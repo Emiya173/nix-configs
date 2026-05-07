@@ -3,6 +3,15 @@
 {
   # niri 详细配置见 ./niri.nix
 
+  programs.mpv = {
+    enable = true;
+    config = {
+      keep-open = "yes";
+      hwdec = "auto-safe";
+      vo = "gpu-next";
+    };
+  };
+
   programs.chromium = {
     enable = true;
     commandLineArgs = [
