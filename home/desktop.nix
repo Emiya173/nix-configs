@@ -56,10 +56,10 @@
     papirus-icon-theme
     materia-theme
 
-    # 中文软件
+    # 中文软件 (linuxqq 在 nixpkgs 里就叫 qq)
     wpsoffice-cn
-    # linuxqq        # 通过 nixpkgs (有时会缺) - 见 README,可改 flatpak
-    # feishu         # nixpkgs 暂无 - 见 README, 用 flatpak 或 AppImage
+    qq
+    feishu
   ];
 
   # GTK / Qt 主题

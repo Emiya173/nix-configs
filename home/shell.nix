@@ -82,7 +82,7 @@
   programs.bat.enable = true;
   programs.eza.enable = true;
   programs.lazygit.enable = true;
-  programs.yazi.enable = true;
+  # yazi 由 home/yazi.nix 接管
 
   programs.fastfetch.enable = true;
 }

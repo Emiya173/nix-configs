@@ -9,6 +9,8 @@
     ./desktop.nix
     ./niri.nix
     ./dev.nix
+    ./nvim.nix
+    ./yazi.nix
   ];
 
   home.username = "present";

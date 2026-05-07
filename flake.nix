@@ -19,13 +19,18 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nix-flatpak = {
       url = "github:gmodena/nix-flatpak";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, dms, nix-flatpak, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, dms, nixvim, nix-flatpak, ... }@inputs:
     let
       system = "x86_64-linux";
       hostName = "present-pc";
@@ -55,6 +60,7 @@
               niri.homeModules.niri
               dms.homeModules.dank-material-shell
               dms.homeModules.niri
+              nixvim.homeModules.nixvim
             ];
           }
         ];

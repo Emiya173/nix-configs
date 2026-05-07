@@ -48,12 +48,5 @@
     enableFishIntegration = true;
   };
 
-  programs.neovim = {
-    enable = true;
-    defaultEditor = true;
-    viAlias = true;
-    vimAlias = true;
-    # 沿用现有 ~/.config/nvim 配置 (lazyvim/lvim).
-    # 不在这里写 plugins,让 lazy.nvim/Lazyman 自管理
-  };
+  # nvim 配置由 home/nvim.nix (nixvim) 接管
 }

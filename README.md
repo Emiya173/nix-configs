@@ -126,14 +126,29 @@ sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
   ```
 - [ ] 确认 sddm 是否能正常启动 niri 会话 (sddm + wayland session)
 
+### Neovim — nixvim 声明式
+
+`home/nvim.nix` 用 [nixvim](https://github.com/nix-community/nixvim) 全声明式接管,
+LazyVim 风格起步配置: tokyonight 主题 / neo-tree / telescope / lualine / bufferline /
+treesitter / gitsigns / which-key / mini.* / flash / trouble / noice / persistence /
+完整 LSP (rust/ts/python/go/lua/nix/...) / cmp 自动补全 / conform 格式化 / nvim-lint。
+
+迭代时直接编辑 `home/nvim.nix` 后 `nixos-rebuild switch`,无需自管 lazy.nvim。
+原 `~/.config/nvim` 不再生效 (但因为 home-manager `backupFileExtension="hm-backup"`,
+首次切换时会被改名为 `nvim.hm-backup` 而不是删除)。
+
+### Yazi — programs.yazi 声明式
+
+`home/yazi.nix` 通过 home-manager 模块管理 settings/keymap/plugins。
+插件来自 `pkgs.yaziPlugins.*` (git / smart-enter / full-border 已加),按需添加。
+
 ### 中文软件
-- `wpsoffice-cn`: 已加入 `home/desktop.nix`
-- `linuxqq` / `feishu`: nixpkgs 不稳定,推荐 flatpak:
-  ```
-  flatpak install flathub com.tencent.QQ
-  flatpak install flathub com.feishu.Feishu
-  ```
-  (services.flatpak.enable 已开启)
+全部在 nixpkgs 里,已写进 `home/desktop.nix`:
+- `wpsoffice-cn` — WPS 中国版
+- `qq` — 即 linuxqq,腾讯 QQ
+- `feishu` — 飞书 (撰写时 7.62.9)
+
+flatpak 模块仍开着 (`services.flatpak.enable`),备用于 nixpkgs 没及时跟版本时手动 `flatpak install`。
 
 ### Quickshell — DankMaterialShell (DMS)
 
