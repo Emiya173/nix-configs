@@ -14,10 +14,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    dms = {
+      url = "github:AvengeMedia/DankMaterialShell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nix-flatpak.url = "github:gmodena/nix-flatpak";
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, nix-flatpak, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, dms, nix-flatpak, ... }@inputs:
     let
       system = "x86_64-linux";
       hostName = "present-pc";
@@ -43,7 +48,11 @@
             home-manager.extraSpecialArgs = { inherit inputs; };
             home-manager.users.${userName} = import ./home/home.nix;
             home-manager.backupFileExtension = "hm-backup";
-            home-manager.sharedModules = [ niri.homeModules.niri ];
+            home-manager.sharedModules = [
+              niri.homeModules.niri
+              dms.homeModules.dank-material-shell
+              dms.homeModules.niri
+            ];
           }
         ];
       };

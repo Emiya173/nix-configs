@@ -135,11 +135,16 @@ sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
   ```
   (services.flatpak.enable 已开启)
 
-### Quickshell
-- 已装 quickshell + Qt6 全套依赖
-- ii 配置依赖 hyprland IPC,**niri 不可直接复用**
-- 待自写: bar / launcher / notification / lock 适配 niri (可参考 `niri msg` 输出)
-- 临时方案: `home.packages` 里有 `fuzzel` 作 launcher,后续替换为自己 quickshell 版
+### Quickshell — DankMaterialShell (DMS)
+
+不再用 illogical-impulse,改用 [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell):
+- 官方支持 niri,通过 flake input `dms` + home-manager 模块接入
+- 自动注入 niri 键位 (Mod+Space spotlight / Mod+V 剪贴板 / Mod+N 通知 / Mod+X 电源菜单 等)
+- 自动 spawn `dms run` (用户级 systemd 服务)
+- 接管动态主题 (matugen) / 通知中心 / spotlight / 剪贴板 / 设置 / 电源菜单 / 系统监控
+- **不**接管: 锁屏定时 (用 swayidle 调 `dms ipc lock lock`)、桌面壁纸 (DMS 自己渲染)
+
+DMS 默认键位见 `home/niri.nix` 注释顶部表格。
 
 ### 开发
 - Rust 用 `rustup` 管理 (避开 nixpkgs 版本切换的麻烦)

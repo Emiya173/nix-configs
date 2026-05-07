@@ -27,13 +27,10 @@
   programs.kdeconnect.enable = false;
 
   environment.systemPackages = with pkgs; [
-    # niri 周边
+    # niri 周边 (DMS 已自带 quickshell / matugen / cliphist 等;此处只放它没覆盖的)
     xwayland-satellite
     swaybg
-    swaylock-effects
-    swayidle
     wl-clipboard
-    cliphist
     grim
     slurp
     satty
@@ -41,28 +38,15 @@
     wlr-randr
     nwg-displays
     nwg-look
+    brightnessctl
 
-    # quickshell + Qt
-    quickshell
-    qt6.qtbase
-    qt6.qtdeclarative
-    qt6.qt5compat
-    qt6.qtwayland
-    qt6.qtimageformats
-    qt6.qtsvg
-    qt6.qtmultimedia
-    qt6.qtshadertools
-    qt6.qtpositioning
-    qt6.qtsensors
-    qt6.qttranslations
-    libsForQt5.qt5.qtgraphicaleffects
+    # Qt 主题 (Kvantum + qt*ct, DMS 自身的 quickshell 不依赖 Kvantum,
+    # 但其它 Qt 应用 (dolphin/ark/kdiskmark 等) 仍需要)
     kdePackages.qtstyleplugin-kvantum
     libsForQt5.qtstyleplugin-kvantum
     qt6ct
     libsForQt5.qt5ct
 
-    # 通用
-    matugen
     libnotify
     polkit_gnome
   ];

@@ -9,16 +9,35 @@ let
   officeSoftware = "wps";
   volumeMixer    = "pavucontrol";
   taskManager    = "kitty -e btop";
-  launcher       = "fuzzel";
-  lockCmd        = "swaylock -f";
-  brightUpCmd    = "brightnessctl s 5%+";
-  brightDownCmd  = "brightnessctl s 5%-";
-  volUpCmd       = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%+ -l 1.5";
-  volDownCmd     = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%-";
-  muteCmd        = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
-  micMuteCmd     = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle";
+  # Spotlight (Mod+Space)、剪贴板 (Mod+V)、亮度/音量 等由 DankMaterialShell 接管
+  # 这里只保留它没覆盖到的命令
 in
 {
+  # =====================================================
+  # DankMaterialShell (DMS) — quickshell-based desktop shell
+  # 提供: bar / spotlight / 通知 / 剪贴板 / 设置 / 电源菜单 / 动态主题
+  # =====================================================
+  programs.dank-material-shell = {
+    enable = true;
+
+    # 自动开机启动 dms run (用户级 systemd 服务)
+    systemd.enable = true;
+
+    # 各功能开关 (默认全开)
+    enableSystemMonitoring  = true;
+    enableVPN               = true;
+    enableDynamicTheming    = true;
+    enableAudioWavelength   = true;
+    enableCalendarEvents    = true;
+    enableClipboardPaste    = true;
+
+    # niri 集成: 让 DMS 自动注入它的键位 + spawn,不要重复手动写
+    niri = {
+      enableKeybinds = true;
+      enableSpawn    = true;
+    };
+  };
+
   programs.niri.settings = {
     # ----------------- input -----------------
     input = {
@@ -109,29 +128,13 @@ in
     };
 
     # ----------------- 启动项 -----------------
+    # DMS 自带 dms run (剪贴板/通知/壁纸/动态主题/spotlight 都归它)
+    # 这里只放 DMS 不管的: xwayland、keyring、polkit、输入法
     spawn-at-startup = [
-      # XWayland (X11 应用必备)
       { command = [ "xwayland-satellite" ]; }
-
-      # 后台守护
       { command = [ "gnome-keyring-daemon" "--start" "--components=secrets" ]; }
       { command = [ "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1" ]; }
-
-      # 剪贴板历史 (要和 modules 中已装的 cliphist 配合)
-      { command = [ "sh" "-c" "wl-paste --type text --watch cliphist store" ]; }
-      { command = [ "sh" "-c" "wl-paste --type image --watch cliphist store" ]; }
-
-      # 输入法
       { command = [ "fcitx5" "-d" ]; }
-
-      # 通知守护 (如果 quickshell 还没接管,先用 mako/dunst,否则注释掉)
-      # { command = [ "mako" ]; }
-
-      # 壁纸 (修改路径或换 swww)
-      { command = [ "sh" "-c" "swaybg -i $HOME/Pictures/wallpaper.jpg -m fill || true" ]; }
-
-      # 待 quickshell 自写 niri 版本完成后启用:
-      # { command = [ "qs" "-c" "niri" ]; }
     ];
 
     # ----------------- 窗口规则 -----------------
@@ -164,31 +167,24 @@ in
 
     # ----------------- 键位 -----------------
     binds = with config.lib.niri.actions; {
-      # === 应用启动 ===
+      # === 应用启动 (DMS 用 Mod+Space 做 spotlight,这里留快捷键给常用程序) ===
       "Mod+Return".action       = spawn terminal;
       "Mod+T".action            = spawn terminal;
       "Ctrl+Alt+T".action       = spawn terminal;
       "Mod+E".action            = spawn fileManager;
       "Mod+W".action            = spawn browser;
-      "Mod+X".action            = spawn textEditor;
+      "Mod+Shift+X".action      = spawn textEditor;          # vscode (Mod+X 给 DMS 电源菜单)
       "Ctrl+Shift+Alt+Mod+W".action = spawn officeSoftware;
       "Ctrl+Mod+V".action       = spawn volumeMixer;
       "Ctrl+Shift+Escape".action = spawn "sh" "-c" taskManager;
-
-      # 启动器 / 剪贴板 / emoji (quickshell 重写后改 ipc 调 quickshell)
-      "Mod+D".action            = spawn launcher;
-      "Mod+V".action            = spawn "sh" "-c"
-        "cliphist list | fuzzel --match-mode fzf --dmenu | cliphist decode | wl-copy";
-      "Mod+Period".action       = spawn "sh" "-c"
-        "fuzzel-emoji";   # 装好后再实现
 
       # === 窗口操作 ===
       "Mod+C".action            = close-window;
       "Alt+F4".action           = close-window;
       "Mod+F".action            = fullscreen-window;
-      "Mod+Shift+F".action      = maximize-column;
+      "Mod+D".action            = maximize-column;           # 对齐 hyprland (Super+D = maximize)
       "Mod+Alt+Space".action    = toggle-window-floating;
-      "Mod+Space".action        = switch-focus-between-floating-and-tiling;
+      # Mod+Space 让给 DMS spotlight
 
       # === 焦点 (列内/列间) — vim-style hjkl ===
       "Mod+H".action            = focus-column-left;
@@ -204,8 +200,8 @@ in
       "Mod+Shift+K".action      = move-window-up;
       "Mod+Shift+J".action      = move-window-down;
 
-      # 列管理
-      "Mod+Comma".action        = consume-window-into-column;
+      # 列管理 (Mod+Comma 让给 DMS 设置面板)
+      "Mod+G".action            = consume-window-into-column;
       "Mod+Apostrophe".action   = expel-window-from-column;
       "Mod+R".action            = switch-preset-column-width;
       "Mod+Shift+R".action      = switch-preset-window-height;
@@ -274,17 +270,11 @@ in
       "Mod+Ctrl+Shift+R".action = spawn "sh" "-c"
         "wf-recorder --audio -f $HOME/Videos/$(date +%Y%m%d-%H%M%S).mp4";
 
-      # === 音量 / 麦克风 ===
-      "XF86AudioRaiseVolume".action  = spawn "sh" "-c" volUpCmd;
-      "XF86AudioLowerVolume".action  = spawn "sh" "-c" volDownCmd;
-      "XF86AudioMute".action         = spawn "sh" "-c" muteCmd;
-      "XF86AudioMicMute".action      = spawn "sh" "-c" micMuteCmd;
-      "Mod+Shift+M".action           = spawn "sh" "-c" muteCmd;
-      "Mod+Alt+M".action             = spawn "sh" "-c" micMuteCmd;
-
-      # === 亮度 ===
-      "XF86MonBrightnessUp".action   = spawn "sh" "-c" brightUpCmd;
-      "XF86MonBrightnessDown".action = spawn "sh" "-c" brightDownCmd;
+      # === 音量 / 亮度 ===
+      # XF86Audio* / XF86MonBrightness* 由 DMS 接管 (走 dms ipc audio/brightness ...)
+      # Mod+Shift+M 留给手动静音作为快捷键备份
+      "Mod+Shift+M".action           = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
+      "Mod+Alt+M".action             = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle";
 
       # === 媒体 ===
       "XF86AudioPlay".action  = spawn "playerctl" "play-pause";
@@ -295,24 +285,14 @@ in
       "Mod+Shift+N".action    = spawn "playerctl" "next";
       "Mod+Shift+B".action    = spawn "playerctl" "previous";
 
-      # === Session ===
-      # Mod+L 已被列焦点占用,锁屏改 Super+Escape
-      "Super+Escape".action             = spawn "sh" "-c" lockCmd;
-      "Mod+Shift+Escape".action         = spawn "systemctl" "suspend";
-      "Ctrl+Alt+Delete".action          = spawn "wlogout" "-p" "layer-shell";
+      # === Session (DMS 提供 Mod+X 电源菜单 + Super+Alt+L 锁屏) ===
+      # 这里保留兜底
+      "Mod+Shift+Escape".action            = spawn "systemctl" "suspend";
       "Ctrl+Shift+Alt+Super+Delete".action = spawn "systemctl" "poweroff";
-      "Mod+Shift+E".action              = quit;
+      "Mod+Shift+E".action                 = quit;
 
-      # 显示 niri 内置 hotkey overlay (cheatsheet 替代品)
-      "Mod+Slash".action                = show-hotkey-overlay;
-
-      # === Quickshell IPC 占位 ===
-      # 等你写完 niri 版本的 quickshell 后,把下面的 spawn 改成
-      #   spawn "qs" "-c" "niri" "ipc" "call" "<service>" "<method>"
-      # 例如:
-      # "Mod+A".action       = spawn "qs" "-c" "niri" "ipc" "call" "sidebarLeft" "toggle";
-      # "Mod+N".action       = spawn "qs" "-c" "niri" "ipc" "call" "sidebarRight" "toggle";
-      # "Mod+Backspace".action = spawn "qs" "-c" "niri" "ipc" "call" "session" "toggle";
+      # 显示 niri 内置 hotkey overlay
+      "Mod+Slash".action                   = show-hotkey-overlay;
     };
 
     # ----------------- 窗口动画 -----------------
@@ -322,41 +302,24 @@ in
     };
   };
 
-  # niri 配套包 (在 home.packages 里加,system 已经有 swaybg/grim/slurp/satty 等)
+  # niri 配套包 — 启动器/剪贴板/通知/锁屏由 DMS 提供,这里只放它没覆盖的
   home.packages = with pkgs; [
-    swaylock-effects
-    swayidle
     wlogout
-    brightnessctl
     wf-recorder
     playerctl
-    cliphist
-    fuzzel
   ];
 
-  # swayidle: 锁屏 + 自动休眠
+  # 自动锁屏 + 休眠 (DMS 提供 dms ipc lock lock 给主动锁屏,
+  # 但 idle 触发还是要 swayidle/hypridle)
   services.swayidle = {
     enable = true;
     timeouts = [
-      { timeout = 600;  command = "${pkgs.swaylock-effects}/bin/swaylock -f"; }
+      { timeout = 600;  command = "dms ipc lock lock"; }
       { timeout = 1200; command = "systemctl suspend"; }
     ];
     events = [
-      { event = "before-sleep"; command = "${pkgs.swaylock-effects}/bin/swaylock -f"; }
-      { event = "lock";         command = "${pkgs.swaylock-effects}/bin/swaylock -f"; }
+      { event = "before-sleep"; command = "dms ipc lock lock"; }
+      { event = "lock";         command = "dms ipc lock lock"; }
     ];
-  };
-
-  # fuzzel 配置 (临时,等 quickshell 接管前用)
-  programs.fuzzel = {
-    enable = true;
-    settings = {
-      main = {
-        terminal = "kitty";
-        font = "JetBrainsMono Nerd Font:size=12";
-        layer = "overlay";
-        prompt = "❯ ";
-      };
-    };
   };
 }
