@@ -3,16 +3,23 @@
 {
   # niri 详细配置见 ./niri.nix
 
-  programs.firefox.enable = true;
+  programs.chromium = {
+    enable = true;
+    commandLineArgs = [
+      # Wayland 原生 + VAAPI 硬解 (AMD)
+      "--ozone-platform=wayland"
+      "--enable-features=UseOzonePlatform,WaylandWindowDecorations,VaapiVideoDecodeLinuxGL"
+      "--ignore-gpu-blocklist"
+      # 关闭烦人的密码冒泡 (Linux 上 KWallet/Gnome-keyring 经常出问题)
+      "--password-store=basic"
+    ];
+  };
 
   # 桌面用户级包
   home.packages = with pkgs; [
     # 启动器
     fuzzel
     rofi-wayland
-
-    # 浏览器
-    chromium
 
     # 通讯
     telegram-desktop

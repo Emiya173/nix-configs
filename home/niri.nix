@@ -4,7 +4,7 @@ let
   # 应用别名 (对应你 hyprland variables.conf 里的 $terminal/$browser/...)
   terminal       = "kitty";
   fileManager    = "dolphin";
-  browser        = "firefox";
+  browser        = "chromium";
   textEditor     = "code";
   officeSoftware = "wps";
   volumeMixer    = "pavucontrol";
@@ -31,8 +31,8 @@ in
         dwt = true;
       };
       mouse.accel-profile = "flat";
-      focus-follows-mouse.enable = false;
-      warp-mouse-to-focus.enable = true;
+      focus-follows-mouse.enable = true;     # 与 hyprland 默认 (follow_mouse=1) 一致
+      warp-mouse-to-focus.enable = true;     # 键盘切焦点时鼠标跟着跳,与上一项互补
       workspace-auto-back-and-forth = true;
     };
 
