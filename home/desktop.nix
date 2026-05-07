@@ -42,12 +42,11 @@
     kdePackages.ark
     kdePackages.dolphin
 
-    # 截图/取色
-    grim
-    slurp
-    satty
-    swappy
-    hyprpicker
+    # 截图/取色 (DMS 不提供这些)
+    grim          # 屏幕抓取
+    slurp         # 区域选择
+    satty         # 截图标注 (Mod+Shift+A 键位用)
+    hyprpicker    # 取色器 (Mod+Shift+C 键位用)
 
     # 系统监控
     nvtopPackages.amd

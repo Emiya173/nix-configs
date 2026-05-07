@@ -27,28 +27,22 @@
   programs.kdeconnect.enable = false;
 
   environment.systemPackages = with pkgs; [
-    # niri 周边 (DMS 已自带 quickshell / matugen / cliphist 等;此处只放它没覆盖的)
+    # niri 周边 (DMS 已接管 wallpaper/clipboard 面板/launcher/通知/电源菜单)
     xwayland-satellite
-    swaybg
-    wl-clipboard
-    grim
-    slurp
-    satty
-    swappy
+    wl-clipboard               # CLI 脚本备用 (wl-copy/wl-paste)
     wlr-randr
     nwg-displays
     nwg-look
-    brightnessctl
+    brightnessctl              # DMS 走 dms ipc brightness,这里留 CLI 兜底
 
-    # Qt 主题 (Kvantum + qt*ct, DMS 自身的 quickshell 不依赖 Kvantum,
-    # 但其它 Qt 应用 (dolphin/ark/kdiskmark 等) 仍需要)
+    # Qt 主题 (DMS quickshell 自身不依赖 Kvantum,但 dolphin/ark 等仍需要)
     kdePackages.qtstyleplugin-kvantum
     libsForQt5.qtstyleplugin-kvantum
     qt6ct
     libsForQt5.qt5ct
 
     libnotify
-    polkit_gnome
+    polkit_gnome               # DMS 不提供 polkit agent
   ];
 
   # niri 不带 polkit agent,用 gnome 的

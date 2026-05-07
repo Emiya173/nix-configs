@@ -27,7 +27,6 @@
     usbutils
     lsof
     psmisc
-    htop
     btop
     duf
     du-dust

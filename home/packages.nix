@@ -10,7 +10,6 @@
     eza
     du-dust
     duf
-    htop
     btop
     tree
     jq
@@ -23,7 +22,6 @@
     hyperfine
     parallel
     asciinema
-    aria2
     httpie
     curl
     wget
@@ -33,7 +31,6 @@
 
     # 文件/归档
     p7zip
-    unrar
     unzip
     zip
 

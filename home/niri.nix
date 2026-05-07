@@ -302,11 +302,11 @@ in
     };
   };
 
-  # niri 配套包 — 启动器/剪贴板/通知/锁屏由 DMS 提供,这里只放它没覆盖的
+  # niri 配套包 — 启动器/剪贴板/通知/电源菜单/壁纸都由 DMS 提供
+  # 这里只放 DMS 没覆盖的功能
   home.packages = with pkgs; [
-    wlogout
-    wf-recorder
-    playerctl
+    wf-recorder    # 屏幕录制 (Mod+Ctrl+R 键位用)
+    playerctl      # 媒体键 (Mod+Shift+N/B/P 键位用)
   ];
 
   # 自动锁屏 + 休眠 (DMS 提供 dms ipc lock lock 给主动锁屏,
