@@ -43,6 +43,7 @@
             home-manager.extraSpecialArgs = { inherit inputs; };
             home-manager.users.${userName} = import ./home/home.nix;
             home-manager.backupFileExtension = "hm-backup";
+            home-manager.sharedModules = [ niri.homeModules.niri ];
           }
         ];
       };

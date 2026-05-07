@@ -7,6 +7,7 @@
     ./git.nix
     ./packages.nix
     ./desktop.nix
+    ./niri.nix
     ./dev.nix
   ];
 

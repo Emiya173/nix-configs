@@ -1,76 +1,8 @@
 { config, pkgs, ... }:
 
 {
-  # niri 配置
-  # 详细 KDL 配置先放在 ./niri/config.kdl,然后这里 link
-  # xdg.configFile."niri/config.kdl".source = ./niri/config.kdl;
+  # niri 详细配置见 ./niri.nix
 
-  programs.niri = {
-    settings = {
-      input = {
-        keyboard.xkb.layout = "us";
-        touchpad = {
-          tap = true;
-          natural-scroll = true;
-        };
-      };
-
-      layout = {
-        gaps = 8;
-        center-focused-column = "never";
-        preset-column-widths = [
-          { proportion = 0.33333; }
-          { proportion = 0.5; }
-          { proportion = 0.66667; }
-        ];
-      };
-
-      spawn-at-startup = [
-        { command = [ "xwayland-satellite" ]; }
-        { command = [ "swaybg" "-i" "${config.home.homeDirectory}/Pictures/wallpaper.jpg" "-m" "fill" ]; }
-      ];
-
-      environment = {
-        DISPLAY = ":0";
-        QT_QPA_PLATFORMTHEME = "qt6ct";
-        XCURSOR_THEME = "Bibata-Modern-Classic";
-      };
-
-      binds = with config.lib.niri.actions; {
-        "Mod+Return".action = spawn "kitty";
-        "Mod+D".action = spawn "fuzzel";
-        "Mod+Q".action = close-window;
-        "Mod+L".action = spawn "swaylock";
-        "Mod+Shift+E".action = quit;
-
-        "Mod+Left".action = focus-column-left;
-        "Mod+Right".action = focus-column-right;
-        "Mod+Up".action = focus-window-up;
-        "Mod+Down".action = focus-window-down;
-
-        "Mod+Shift+Left".action = move-column-left;
-        "Mod+Shift+Right".action = move-column-right;
-        "Mod+Shift+Up".action = move-window-up;
-        "Mod+Shift+Down".action = move-window-down;
-
-        "Mod+1".action = focus-workspace 1;
-        "Mod+2".action = focus-workspace 2;
-        "Mod+3".action = focus-workspace 3;
-        "Mod+4".action = focus-workspace 4;
-        "Mod+5".action = focus-workspace 5;
-
-        "Mod+R".action = switch-preset-column-width;
-        "Mod+F".action = maximize-column;
-        "Mod+Shift+F".action = fullscreen-window;
-
-        "Print".action = screenshot;
-        "Ctrl+Print".action = screenshot-screen;
-        "Alt+Print".action = screenshot-window;
-      };
-    };
-  };
-
-  # 可选的浏览/工具
   programs.firefox.enable = true;
 
   # 桌面用户级包
