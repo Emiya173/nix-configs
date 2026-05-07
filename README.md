@@ -1,0 +1,134 @@
+# present-pc NixOS 配置
+
+从 Arch Linux + Hyprland/quickshell-ii 迁移而来,新桌面: **niri + quickshell**。
+Flake + Home Manager 结构,所有用户级配置在 `home/`,系统级在 `modules/`。
+
+## 目录结构
+
+```
+.
+├── flake.nix                  # 入口,锁定 nixpkgs/home-manager/niri-flake
+├── hosts/present-pc/
+│   ├── configuration.nix      # 主机配置入口
+│   └── hardware-configuration.nix  # 占位,安装时替换!
+├── modules/                   # 系统级
+│   ├── boot.nix               # GRUB + os-prober + linux-zen
+│   ├── network.nix            # NetworkManager + Bluetooth + Tailscale + SSH
+│   ├── audio.nix              # PipeWire
+│   ├── graphics.nix           # AMD RX 9070 (mesa + ROCm)
+│   ├── desktop.nix            # niri + sddm + portal + Qt6/quickshell 依赖
+│   ├── input-method.nix       # fcitx5 + rime
+│   ├── fonts.nix              # CJK + Nerd Font
+│   ├── locale.nix             # zh_CN.UTF-8 + Asia/Shanghai
+│   ├── services.nix           # docker / waydroid / sunshine / flatpak
+│   ├── users.nix              # present 用户 + fish
+│   ├── packages.nix           # 系统级包
+│   └── nix.nix                # flakes / GC / 镜像
+└── home/                      # home-manager
+    ├── home.nix
+    ├── shell.nix              # fish + starship + atuin + zoxide + fzf
+    ├── kitty.nix
+    ├── git.nix
+    ├── desktop.nix            # niri 配置 + GTK/Qt + 桌面工具
+    ├── dev.nix                # rust/node/jdk/python/typst/mdbook
+    └── packages.nix           # 用户 CLI 包
+```
+
+## 首次安装步骤
+
+1. **U 盘装最小 NixOS**,分区时 **保留** 现有 `/boot` (BDCB-F864) 和 `/` (6c70dc3c-...)。
+   建议:
+   - 备份 `/home/present` 重要数据
+   - 用现有 btrfs 重建子卷 `@`, `@home`, `@nix`, `@snapshots`
+   - 引导用现有 `/dev/nvme1n1p1`
+
+2. **挂载并克隆此仓库**
+   ```
+   mount /dev/nvme1n1p3 /mnt -o subvol=@,compress=zstd,noatime
+   mkdir -p /mnt/{boot,home,nix}
+   mount /dev/nvme1n1p1 /mnt/boot
+   mount /dev/nvme1n1p3 /mnt/home -o subvol=@home,compress=zstd
+   git clone <你的仓库> /mnt/home/present/nix_migrate
+   ```
+
+3. **生成 hardware-configuration.nix**
+   ```
+   nixos-generate-config --root /mnt --dir /tmp/nixcfg
+   cp /tmp/nixcfg/hardware-configuration.nix \
+      /mnt/home/present/nix_migrate/hosts/present-pc/hardware-configuration.nix
+   ```
+
+4. **首次安装**
+   ```
+   nixos-install --flake /mnt/home/present/nix_migrate#present-pc
+   ```
+
+5. **重启,进入 NixOS 后**
+   ```
+   sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
+   ```
+
+## 后续日常
+
+```fish
+# 重建系统
+sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
+
+# 更新输入
+nix flake update ~/nix_migrate
+sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
+
+# 仅更新 home-manager (作为 NixOS 模块,通常跟随 system)
+# 不需要单独运行
+```
+
+## 待办 / 需要本人补全
+
+### 高优先级
+- [ ] **替换 hardware-configuration.nix** (nixos-generate-config 输出)
+- [ ] 检查 `hosts/present-pc/hardware-configuration.nix` 中 btrfs `subvol=` 选项
+- [ ] **niri 壁纸路径** `home/desktop.nix` 的 swaybg 默认指向 `~/Pictures/wallpaper.jpg`
+- [ ] **rime 词库** 安装后手动:
+  ```
+  git clone https://github.com/iDvel/rime-ice ~/.local/share/fcitx5/rime
+  ```
+- [ ] 确认 sddm 是否能正常启动 niri 会话 (sddm + wayland session)
+
+### 中文软件
+- `wpsoffice-cn`: 已加入 `home/desktop.nix`
+- `linuxqq` / `feishu`: nixpkgs 不稳定,推荐 flatpak:
+  ```
+  flatpak install flathub com.tencent.QQ
+  flatpak install flathub com.feishu.Feishu
+  ```
+  (services.flatpak.enable 已开启)
+
+### Quickshell
+- 已装 quickshell + Qt6 全套依赖
+- ii 配置依赖 hyprland IPC,**niri 不可直接复用**
+- 待自写: bar / launcher / notification / lock 适配 niri (可参考 `niri msg` 输出)
+- 临时方案: `home.packages` 里有 `fuzzel` 作 launcher,后续替换为自己 quickshell 版
+
+### 开发
+- Rust 用 `rustup` 管理 (避开 nixpkgs 版本切换的麻烦)
+- Python 全局环境含 pip/uv/poetry; 项目内推荐 direnv + flake.nix
+- Java: jdk17 + jdk21 共存,环境变量 `JAVA_HOME` 默认指向 jdk21,可在 shell 里 override
+
+### 双启动 NTFS 挂载
+NTFS 分区 (nvme0n1p2/p4) **不在自动挂载列表**,按需手动添加到
+`hosts/present-pc/hardware-configuration.nix` 或用 udisks2 临时挂载。
+
+### 暂未迁移的包/功能 (可按需手动加)
+- 游戏: steam / lutris / wine / ryujinx
+- 媒体: jellyfin-media-player / netease-cloud-music
+- 仿真: torzu / yuzu
+- IDE: jetbrains-toolbox (建议直接用 nix-shell 或下载 tar)
+- VSCode: 已加,见 `home/dev.nix`
+
+## 移除/合并的旧包
+- `illogical-impulse-*` 全套: 与 hyprland 绑定,niri 下重写
+- `hyprland` / `hyprlock` / `hyprtoolkit` / `swaylock-effects`: 不再使用
+- `oh-my-zsh` / `zsh-theme-powerlevel10k`: 改用 fish + starship 单一 shell
+- `paru` / `yay`: NixOS 包管理替代
+- `grub-btrfs` / `timeshift`: 用 btrfs snapshot + nh/nixos generations 替代
+- `nvm`: 用 nixpkgs 中的 `nodejs_22` 或 direnv 项目级管理
