@@ -36,37 +36,69 @@ Flake + Home Manager 结构,所有用户级配置在 `home/`,系统级在 `modul
 
 ## 首次安装步骤
 
-1. **U 盘装最小 NixOS**,分区时 **保留** 现有 `/boot` (BDCB-F864) 和 `/` (6c70dc3c-...)。
-   建议:
-   - 备份 `/home/present` 重要数据
-   - 用现有 btrfs 重建子卷 `@`, `@home`, `@nix`, `@snapshots`
-   - 引导用现有 `/dev/nvme1n1p1`
+**前提**: 现有 Arch 的 btrfs 布局只有 `@` (root) 和 `@home`。`@home` 全保留,`@`
+要替换为 NixOS,并新建 `@nix` 和 `@snapshots`。
 
-2. **挂载并克隆此仓库**
-   ```
-   mount /dev/nvme1n1p3 /mnt -o subvol=@,compress=zstd,noatime
-   mkdir -p /mnt/{boot,home,nix}
-   mount /dev/nvme1n1p1 /mnt/boot
-   mount /dev/nvme1n1p3 /mnt/home -o subvol=@home,compress=zstd
-   git clone <你的仓库> /mnt/home/present/nix_migrate
-   ```
+### 1. 装机前 (在 Arch 里)
 
-3. **生成 hardware-configuration.nix**
-   ```
-   nixos-generate-config --root /mnt --dir /tmp/nixcfg
-   cp /tmp/nixcfg/hardware-configuration.nix \
-      /mnt/home/present/nix_migrate/hosts/present-pc/hardware-configuration.nix
-   ```
+- 备份关键数据 (尤其 ssh keys、gpg、未提交的 dev 项目)
+- 把本仓库 push 到 GitHub,U 盘里 NixOS 安装环境再 clone
+- 记录: `~/.dotfiles/` bare repo 仍在 `@home`,迁移后是否继续用看个人
 
-4. **首次安装**
-   ```
-   nixos-install --flake /mnt/home/present/nix_migrate#present-pc
-   ```
+### 2. 用 NixOS minimal ISO 启动 → 调整子卷
 
-5. **重启,进入 NixOS 后**
-   ```
-   sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
-   ```
+```bash
+sudo mkdir -p /mnt-top
+sudo mount -o subvolid=5 /dev/nvme1n1p3 /mnt-top
+sudo btrfs subvol list /mnt-top   # 确认 @ + @home
+
+# (可选) 备份 Arch 的 @,装完 NixOS 没问题再删
+sudo btrfs subvol snapshot -r /mnt-top/@ /mnt-top/@arch-backup
+
+sudo btrfs subvol delete /mnt-top/@
+sudo btrfs subvol create /mnt-top/@
+sudo btrfs subvol create /mnt-top/@nix
+sudo btrfs subvol create /mnt-top/@snapshots
+sudo umount /mnt-top
+```
+
+### 3. 按目标布局挂载
+
+```bash
+MOPT="compress=zstd:3,noatime,ssd,space_cache=v2,discard=async"
+sudo mount -o "$MOPT,subvol=@"          /dev/nvme1n1p3 /mnt
+sudo mkdir -p /mnt/{boot,home,nix,snapshots}
+sudo mount -o "$MOPT,subvol=@home"      /dev/nvme1n1p3 /mnt/home
+sudo mount -o "$MOPT,subvol=@nix"       /dev/nvme1n1p3 /mnt/nix
+sudo mount -o "$MOPT,subvol=@snapshots" /dev/nvme1n1p3 /mnt/snapshots
+sudo mount                              /dev/nvme1n1p1 /mnt/boot
+```
+
+### 4. 生成 hardware-configuration.nix
+
+```bash
+sudo nixos-generate-config --root /mnt --dir /tmp/nixcfg
+diff /tmp/nixcfg/hardware-configuration.nix \
+     /mnt/home/present/nix_migrate/hosts/present-pc/hardware-configuration.nix
+# 把 boot.initrd.availableKernelModules / boot.kernelModules 等
+# 缺失项合并进仓库版本 (UUID/subvol 我已写好,不要被覆盖)
+```
+
+### 5. 装机
+
+```bash
+sudo nixos-install --flake /mnt/home/present/nix_migrate#present-pc
+sudo nixos-enter --root /mnt -c 'passwd present'
+reboot
+```
+
+### 6. 进入 NixOS
+
+```fish
+sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
+sudo btrbk run                          # 第一轮快照
+sudo btrfs subvol delete /snapshots/@arch-backup  # 确认无事后清理
+```
 
 ## 后续日常
 
