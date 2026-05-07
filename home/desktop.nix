@@ -15,14 +15,44 @@
   programs.chromium = {
     enable = true;
     commandLineArgs = [
-      # Wayland 原生 + VAAPI 硬解 (AMD)
-      "--ozone-platform=wayland"
-      "--enable-features=UseOzonePlatform,WaylandWindowDecorations,VaapiVideoDecodeLinuxGL"
+      "--ozone-platform-hint=wayland"
+      "--gtk-version=4"
       "--ignore-gpu-blocklist"
-      # 关闭烦人的密码冒泡 (Linux 上 KWallet/Gnome-keyring 经常出问题)
-      "--password-store=basic"
+      "--enable-features=WaylandWindowDecorations,TouchpadOverscrollHistoryNavigation,AcceleratedVideoDecodeLinuxGL,VaapiVideoDecodeLinuxGL"
+      "--enable-wayland-ime"                # fcitx5 中文输入 (Wayland text-input-v3)
+      "--wayland-text-input-version=3"
+      "--password-store=gnome-libsecret"    # 需要 gnome-keyring (已在 niri spawn 启动)
+      "--disable-features=ExtensionManifestV2Unsupported"
     ];
   };
+
+  # ---- 其他 Electron 应用全局 flags (telegram/element/feishu/linuxqq/wpsoffice...) ----
+  # ~/.config/electron-flags.conf 是 Electron 通用约定,所有不带专属 wrapper 的 Electron 都会读
+  xdg.configFile."electron-flags.conf".text = ''
+    --ozone-platform-hint=auto
+    --enable-features=WaylandWindowDecorations
+    --enable-wayland-ime
+    --wayland-text-input-version=3
+  '';
+
+  # 不同主版本 Electron 也读各自版本号文件,batch 写一份避免漏
+  xdg.configFile."electron25-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
+  xdg.configFile."electron28-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
+  xdg.configFile."electron30-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
+  xdg.configFile."electron32-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
+  xdg.configFile."electron34-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
+  xdg.configFile."electron36-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
+
+  # ---- VSCode 也是 Electron,但读自己的 code-flags.conf ----
+  xdg.configFile."code-flags.conf".text = ''
+    --ozone-platform-hint=wayland
+    --gtk-version=4
+    --ignore-gpu-blocklist
+    --enable-features=TouchpadOverscrollHistoryNavigation
+    --enable-wayland-ime
+    --wayland-text-input-version=3
+    --password-store=gnome-libsecret
+  '';
 
   # 桌面用户级包
   home.packages = with pkgs; [
@@ -83,6 +113,9 @@
       name = "Bibata-Modern-Classic";
       package = pkgs.bibata-cursors;
     };
+    # 不要用 GTK_IM_MODULE env (GTK4 已不读),改写 settings.ini
+    gtk3.extraConfig.gtk-im-module = "fcitx";
+    gtk4.extraConfig.gtk-im-module = "fcitx";
   };
 
   qt = {
