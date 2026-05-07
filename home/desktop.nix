@@ -26,9 +26,7 @@
 
   # 桌面用户级包
   home.packages = with pkgs; [
-    # 启动器
-    fuzzel
-    rofi-wayland
+    # 启动器/剪贴板/通知/电源菜单全归 DMS,不再装 fuzzel/rofi
 
     # 通讯
     telegram-desktop
