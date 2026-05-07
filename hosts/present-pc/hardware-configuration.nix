@@ -1,36 +1,55 @@
-# 占位文件 — 在新系统上首次安装时,用 nixos-generate-config 输出的真实文件替换它
+# 占位文件 — 安装时用 nixos-generate-config 输出替换大部分内容,
+# 但保留下面的 fileSystems 子卷布局假设 (@/@home/@nix/@snapshots)。
 #
-#   sudo nixos-generate-config --root /mnt --dir /tmp/nixcfg
-#   cp /tmp/nixcfg/hardware-configuration.nix \
-#      /mnt/home/present/nix_migrate/hosts/present-pc/hardware-configuration.nix
+# 假设的 btrfs 布局:
+#   subvol=@          -> /
+#   subvol=@home      -> /home
+#   subvol=@nix       -> /nix         (不快照,纯 store)
+#   subvol=@snapshots -> /snapshots   (btrbk 写入)
 #
-# 现有 Arch 上的分区情况 (lsblk -f 输出):
-#   nvme1n1p1  vfat   FAT32          BDCB-F864                  -> /boot
-#   nvme1n1p2  swap                  76877c07-f399-4058-...     -> [SWAP]
-#   nvme1n1p3  btrfs        Present  6c70dc3c-cb9a-...          -> /, /home (subvol?)
-#   nvme0n1p2  ntfs (Windows)
-#   nvme0n1p4  ntfs (新加卷)
+# 如果现有 Arch 系统不是这个布局,迁移时需要先 rebalance:
+#   sudo btrfs subvol list /                       # 看现有子卷
+#   sudo btrfs subvol create /mnt/@nix             # 缺啥建啥
+#   sudo rsync -aHAX /old-nix/ /mnt/@nix/          # 迁移数据
 #
-# Btrfs 子卷布局自查: sudo btrfs subvol list /
+# 现有分区 (lsblk -f):
+#   nvme1n1p1  vfat   FAT32          BDCB-F864                    -> /boot
+#   nvme1n1p2  swap                  76877c07-f399-4058-...       -> [SWAP]
+#   nvme1n1p3  btrfs        Present  6c70dc3c-cb9a-...            -> 多子卷
 { config, lib, pkgs, modulesPath, ... }:
 
+let
+  btrfsDevice = "/dev/disk/by-uuid/6c70dc3c-cb9a-4899-bf8e-966826d297bb";
+  btrfsOpts = [ "compress=zstd:3" "noatime" "ssd" "space_cache=v2" "discard=async" ];
+in
 {
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
 
   boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "ahci" "usb_storage" "sd_mod" ];
   boot.kernelModules = [ "kvm-intel" ];
 
-  # 按 nixos-generate-config 实际输出替换
   fileSystems."/" = {
-    device = "/dev/disk/by-uuid/6c70dc3c-cb9a-4899-bf8e-966826d297bb";
+    device = btrfsDevice;
     fsType = "btrfs";
-    # options = [ "subvol=@" "compress=zstd" "noatime" ];
+    options = btrfsOpts ++ [ "subvol=@" ];
   };
 
   fileSystems."/home" = {
-    device = "/dev/disk/by-uuid/6c70dc3c-cb9a-4899-bf8e-966826d297bb";
+    device = btrfsDevice;
     fsType = "btrfs";
-    # options = [ "subvol=@home" "compress=zstd" "noatime" ];
+    options = btrfsOpts ++ [ "subvol=@home" ];
+  };
+
+  fileSystems."/nix" = {
+    device = btrfsDevice;
+    fsType = "btrfs";
+    options = btrfsOpts ++ [ "subvol=@nix" ];
+  };
+
+  fileSystems."/snapshots" = {
+    device = btrfsDevice;
+    fsType = "btrfs";
+    options = btrfsOpts ++ [ "subvol=@snapshots" ];
   };
 
   fileSystems."/boot" = {
@@ -42,6 +61,9 @@
   swapDevices = [
     { device = "/dev/disk/by-uuid/76877c07-f399-4058-88c5-3425c5f37cdd"; }
   ];
+
+  # /var/lib/docker, /var/lib/libvirt/images 等高写入路径建议
+  # 用 chattr +C 关 CoW 或挂成单独 nodatacow 子卷,见 modules/services.nix
 
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";

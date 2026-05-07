@@ -30,9 +30,8 @@
   # Flatpak (中文软件部分用 flatpak 补)
   services.flatpak.enable = true;
 
-  # Trim
-  services.fstrim.enable = true;
+  # fstrim 已在 modules/boot.nix 启用
 
-  # 字体缓存等
+  # 让 NixOS 能跑非 Nix 编译的二进制 (animeko AppImage / 其他 ELF)
   programs.nix-ld.enable = true;
 }

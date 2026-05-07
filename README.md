@@ -114,6 +114,43 @@ sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
 - Python 全局环境含 pip/uv/poetry; 项目内推荐 direnv + flake.nix
 - Java: jdk17 + jdk21 共存,环境变量 `JAVA_HOME` 默认指向 jdk21,可在 shell 里 override
 
+### Btrfs 快照 (替代 Timeshift)
+
+由 `modules/snapshots.nix` 中的 `services.btrbk` 自动管理。
+
+**保留策略**:
+- `@home`: 24 小时 + 7 日 + 4 周 + 3 月
+- `@`:     12 小时 + 3 日 (系统层主要靠 generations,快照只是辅助)
+- `@nix`:  不快照
+
+**手动操作**:
+```fish
+# 立即跑一次 (不等 timer)
+sudo btrbk run
+
+# 列快照
+sudo btrbk list snapshots
+
+# 看实际占用 (考虑 CoW 共享)
+sudo btdu /
+
+# 看压缩比
+sudo compsize /home
+
+# rebuild 前手动快一发
+sudo btrfs subvolume snapshot -r /@home /snapshots/@home/manual-(date +%Y%m%d-%H%M)
+```
+
+**恢复文件**: 直接 `cp /snapshots/@home/<时间>/relative/path ~/`,只读快照不会被误删。
+
+**整盘还原**: 引导进 NixOS rescue → 重命名当前 `@home` → 把目标快照 `btrfs sub snapshot` 成新 `@home` → reboot。NixOS 系统本身坏了不用动快照,**直接在 GRUB 选 older generation** 即可。
+
+**异机备份** (可选): 在 `services.btrbk.instances.local.settings` 里加
+```nix
+target."ssh://backup.lan/mnt/btrfs/backup" = {};
+```
+btrbk 会用 incremental send 推送增量。
+
 ### 双启动 NTFS 挂载
 NTFS 分区 (nvme0n1p2/p4) **不在自动挂载列表**,按需手动添加到
 `hosts/present-pc/hardware-configuration.nix` 或用 udisks2 临时挂载。

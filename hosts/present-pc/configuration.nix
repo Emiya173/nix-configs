@@ -12,6 +12,7 @@
     ../../modules/fonts.nix
     ../../modules/locale.nix
     ../../modules/services.nix
+    ../../modules/snapshots.nix
     ../../modules/users.nix
     ../../modules/packages.nix
     ../../modules/nix.nix
