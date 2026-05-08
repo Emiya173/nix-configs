@@ -29,7 +29,7 @@
     psmisc
     btop
     duf
-    du-dust
+    dust   # 原 du-dust
     inetutils
     traceroute
 
@@ -41,13 +41,10 @@
     binutils
     gdb
 
-    # 内核相关
-    linux-firmware
-    cpupower
+    # 内核相关 (firmware 走 hardware.enableRedistributableFirmware,cpupower 走 powerManagement.cpuFreqGovernor)
 
-    # 终端工具
+    # 终端工具 (neofetch 已 unmaintained / 从 nixpkgs 移除,只留 fastfetch)
     fastfetch
-    neofetch
 
     # NTFS
     ntfs3g

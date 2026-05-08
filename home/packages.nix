@@ -8,7 +8,7 @@
     ripgrep-all
     bat
     eza
-    du-dust
+    dust   # 原 du-dust,nixpkgs 改名了
     duf
     btop
     tree

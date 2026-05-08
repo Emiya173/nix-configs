@@ -8,14 +8,14 @@
       noto-fonts
       noto-fonts-cjk-sans
       noto-fonts-cjk-serif
-      noto-fonts-emoji
-      noto-fonts-extra
+      noto-fonts-color-emoji   # 原 noto-fonts-emoji
+      # noto-fonts-extra 已并入 noto-fonts
       source-han-sans
       source-han-serif
       source-han-mono
       sarasa-gothic
-      wqy-microhei
-      wqy-zenhei
+      wqy_microhei
+      wqy_zenhei
       liberation_ttf
       dejavu_fonts
       twitter-color-emoji

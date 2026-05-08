@@ -7,11 +7,10 @@
     cargo-watch
     cargo-edit
 
-    # Node
+    # Node (npm 已随 nodejs_22 自带)
     nodejs_22
     pnpm
     yarn
-    nodePackages.npm
 
     # JDK
     jdk17

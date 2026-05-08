@@ -59,8 +59,10 @@
       # 文件树
       neo-tree = {
         enable = true;
-        closeIfLastWindow = true;
-        filesystem.followCurrentFile.enabled = true;
+        settings = {
+          close_if_last_window = true;
+          filesystem.follow_current_file.enabled = true;
+        };
       };
 
       # 模糊查找
@@ -294,8 +296,7 @@
       shellcheck
       ruff
       black
-      prettierd
-      nodePackages.prettier
+      prettierd   # prettierd 已够,不再单独装 prettier
       markdownlint-cli
       gopls          # 让 gopls 自动可用 (nixvim 也会装,但保险)
     ];

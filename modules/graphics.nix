@@ -10,20 +10,20 @@
       vulkan-validation-layers
       libva
       libva-utils
-      vaapiVdpau
+      libva-vdpau-driver   # 原 vaapiVdpau,nixpkgs 改了名
       libvdpau-va-gl
       rocmPackages.clr
       rocmPackages.clr.icd
     ];
-    extraPackages32 = with pkgs.driversi686Linux; [
-      mesa
-      vulkan-loader
+    extraPackages32 = [
+      pkgs.driversi686Linux.mesa
+      pkgs.pkgsi686Linux.vulkan-loader   # 32-bit vulkan 不在 driversi686Linux 命名空间
     ];
   };
 
   environment.systemPackages = with pkgs; [
     vulkan-tools
-    glxinfo
+    mesa-demos   # 包含 glxinfo (顶层 glxinfo 已合并进 mesa-demos)
     libva-utils
     vdpauinfo
     clinfo

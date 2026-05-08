@@ -228,16 +228,17 @@ in
       "Mod+9".action            = focus-workspace 9;
       "Mod+0".action            = focus-workspace 10;
 
-      "Mod+Shift+1".action      = move-column-to-workspace 1;
-      "Mod+Shift+2".action      = move-column-to-workspace 2;
-      "Mod+Shift+3".action      = move-column-to-workspace 3;
-      "Mod+Shift+4".action      = move-column-to-workspace 4;
-      "Mod+Shift+5".action      = move-column-to-workspace 5;
-      "Mod+Shift+6".action      = move-column-to-workspace 6;
-      "Mod+Shift+7".action      = move-column-to-workspace 7;
-      "Mod+Shift+8".action      = move-column-to-workspace 8;
-      "Mod+Shift+9".action      = move-column-to-workspace 9;
-      "Mod+Shift+0".action      = move-column-to-workspace 10;
+      # niri-flake 没把 move-column-to-workspace 暴露成函数(它在 niri 里有多参数),只能走 attrs
+      "Mod+Shift+1".action.move-column-to-workspace = [ 1 ];
+      "Mod+Shift+2".action.move-column-to-workspace = [ 2 ];
+      "Mod+Shift+3".action.move-column-to-workspace = [ 3 ];
+      "Mod+Shift+4".action.move-column-to-workspace = [ 4 ];
+      "Mod+Shift+5".action.move-column-to-workspace = [ 5 ];
+      "Mod+Shift+6".action.move-column-to-workspace = [ 6 ];
+      "Mod+Shift+7".action.move-column-to-workspace = [ 7 ];
+      "Mod+Shift+8".action.move-column-to-workspace = [ 8 ];
+      "Mod+Shift+9".action.move-column-to-workspace = [ 9 ];
+      "Mod+Shift+0".action.move-column-to-workspace = [ 10 ];
 
       "Mod+Alt+Page_Up".action      = move-workspace-up;
       "Mod+Alt+Page_Down".action    = move-workspace-down;
@@ -252,11 +253,11 @@ in
       "Mod+Ctrl+WheelScrollDown".action = focus-column-right;
       "Mod+Ctrl+WheelScrollUp".action   = focus-column-left;
 
-      # === 截图 ===
-      "Print".action            = screenshot;
-      "Ctrl+Print".action       = screenshot-screen;
-      "Alt+Print".action        = screenshot-window;
-      "Mod+Shift+S".action      = screenshot;
+      # === 截图 === (niri-flake 把截图当 attrs 而非 action 函数)
+      "Print".action.screenshot = { };
+      "Ctrl+Print".action.screenshot-screen = { };
+      "Alt+Print".action.screenshot-window = { };
+      "Mod+Shift+S".action.screenshot = { };
       # 区域截图直接走 grim+slurp+satty (更接近 hyprshot 体验)
       "Mod+Shift+A".action      = spawn "sh" "-c"
         "grim -g \"$(slurp)\" - | satty --filename - --copy-command wl-copy";

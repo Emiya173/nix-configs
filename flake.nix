@@ -56,8 +56,9 @@
             home-manager.extraSpecialArgs = { inherit inputs; };
             home-manager.users.${userName} = import ./home/home.nix;
             home-manager.backupFileExtension = "hm-backup";
+            # 注意:dms.homeModules.niri 自己 import 了 niri.homeModules.niri,
+            # 这里再加 niri.homeModules.niri 会让 programs.niri.finalConfig 双重声明
             home-manager.sharedModules = [
-              niri.homeModules.niri
               dms.homeModules.dank-material-shell
               dms.homeModules.niri
               nixvim.homeModules.nixvim
