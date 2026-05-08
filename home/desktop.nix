@@ -115,7 +115,10 @@
     };
     # 不要用 GTK_IM_MODULE env (GTK4 已不读),改写 settings.ini
     gtk3.extraConfig.gtk-im-module = "fcitx";
-    gtk4.extraConfig.gtk-im-module = "fcitx";
+    gtk4 = {
+      extraConfig.gtk-im-module = "fcitx";
+      theme = config.gtk.theme;   # 显式继承,silence 26.05 warning
+    };
   };
 
   qt = {

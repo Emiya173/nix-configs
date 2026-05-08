@@ -3,9 +3,9 @@
 {
   programs.git = {
     enable = true;
-    userName = "Emiya173";
-    userEmail = "cno.101@qq.com";
-    extraConfig = {
+    settings = {
+      user.name = "Emiya173";
+      user.email = "cno.101@qq.com";
       init.defaultBranch = "main";
       pull.rebase = false;
       core.editor = "nvim";

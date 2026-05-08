@@ -26,6 +26,7 @@
     userDirs = {
       enable = true;
       createDirectories = true;
+      setSessionVariables = true;   # 26.05 默认改成 false,我们显式保留旧行为(让 $XDG_*_DIR 进 env)
       desktop     = "${config.home.homeDirectory}/Desktop";
       documents   = "${config.home.homeDirectory}/Documents";
       download    = "${config.home.homeDirectory}/Downloads";

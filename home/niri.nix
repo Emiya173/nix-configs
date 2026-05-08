@@ -35,6 +35,9 @@ in
     niri = {
       enableKeybinds = true;
       enableSpawn    = true;
+      # enableKeybinds 已经把 DMS 键位塞进 programs.niri.settings.binds,
+      # includes.enable 又会通过 raw KDL include 同样的键位 -> 重复,关掉
+      includes.enable = false;
     };
   };
 
@@ -318,9 +321,9 @@ in
       { timeout = 600;  command = "dms ipc lock lock"; }
       { timeout = 1200; command = "systemctl suspend"; }
     ];
-    events = [
-      { event = "before-sleep"; command = "dms ipc lock lock"; }
-      { event = "lock";         command = "dms ipc lock lock"; }
-    ];
+    events = {
+      before-sleep = "dms ipc lock lock";
+      lock         = "dms ipc lock lock";
+    };
   };
 }
