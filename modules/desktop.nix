@@ -1,4 +1,10 @@
-{ config, pkgs, lib, inputs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  inputs,
+  ...
+}:
 
 let
   # 从 Arch HyDE 带过来的 Candy 主题,QML 里 QtGraphicalEffects 已替换为 Qt5Compat.GraphicalEffects
@@ -6,25 +12,58 @@ let
     name = "sddm-theme-candy";
     src = ../assets/sddm-theme-candy;
     installPhase = ''
-      mkdir -p $out/share/sddm/themes/Candy
-      cp -r ./* $out/share/sddm/themes/Candy/
+      dst=$out/share/sddm/themes/Candy
+      mkdir -p $dst
+      cp -r ./* $dst/
+      # 原仓库没附带 metadata.desktop —— sddm 没这个文件就识别不到主题,
+      # 报 "theme not found / missing resources",这里补上
+      cat > $dst/metadata.desktop <<EOF
+      [SddmGreeterTheme]
+      Name=Candy
+      Description=Candy (HyDE)
+      Type=sddm-theme
+      Version=0.1
+      MainScript=Main.qml
+      ConfigFile=theme.conf
+      QtVersion=6
+      EOF
     '';
   };
 in
 {
   programs.niri.enable = true;
+  programs.niri.package = pkgs.niri;
 
   services.displayManager.sddm = {
     enable = true;
-    wayland.enable = true;
+    # wayland greeter 需要额外 wayland 合成器 (kwin_wayland 等),没装直接起不来,关掉
+    wayland.enable = false;
     theme = "Candy";
-    # Candy 用了 Qt5Compat.GraphicalEffects + QtQuick.VirtualKeyboard,要把 QML import 路径塞进 sddm
+    # Candy QML import: QtQuick.Controls 2.4 / Qt5Compat.GraphicalEffects /
+    # QtQuick.VirtualKeyboard 2.3 —— 都要塞 QML 模块路径
     extraPackages = with pkgs.kdePackages; [
+      qtdeclarative
       qt5compat
       qtvirtualkeyboard
       qtsvg
     ];
   };
+
+  services.xserver.enable = true;
+  # SDDM 走 X11 模式,greeter 显示在 Xorg primary output 上 —— 钉到 DP-1 (主屏)
+  services.xserver.xrandrHeads = [
+    { output = "DP-1"; primary = true; }
+    { output = "DP-2"; }
+  ];
+  # xrandrHeads 只写 xorg.conf 的 Monitor/Screen section,amdgpu modesetting 经常不认。
+  # 仅设 --primary 也不移动 greeter —— sddm-greeter 走 Qt primaryScreen,
+  # 但 amdgpu 默认把 DP-2 排到 (0,0) -> greeter 还是落副屏。
+  # 直接在 SDDM 阶段关掉 DP-2,让 greeter 只能落主屏;登入后 niri 自己重新
+  # 按 outputs 配置点亮 DP-2 + 旋转 + 摆位。
+  services.xserver.displayManager.setupCommands = ''
+    ${pkgs.xorg.xrandr}/bin/xrandr --output DP-2 --off || true
+    ${pkgs.xorg.xrandr}/bin/xrandr --output DP-1 --primary --auto || true
+  '';
 
   programs.dconf.enable = true;
 
@@ -35,7 +74,10 @@ in
       xdg-desktop-portal-gnome
     ];
     config.niri = {
-      default = [ "gnome" "gtk" ];
+      default = [
+        "gnome"
+        "gtk"
+      ];
     };
   };
 
@@ -44,24 +86,24 @@ in
   programs.kdeconnect.enable = false;
 
   environment.systemPackages = with pkgs; [
-    sddm-candy                 # 自打包的 Candy 主题 (let 里定义)
+    sddm-candy # 自打包的 Candy 主题 (let 里定义)
 
     # niri 周边 (DMS 已接管 wallpaper/clipboard 面板/launcher/通知/电源菜单)
     xwayland-satellite
-    wl-clipboard               # CLI 脚本备用 (wl-copy/wl-paste)
+    wl-clipboard # CLI 脚本备用 (wl-copy/wl-paste)
     wlr-randr
     nwg-displays
     nwg-look
-    brightnessctl              # DMS 走 dms ipc brightness,这里留 CLI 兜底
+    brightnessctl # DMS 走 dms ipc brightness,这里留 CLI 兜底
 
     # Qt 主题 (DMS quickshell 自身不依赖 Kvantum,但 dolphin/ark 等仍需要)
     kdePackages.qtstyleplugin-kvantum
     libsForQt5.qtstyleplugin-kvantum
-    qt6Packages.qt6ct   # 顶层 qt6ct 已 deprecated
+    qt6Packages.qt6ct # 顶层 qt6ct 已 deprecated
     libsForQt5.qt5ct
 
     libnotify
-    polkit_gnome               # DMS 不提供 polkit agent
+    polkit_gnome # DMS 不提供 polkit agent
   ];
 
   # niri 不带 polkit agent,用 gnome 的
