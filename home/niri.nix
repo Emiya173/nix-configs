@@ -121,9 +121,10 @@ in
 
     # ----------------- workspaces -----------------
     # named workspace (类比 hyprland special workspace / scratchpad)
-    # 不指定 open-on-output -> 在哪个屏 toggle 就在哪个屏冒出来
-    # 普通数字 workspace 仍按需自动生成 (Mod+1..0 / Mod+I/U)
-    workspaces."scratch" = { };
+    # 钉到主屏 DP-1 (副屏太窄,scratch 内容铺满不好用)
+    workspaces."scratch" = {
+      open-on-output = "DP-1";
+    };
 
     # ----------------- 杂项 -----------------
     prefer-no-csd = true;
@@ -209,6 +210,13 @@ in
         focus-ring.enable = false;
         border.enable = false;
       }
+      # scratchpad 窗口 (Mod+S 自动开的 kitty --class=scratchpad)
+      # 默认 column 宽 100% -> 铺满主屏 (单 window 自动占满 column 高度);
+      # 不是 fullscreen,所以仍带边框/bar/可被 Mod+, 收别的窗口进列
+      {
+        matches = [ { app-id = "^scratchpad$"; } ];
+        default-column-width = { proportion = 1.0; };
+      }
     ];
 
     # ----------------- 键位 -----------------
@@ -260,7 +268,9 @@ in
       "Mod+Page_Down".action    = focus-workspace-down;
       "Mod+U".action            = focus-workspace-down;
       # Mod+I 占用为 DMS 设置面板; workspace-up 改用 Mod+Page_Up / Mod+Tab
-      "Mod+I".action            = spawn "dms" "ipc" "control-center" "toggle" "";
+      # 用 "settings toggle" 而不是 "control-center toggle" —— DMS 这个版本里
+      # IPC handler target 名是 settings (control-center 是内部别名,某些参数解析不对)
+      "Mod+I".action            = spawn "dms" "ipc" "settings" "toggle";
       "Mod+Shift+U".action      = move-column-to-workspace-down;
       "Mod+Shift+I".action      = move-column-to-workspace-up;
       # Mod+Tab = niri 自带 overview (所有 workspace + 窗口缩略图)
@@ -302,25 +312,30 @@ in
         if [ "$current" = "scratch" ]; then
           niri msg action focus-workspace-previous
         else
+          # focus-workspace 会跳到 scratch 当前所在 output (可能在副屏);
+          # 用 move-workspace-to-monitor DP-1 强制把它搬到主屏 (focus 跟随)
           niri msg action focus-workspace scratch
+          scratch_out=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .output')
+          if [ "$scratch_out" != "DP-1" ]; then
+            niri msg action move-workspace-to-monitor DP-1
+          fi
           scratch_id=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .id')
           count=$(niri msg --json windows | jq --argjson id "$scratch_id" '[.[] | select(.workspace_id==$id)] | length')
           if [ "$count" = "0" ]; then
-            kitty &
+            # --class=scratchpad 用来匹配下面的 window-rule (铺满 100% 宽)
+            kitty --class scratchpad &
           fi
         fi
       '';
       "Mod+Ctrl+S".action.move-column-to-workspace = [ "scratch" ];
 
-      # 滚轮 = 列内窗口上下切焦点 (workspace 切换走 U/I 键盘)
-      "Mod+WheelScrollDown".action       = focus-window-down;
-      "Mod+WheelScrollUp".action         = focus-window-up;
-      "Mod+Shift+WheelScrollDown".action = move-window-down;
-      "Mod+Shift+WheelScrollUp".action   = move-window-up;
-
-      # 列水平滚动 (niri 特色)
-      "Mod+Ctrl+WheelScrollDown".action = focus-column-right;
-      "Mod+Ctrl+WheelScrollUp".action   = focus-column-left;
+      # 滚轮 = 列左右切焦点 (niri 横向布局,滚轮下 = 下一列 = 右)
+      # 列内窗口上下切走 Mod+J/K; workspace 切换走 Mod+U/I/Page_Up/Down
+      "Mod+WheelScrollDown".action       = focus-column-right;
+      "Mod+WheelScrollUp".action         = focus-column-left;
+      # Shift+滚轮 = 移动当前列 (拖着 column 跨 column 走)
+      "Mod+Shift+WheelScrollDown".action = move-column-right;
+      "Mod+Shift+WheelScrollUp".action   = move-column-left;
 
       # === 屏幕间跳焦点 / 搬窗口 (hjkl) ===
       "Mod+Ctrl+H".action       = focus-monitor-left;
@@ -380,9 +395,9 @@ in
       # 所以这里 bind 的是 XF86Tools 而不是 F13。Win 长按仍是 Super modifier
       "XF86Tools".action = spawn "dms" "ipc" "spotlight" "toggle";
 
-      # 键位面板 —— niri 自带 show-hotkey-overlay 只列设了 hotkey-overlay-title 的键,
-      # DMS 的 keybinds 面板能拿到 enableKeybinds 注入的那批+本文件的 binds,带搜索分组
-      "Mod+Slash".action                   = spawn "dms" "ipc" "keybinds" "toggleBinds";
+      # 键位面板 —— DMS 的 keybinds target.toggleBinds 只对 hyprland 用户生效;
+      # niri 用户走 settings.toggleWith 直接打开设置面板的 keybinds tab
+      "Mod+Slash".action                   = spawn "dms" "ipc" "settings" "toggleWith" "keybinds";
     };
 
     # ----------------- 窗口动画 -----------------
