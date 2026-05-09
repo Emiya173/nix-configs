@@ -31,9 +31,7 @@
     vscode
     # jetbrains.idea-community  # 按需放开
 
-    # 工具
-    direnv
-    nix-direnv
+    # 工具 (direnv + nix-direnv 由下面 programs.direnv 自动装,这里不重复)
     just
     typst
     mdbook
