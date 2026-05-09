@@ -24,10 +24,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nix-flatpak = {
-      url = "github:gmodena/nix-flatpak";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # nix-flatpak 已经不再声明 nixpkgs input,follows 会触发 warning
+    nix-flatpak.url = "github:gmodena/nix-flatpak";
   };
 
   outputs = { self, nixpkgs, home-manager, niri, dms, nixvim, nix-flatpak, ... }@inputs:

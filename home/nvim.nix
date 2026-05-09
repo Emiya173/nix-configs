@@ -290,7 +290,7 @@
 
     # 把外部依赖的 CLI (formatter/linter) 一起进 PATH
     extraPackages = with pkgs; [
-      nixfmt-rfc-style
+      nixfmt          # 即原 nixfmt-rfc-style,顶层 alias 已统一
       stylua
       shfmt
       shellcheck

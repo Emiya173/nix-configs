@@ -61,8 +61,8 @@ in
   # 直接在 SDDM 阶段关掉 DP-2,让 greeter 只能落主屏;登入后 niri 自己重新
   # 按 outputs 配置点亮 DP-2 + 旋转 + 摆位。
   services.xserver.displayManager.setupCommands = ''
-    ${pkgs.xorg.xrandr}/bin/xrandr --output DP-2 --off || true
-    ${pkgs.xorg.xrandr}/bin/xrandr --output DP-1 --primary --auto || true
+    ${pkgs.xrandr}/bin/xrandr --output DP-2 --off || true
+    ${pkgs.xrandr}/bin/xrandr --output DP-1 --primary --auto || true
   '';
 
   programs.dconf.enable = true;
