@@ -115,9 +115,12 @@
     };
     # 不要用 GTK_IM_MODULE env (GTK4 已不读),改写 settings.ini
     gtk3.extraConfig.gtk-im-module = "fcitx";
+    # GTK4 主题/css 全交 DMS 写: ~/.config/gtk-4.0/{gtk,dank-colors}.css
+    # gtk4.theme=null = 26.05 新默认: hm 不写 gtk-4.0/gtk.css,
+    # 不跟 DMS 同名文件打架 (legacy 默认是 config.gtk.theme,会写 gtk.css)
     gtk4 = {
       extraConfig.gtk-im-module = "fcitx";
-      theme = config.gtk.theme;   # 显式继承,silence 26.05 warning
+      theme = null;
     };
   };
 
