@@ -48,7 +48,7 @@
       # nh / 系统切换 --------------------------------------------------
       nos   = "nh os switch ~/nix_migrate";              # 切换 (= apt upgrade + dotfile sync)
       nob   = "nh os build  ~/nix_migrate";              # 只 build 验证,不切换
-      nor   = "nh os switch ~/nix_migrate --rollback";   # 回上一代
+      nor   = "nh os rollback";                          # 回上一代 (nh 独立子命令,switch 没有 --rollback flag)
       ninfo = "nh os info";                              # 看 generations 列表
       ngc   = "sudo nh clean all --keep 5 --keep-since 14d";  # GC 老 generations,留 5/14d
 
