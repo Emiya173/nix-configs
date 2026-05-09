@@ -13,7 +13,6 @@
     yarn
 
     # JDK
-    jdk17
     jdk21
     gradle
     kotlin

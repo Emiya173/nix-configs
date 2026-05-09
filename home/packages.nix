@@ -8,7 +8,7 @@
     ripgrep-all
     bat
     eza
-    dust   # 原 du-dust,nixpkgs 改名了
+    dust # 原 du-dust,nixpkgs 改名了
     duf
     btop
     tree
@@ -35,8 +35,9 @@
     zip
 
     # 远程 / 网络
-    rustdesk-flutter   # nixpkgs 中是 rustdesk-flutter,旧 rustdesk 已停更
+    rustdesk-flutter # nixpkgs 中是 rustdesk-flutter,旧 rustdesk 已停更
     scrcpy
+    wlvncc          # wayland 原生 VNC 客户端
     openssh
     sshfs
     rsync
@@ -49,5 +50,7 @@
     nix-output-monitor
     nh
     nvd
+
+    claude-code
   ];
 }
