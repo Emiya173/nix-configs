@@ -9,6 +9,7 @@
     ../../modules/graphics.nix
     ../../modules/desktop.nix
     ../../modules/input-method.nix
+    ../../modules/keyd.nix
     ../../modules/fonts.nix
     ../../modules/locale.nix
     ../../modules/services.nix
