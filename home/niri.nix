@@ -119,6 +119,12 @@ in
       always-center-single-column = false;
     };
 
+    # ----------------- workspaces -----------------
+    # named workspace (类比 hyprland special workspace / scratchpad)
+    # 不指定 open-on-output -> 在哪个屏 toggle 就在哪个屏冒出来
+    # 普通数字 workspace 仍按需自动生成 (Mod+1..0 / Mod+I/U)
+    workspaces."scratch" = { };
+
     # ----------------- 杂项 -----------------
     prefer-no-csd = true;
     hotkey-overlay.skip-at-startup = true;
@@ -240,9 +246,10 @@ in
       "Mod+Shift+K".action      = move-window-up;
       "Mod+Shift+J".action      = move-window-down;
 
-      # 列管理 (Mod+Comma 让给 DMS 设置面板)
-      "Mod+G".action            = consume-window-into-column;
-      "Mod+Apostrophe".action   = expel-window-from-column;
+      # 列管理 —— Mod+Comma 默认被 DMS niri 集成绑成设置面板,
+      # 我们已经把设置面板搬到 Mod+I,这里 mkForce 覆盖
+      "Mod+Comma".action        = lib.mkForce consume-window-into-column;
+      "Mod+Period".action       = expel-window-from-column;
       "Mod+R".action            = switch-preset-column-width;
       "Mod+Shift+R".action      = switch-preset-window-height;
       "Mod+Minus".action        = set-column-width "-10%";
@@ -252,10 +259,13 @@ in
       "Mod+Page_Up".action      = focus-workspace-up;
       "Mod+Page_Down".action    = focus-workspace-down;
       "Mod+U".action            = focus-workspace-down;
-      "Mod+I".action            = focus-workspace-up;
+      # Mod+I 占用为 DMS 设置面板; workspace-up 改用 Mod+Page_Up / Mod+Tab
+      "Mod+I".action            = spawn "dms" "ipc" "control-center" "toggle" "";
       "Mod+Shift+U".action      = move-column-to-workspace-down;
       "Mod+Shift+I".action      = move-column-to-workspace-up;
-      "Mod+Tab".action          = focus-workspace-previous;
+      # Mod+Tab = niri 自带 overview (所有 workspace + 窗口缩略图)
+      # 原 focus-workspace-previous 被覆盖,需要"回上一个 workspace"用 Mod+Page_Up/Down 替代
+      "Mod+Tab".action          = toggle-overview;
 
       "Mod+1".action            = focus-workspace 1;
       "Mod+2".action            = focus-workspace 2;
@@ -283,11 +293,30 @@ in
       "Mod+Alt+Page_Up".action      = move-workspace-up;
       "Mod+Alt+Page_Down".action    = move-workspace-down;
 
-      # 滚轮切 workspace
-      "Mod+WheelScrollDown".action  = focus-workspace-down;
-      "Mod+WheelScrollUp".action    = focus-workspace-up;
-      "Mod+Shift+WheelScrollDown".action = move-column-to-workspace-down;
-      "Mod+Shift+WheelScrollUp".action   = move-column-to-workspace-up;
+      # === Scratchpad (named workspace "scratch", 类比 hyprland special workspace) ===
+      # Mod+S      : toggle —— 在 scratch 时回上一个 workspace;
+      #              否则跳进 scratch,空 scratch 自动开 kitty
+      # Mod+Ctrl+S : 把当前 column 扔进 scratch (默认跟随焦点过去)
+      "Mod+S".action = spawn "sh" "-c" ''
+        current=$(niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .name // empty')
+        if [ "$current" = "scratch" ]; then
+          niri msg action focus-workspace-previous
+        else
+          niri msg action focus-workspace scratch
+          scratch_id=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .id')
+          count=$(niri msg --json windows | jq --argjson id "$scratch_id" '[.[] | select(.workspace_id==$id)] | length')
+          if [ "$count" = "0" ]; then
+            kitty &
+          fi
+        fi
+      '';
+      "Mod+Ctrl+S".action.move-column-to-workspace = [ "scratch" ];
+
+      # 滚轮 = 列内窗口上下切焦点 (workspace 切换走 U/I 键盘)
+      "Mod+WheelScrollDown".action       = focus-window-down;
+      "Mod+WheelScrollUp".action         = focus-window-up;
+      "Mod+Shift+WheelScrollDown".action = move-window-down;
+      "Mod+Shift+WheelScrollUp".action   = move-window-up;
 
       # 列水平滚动 (niri 特色)
       "Mod+Ctrl+WheelScrollDown".action = focus-column-right;
@@ -351,8 +380,9 @@ in
       # 所以这里 bind 的是 XF86Tools 而不是 F13。Win 长按仍是 Super modifier
       "XF86Tools".action = spawn "dms" "ipc" "spotlight" "toggle";
 
-      # 显示 niri 内置 hotkey overlay
-      "Mod+Slash".action                   = show-hotkey-overlay;
+      # 键位面板 —— niri 自带 show-hotkey-overlay 只列设了 hotkey-overlay-title 的键,
+      # DMS 的 keybinds 面板能拿到 enableKeybinds 注入的那批+本文件的 binds,带搜索分组
+      "Mod+Slash".action                   = spawn "dms" "ipc" "keybinds" "toggleBinds";
     };
 
     # ----------------- 窗口动画 -----------------
@@ -368,6 +398,7 @@ in
     wf-recorder    # 屏幕录制 (Mod+Ctrl+R 键位用)
     playerctl      # 媒体键 (Mod+Shift+N/B/P 键位用)
     cliphist       # DMS 剪贴板后端 (spawn-at-startup 里被 wl-paste 喂数据)
+    jq             # Mod+S scratch toggle 脚本读 niri msg --json 用
   ];
 
   # 自动锁屏 + 休眠 (DMS 提供 dms ipc lock lock 给主动锁屏,
