@@ -42,6 +42,36 @@
 
     # `y` 函数由 programs.yazi.enableFishIntegration + shellWrapperName 生成
     # (home/yazi.nix), 这里不要重复定义,否则 cd-on-quit 会被 cat alias 吃掉
+
+    # ---- nix 工作流 abbr (空格展开,看得见再执行) ----
+    shellAbbrs = {
+      # nh / 系统切换 --------------------------------------------------
+      nos   = "nh os switch ~/nix_migrate";              # 切换 (= apt upgrade + dotfile sync)
+      nob   = "nh os build  ~/nix_migrate";              # 只 build 验证,不切换
+      nor   = "nh os switch ~/nix_migrate --rollback";   # 回上一代
+      ninfo = "nh os info";                              # 看 generations 列表
+      ngc   = "sudo nh clean all --keep 5 --keep-since 14d";  # GC 老 generations,留 5/14d
+
+      # flake --------------------------------------------------
+      nfu = "nix flake update ~/nix_migrate";  # 升 input
+      nfc = "nix flake check  ~/nix_migrate";  # eval 自检
+      nfs = "nix flake show   ~/nix_migrate";  # 看 outputs 树
+
+      # 搜索 / 临时拉包 --------------------------------------------------
+      nse   = "nh search";                  # nh search <pkg> (走本地索引,快)
+      nsh   = "nix shell nixpkgs#";         # nix shell nixpkgs#<pkg> (临时 shell)
+      nrun  = "nix run   nixpkgs#";         # nix run   nixpkgs#<pkg> -- args
+      ndev  = "nix develop";                # 进当前目录 flake 的 devShell
+
+      # 调试 --------------------------------------------------
+      nwhy  = "nix why-depends";            # 谁拖进了某个包
+      ntree = "nix-tree";                   # 交互式依赖树
+      nrepl = "nix repl --expr 'import <nixpkgs> {}'";  # 进 repl 试 nix 表达式
+
+      # niri / DMS --------------------------------------------------
+      nmsg = "niri msg";                    # niri msg outputs/windows/action ...
+      dipc = "dms ipc";                     # dms ipc spotlight/lock/audio ...
+    };
   };
 
   programs.starship = {
