@@ -52,6 +52,14 @@ in
     options = btrfsOpts ++ [ "subvol=@snapshots" ];
   };
 
+  # btrfs root subvolume (id=5) —— 不是数据目录,而是给 btrbk 看到 @/@home/@snapshots
+  # 这些 named subvol 用的入口。日常不用进去,只是 btrbk volume 配置指向它
+  fileSystems."/btrfs" = {
+    device = btrfsDevice;
+    fsType = "btrfs";
+    options = btrfsOpts ++ [ "subvolid=5" ];
+  };
+
   fileSystems."/boot" = {
     device = "/dev/disk/by-uuid/BDCB-F864";
     fsType = "vfat";

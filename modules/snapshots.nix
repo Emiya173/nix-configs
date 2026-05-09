@@ -8,17 +8,19 @@
     instances.local = {
       onCalendar = "hourly";          # 触发频率 (实际是否生成由 snapshot_preserve 决定)
       settings = {
-        # 快照与备份目录
-        snapshot_dir = "/snapshots";
         timestamp_format = "long";
 
-        # 全局保留策略: 24 小时 + 7 天 + 4 周 + 3 月
+        # 保留策略: 24 小时 + 7 天 + 4 周 (不留月度)
         # 语法: "<hourly> <daily> <weekly> <monthly>"
-        snapshot_preserve = "24h 7d 4w 3m";
+        snapshot_preserve = "24h 7d 4w";
         snapshot_preserve_min = "2h";
 
-        # 默认全部源都用上面策略
-        volume."/" = {
+        # btrbk 的 volume 必须指向 btrfs root subvol (id=5) 的挂载点 ——
+        # 因为它字面去 <volume>/<subvolume> 找子卷; / 已经是 @ 的内容,
+        # 里面没有 @ 这个名字,所以 readlink /@ 会失败。
+        # /btrfs 这个挂载点在 hardware-configuration.nix 里挂 subvolid=5
+        volume."/btrfs" = {
+          snapshot_dir = "@snapshots";   # = /btrfs/@snapshots,即 /snapshots subvol
           subvolume = {
             "@home" = { snapshot_create = "always"; };
             "@"     = { snapshot_create = "onchange"; snapshot_preserve = "12h 3d"; };
