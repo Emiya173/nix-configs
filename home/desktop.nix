@@ -126,4 +126,28 @@
     platformTheme.name = "qtct";
     style.name = "kvantum";
   };
+
+  # fcitx5-rime 默认 schema 是 luna_pinyin (繁体倾向),切到小鹤双拼简体
+  # double_pinyin_flypy 由 nixpkgs rime-data 提供,无需额外词库
+  home.file.".local/share/fcitx5/rime/default.custom.yaml".text = ''
+    patch:
+      schema_list:
+        - schema: double_pinyin_flypy
+  '';
+
+  # double_pinyin_flypy 默认 simplification=0 (繁体),改默认为简体
+  home.file.".local/share/fcitx5/rime/double_pinyin_flypy.custom.yaml".text = ''
+    patch:
+      switches:
+        - name: ascii_mode
+          reset: 0
+          states: [ 中文, 西文 ]
+        - name: full_shape
+          states: [ 半角, 全角 ]
+        - name: simplification
+          reset: 1
+          states: [ 漢字, 汉字 ]
+        - name: extended_charset
+          states: [ 常用, 增廣 ]
+  '';
 }
