@@ -15,9 +15,10 @@
           enable_transience
       end
 
-      # quickshell 终端配色 (迁移期间可能没有,加判断)
-      if test -f ~/.local/state/quickshell/user/generated/terminal/sequences.txt
-          cat ~/.local/state/quickshell/user/generated/terminal/sequences.txt
+      # quickshell/DMS 终端配色 escape 序列 —— 必须 raw 注入,
+      # 不能走 cat alias (bat) 否则会被画成带框文本。-s 跳过空文件
+      if test -s ~/.local/state/quickshell/user/generated/terminal/sequences.txt
+          command cat ~/.local/state/quickshell/user/generated/terminal/sequences.txt
       end
 
       fish_add_path "$HOME/.local/bin"
@@ -39,19 +40,8 @@
       cat = "bat --paging=never";
     };
 
-    functions = {
-      y = ''
-        set tmp (mktemp -t "yazi-cwd.XXXXXX")
-        yazi $argv --cwd-file="$tmp"
-        if test -f "$tmp"
-            set cwd (cat -- "$tmp")
-            if test -n "$cwd" -a "$cwd" != "$PWD"
-                cd -- "$cwd"
-            end
-        end
-        rm -f -- "$tmp"
-      '';
-    };
+    # `y` 函数由 programs.yazi.enableFishIntegration + shellWrapperName 生成
+    # (home/yazi.nix), 这里不要重复定义,否则 cd-on-quit 会被 cat alias 吃掉
   };
 
   programs.starship = {
