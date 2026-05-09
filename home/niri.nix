@@ -34,18 +34,37 @@ in
     # niri 集成: 让 DMS 自动注入它的键位 + spawn,不要重复手动写
     niri = {
       enableKeybinds = true;
-      enableSpawn    = true;
+      # systemd.enable 已经用 user 服务跑 dms run; enableSpawn 会再往
+      # niri spawn-at-startup 注入一份 -> 两份 dms 实例 / 两条 bar
+      enableSpawn    = false;
       # enableKeybinds 已经把 DMS 键位塞进 programs.niri.settings.binds,
       # includes.enable 又会通过 raw KDL include 同样的键位 -> 重复,关掉
       includes.enable = false;
     };
+
+    # ---- DMS vs 本文件的分工 ----------------------------------------------
+    # DMS 设置面板里"键盘快捷键 / 显示 / 光标主题 / 窗口规则"几项会提示
+    # "找到配置文件,未导入" —— 那是 DMS 想接管 ~/.config/niri/config.kdl,
+    # 但这个文件由 home-manager 写成 nix-store 只读 symlink,DMS 写不回去。
+    # 决策: 这四类全部在本文件 (programs.niri.settings) 声明式管理,
+    #       DMS 的相关面板只当只读展示;它的导入提示直接在 UI 里 Dismiss。
+    # DMS 仍然负责的部分: bar / spotlight / 通知 / 剪贴板面板 / 电源菜单 /
+    #                    动态主题 / 壁纸 / 音量亮度 OSD。
+    # 想改键位/输出/光标/窗口规则 -> 改本文件,然后 nh os switch。
+    # -----------------------------------------------------------------------
   };
 
   programs.niri.settings = {
     # ----------------- input -----------------
     input = {
-      keyboard.xkb = {
-        layout = "us";
+      keyboard = {
+        xkb = {
+          layout = "us";
+          options = "caps:escape";
+        };
+        # niri 默认 600ms / 25cps,首次重复触发偏慢
+        repeat-delay = 250;
+        repeat-rate  = 40;
       };
       touchpad = {
         tap = true;
@@ -59,8 +78,20 @@ in
     };
 
     # ----------------- 输出 / HiDPI -----------------
-    # 多显示器: 安装后用 `niri msg outputs` 查具体名字,然后在这里加 outputs."DP-1" = { ... }
-    # 默认让 niri 自己排列即可
+    # 主屏 = DP-1 (MSI MAG 272U 4K@240Hz),副屏 DP-2 (2560x1600@160Hz) 270° 竖屏摆左侧
+    # 逻辑坐标 = 物理像素 / scale: DP-2 旋转后 1067x1707, DP-1 -> 2560x1440
+    outputs."DP-1" = {
+      mode = { width = 3840; height = 2160; refresh = 239.99; };
+      scale = 1.5;
+      position = { x = 1067; y = 0; };   # = DP-2 旋转后逻辑宽度
+    };
+    outputs."DP-2" = {
+      mode = { width = 2560; height = 1600; refresh = 160.0; };
+      scale = 1.5;
+      # niri 旋转方向和直觉相反,90 才是顶部朝左
+      transform.rotation = 90;
+      position = { x = 0; y = 0; };
+    };
 
     # ----------------- 布局 -----------------
     layout = {
@@ -138,6 +169,12 @@ in
       { command = [ "gnome-keyring-daemon" "--start" "--components=secrets" ]; }
       { command = [ "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1" ]; }
       { command = [ "fcitx5" "-d" ]; }
+      # DMS 剪贴板面板靠 cliphist 持久化,wl-paste --watch 把每次复制写进去
+      { command = [ "sh" "-c" "wl-paste --type text  --watch cliphist store &
+                                wl-paste --type image --watch cliphist store" ]; }
+      # niri 没有 primary monitor 字段,启动焦点按 connector 注册顺序 -> 经常落副屏
+      # 等 DMS / 输出就绪后强制把焦点切到 DP-1
+      { command = [ "sh" "-c" "sleep 1 && niri msg action focus-monitor DP-1" ]; }
     ];
 
     # ----------------- 窗口规则 -----------------
@@ -256,6 +293,17 @@ in
       "Mod+Ctrl+WheelScrollDown".action = focus-column-right;
       "Mod+Ctrl+WheelScrollUp".action   = focus-column-left;
 
+      # === 屏幕间跳焦点 / 搬窗口 (hjkl) ===
+      "Mod+Ctrl+H".action       = focus-monitor-left;
+      "Mod+Ctrl+L".action       = focus-monitor-right;
+      "Mod+Ctrl+K".action       = focus-monitor-up;
+      "Mod+Ctrl+J".action       = focus-monitor-down;
+      # 把当前列搬到另一个屏 (跟当前焦点走)
+      "Mod+Ctrl+Shift+H".action = move-column-to-monitor-left;
+      "Mod+Ctrl+Shift+L".action = move-column-to-monitor-right;
+      "Mod+Ctrl+Shift+K".action = move-column-to-monitor-up;
+      "Mod+Ctrl+Shift+J".action = move-column-to-monitor-down;
+
       # === 截图 === (niri-flake 把截图当 attrs 而非 action 函数)
       "Print".action.screenshot = { };
       "Ctrl+Print".action.screenshot-screen = { };
@@ -289,11 +337,19 @@ in
       "Mod+Shift+N".action    = spawn "playerctl" "next";
       "Mod+Shift+B".action    = spawn "playerctl" "previous";
 
-      # === Session (DMS 提供 Mod+X 电源菜单 + Super+Alt+L 锁屏) ===
-      # 这里保留兜底
+      # === Session ===
+      # 电源菜单 (DMS) —— 用户偏好 Mod+Backspace
+      "Mod+BackSpace".action               = spawn "dms" "ipc" "powermenu" "toggle";
+      "Mod+Alt+L".action                   = spawn "dms" "ipc" "lock" "lock";
+      "Mod+Shift+E".action                 = quit;        # 退出 niri = logout 回 SDDM
       "Mod+Shift+Escape".action            = spawn "systemctl" "suspend";
       "Ctrl+Shift+Alt+Super+Delete".action = spawn "systemctl" "poweroff";
-      "Mod+Shift+E".action                 = quit;
+
+      # === Win 单点 launcher ===
+      # keyd (modules/keyd.nix) 把 LeftMeta tap 映射成 KEY_F13,但默认 xkb keymap
+      # 把 keycode F13 解释成 XF86Tools keysym (老 IBM 键盘 Tools 键的遗留),
+      # 所以这里 bind 的是 XF86Tools 而不是 F13。Win 长按仍是 Super modifier
+      "XF86Tools".action = spawn "dms" "ipc" "spotlight" "toggle";
 
       # 显示 niri 内置 hotkey overlay
       "Mod+Slash".action                   = show-hotkey-overlay;
@@ -311,6 +367,7 @@ in
   home.packages = with pkgs; [
     wf-recorder    # 屏幕录制 (Mod+Ctrl+R 键位用)
     playerctl      # 媒体键 (Mod+Shift+N/B/P 键位用)
+    cliphist       # DMS 剪贴板后端 (spawn-at-startup 里被 wl-paste 喂数据)
   ];
 
   # 自动锁屏 + 休眠 (DMS 提供 dms ipc lock lock 给主动锁屏,
