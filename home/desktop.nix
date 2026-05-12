@@ -54,6 +54,32 @@
     --password-store=gnome-libsecret
   '';
 
+  # 默认应用关联 (xdg-open / 各 app 的 "用...打开" 都读这个)
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "text/html"              = "chromium-browser.desktop";
+      "x-scheme-handler/http"  = "chromium-browser.desktop";
+      "x-scheme-handler/https" = "chromium-browser.desktop";
+      "x-scheme-handler/about" = "chromium-browser.desktop";
+      "x-scheme-handler/unknown" = "chromium-browser.desktop";
+
+      "video/mp4"          = "mpv.desktop";
+      "video/x-matroska"   = "mpv.desktop";
+      "video/webm"         = "mpv.desktop";
+      "video/quicktime"    = "mpv.desktop";
+      "audio/mpeg"         = "mpv.desktop";
+      "audio/flac"         = "mpv.desktop";
+
+      "image/png"  = "imv.desktop";
+      "image/jpeg" = "imv.desktop";
+      "image/gif"  = "imv.desktop";
+      "image/webp" = "imv.desktop";
+
+      "inode/directory" = "org.kde.dolphin.desktop";
+    };
+  };
+
   # 桌面用户级包
   home.packages = with pkgs; [
     # 启动器/剪贴板/通知/电源菜单全归 DMS,不再装 fuzzel/rofi

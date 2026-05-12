@@ -78,11 +78,15 @@ in
         "gnome"
         "gtk"
       ];
+      # gnome portal 不自带 FileChooser,会委托给 nautilus;没装 nautilus 就
+      # 报 "The name is not activatable",表现为应用里点上传/打开文件没反应。
+      "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
     };
   };
 
   services.gvfs.enable = true;
   services.udisks2.enable = true;
+  services.tumbler.enable = true; # 文件管理器视频/PDF/字体缩略图
   programs.kdeconnect.enable = false;
 
   environment.systemPackages = with pkgs; [
@@ -101,6 +105,13 @@ in
     libsForQt5.qtstyleplugin-kvantum
     qt6Packages.qt6ct # 顶层 qt6ct 已 deprecated
     libsForQt5.qt5ct
+    kdePackages.breeze-icons       # 图标兜底 (Papirus / OneUI 没覆盖的 KDE 自家图标)
+    kdePackages.qqc2-desktop-style # QtQuick Controls 2 走桌面风格
+
+    # dolphin 缩略图: 视频 / 图片 / PDF / 字体 / 漫画书 / ePub 等
+    kdePackages.kio-extras
+    kdePackages.kdegraphics-thumbnailers
+    kdePackages.ffmpegthumbs
 
     libnotify
     polkit_gnome # DMS 不提供 polkit agent
