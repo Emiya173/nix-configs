@@ -175,7 +175,8 @@ in
       { command = [ "xwayland-satellite" ]; }
       # gnome-keyring 走 PAM (services.gnome.gnome-keyring + pam.services.sddm),
       # 登入时 sddm 已经用登录密码解锁了 login keyring,不需要再 spawn 一遍
-      { command = [ "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1" ]; }
+      # polkit-gnome 由 modules/desktop.nix 的 systemd user service 启动,
+      # 不需要在这里 spawn (原 Arch 路径 /usr/lib/... 在 NixOS 不存在)
       { command = [ "fcitx5" "-d" ]; }
       # DMS 剪贴板面板靠 cliphist 持久化,wl-paste --watch 把每次复制写进去
       { command = [ "sh" "-c" "wl-paste --type text  --watch cliphist store &
@@ -417,17 +418,11 @@ in
     jq             # Mod+S scratch toggle 脚本读 niri msg --json 用
   ];
 
-  # 自动锁屏 + 休眠 (DMS 提供 dms ipc lock lock 给主动锁屏,
-  # 但 idle 触发还是要 swayidle/hypridle)
-  services.swayidle = {
-    enable = true;
-    timeouts = [
-      { timeout = 600;  command = "dms ipc lock lock"; }
-      { timeout = 1200; command = "systemctl suspend"; }
-    ];
-    events = {
-      before-sleep = "dms ipc lock lock";
-      lock         = "dms ipc lock lock";
-    };
-  };
+  # idle / 锁屏 / 熄屏 / 挂起 全交给 DMS 内建 IdleMonitor + 电源管理:
+  #   - DMS 直接监听 ext-idle-notify-v1 + logind (lid close, systemctl suspend)
+  #   - settings.json 里 acLockTimeout / acMonitorTimeout / acSuspendTimeout 控制 timeout
+  #   - loginctlLockIntegration=true 默认开,systemctl suspend 时自动锁
+  # 不要再叠 swayidle —— 两套 idle watcher 会互相抢 ext-idle-notify-v1 信号
+  # 主动锁屏: Mod+Alt+L → dms ipc lock lock (已经绑在 keybindings 里)
+  # timeout 值在 DMS Settings → Power 里改 (mutable state, 不走 home-manager)
 }
