@@ -173,7 +173,8 @@ in
     # 这里只放 DMS 不管的: xwayland、keyring、polkit、输入法
     spawn-at-startup = [
       { command = [ "xwayland-satellite" ]; }
-      { command = [ "gnome-keyring-daemon" "--start" "--components=secrets" ]; }
+      # gnome-keyring 走 PAM (services.gnome.gnome-keyring + pam.services.sddm),
+      # 登入时 sddm 已经用登录密码解锁了 login keyring,不需要再 spawn 一遍
       { command = [ "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1" ]; }
       { command = [ "fcitx5" "-d" ]; }
       # DMS 剪贴板面板靠 cliphist 持久化,wl-paste --watch 把每次复制写进去

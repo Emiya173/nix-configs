@@ -89,6 +89,12 @@ in
   services.tumbler.enable = true; # 文件管理器视频/PDF/字体缩略图
   programs.kdeconnect.enable = false;
 
+  # gnome-keyring + PAM 自动解锁 (登入时用登录密码解 login keyring)
+  # chromium --password-store=gnome-libsecret / git credential / ssh 私钥都走这个
+  services.gnome.gnome-keyring.enable = true;
+  security.pam.services.sddm.enableGnomeKeyring = true;
+  security.pam.services.login.enableGnomeKeyring = true;
+
   environment.systemPackages = with pkgs; [
     sddm-candy # 自打包的 Candy 主题 (let 里定义)
 
