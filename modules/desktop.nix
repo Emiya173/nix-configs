@@ -106,11 +106,16 @@ in
     nwg-look
     brightnessctl # DMS 走 dms ipc brightness,这里留 CLI 兜底
 
-    # Qt 主题 (DMS quickshell 自身不依赖 Kvantum,但 dolphin/ark 等仍需要)
+    # DMS "System Default" 主题靠 gsettings get org.gnome.desktop.interface icon-theme
+    # gsettings 二进制已经被其他包 (glib-bin) 间接拉进 PATH,只差 schema
+    gsettings-desktop-schemas
+
+    # Qt 主题链: DMS 写 qt6ct.conf + Kvantum/MaterialAdw,kvantum style 是系统级
+    # qt6ct/qt5ct 不能放 system —— 它们的 platformtheme 插件得在 user 的 QT_PLUGIN_PATH
+    # (/etc/profiles/per-user/...) 里 dolphin 才搜得到,system 路径不会被搜。
+    # 见 home/desktop.nix 里 home.packages。
     kdePackages.qtstyleplugin-kvantum
     libsForQt5.qtstyleplugin-kvantum
-    qt6Packages.qt6ct # 顶层 qt6ct 已 deprecated
-    libsForQt5.qt5ct
     kdePackages.breeze-icons       # 图标兜底 (Papirus / OneUI 没覆盖的 KDE 自家图标)
     kdePackages.qqc2-desktop-style # QtQuick Controls 2 走桌面风格
 

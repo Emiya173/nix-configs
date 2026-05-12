@@ -118,6 +118,11 @@
     papirus-icon-theme
     materia-theme
 
+    # qt6ct/qt5ct: 走 user profile 让 dolphin 等 system Qt app 能在 QT_PLUGIN_PATH 里搜到
+    # (home-manager qt.platformTheme.name="qt6ct" 时 platformPackages 表无对应 key,不会自动装,显式补)
+    qt6Packages.qt6ct
+    libsForQt5.qt5ct
+
     # 中文软件 (linuxqq 在 nixpkgs 里就叫 qq)
     wpsoffice-cn
     qq
@@ -135,10 +140,7 @@
       name = "Papirus-Dark";
       package = pkgs.papirus-icon-theme;
     };
-    cursorTheme = {
-      name = "Bibata-Modern-Classic";
-      package = pkgs.bibata-cursors;
-    };
+    # cursorTheme 由 home.pointerCursor 统一管 (覆盖 GTK + XCursor + Wayland)
     # 不要用 GTK_IM_MODULE env (GTK4 已不读),改写 settings.ini
     gtk3.extraConfig.gtk-im-module = "fcitx";
     # GTK4 主题/css 全交 DMS 写: ~/.config/gtk-4.0/{gtk,dank-colors}.css
@@ -150,10 +152,40 @@
     };
   };
 
+  # Qt 主题全交 DMS: DMS 动态生成
+  #   ~/.config/qt6ct/qt6ct.conf    (kvantum + DankMatugen colors + Rubik 字体)
+  #   ~/.config/Kvantum/MaterialAdw (kvantum 主题本体)
+  #   ~/.local/share/color-schemes/DankMatugen*.colors (Matugen 色板)
+  # (kdeglobals 是 Arch HyDE 残留, DMS 不写; KDE 应用 "默认" 配色渲染有问题,
+  # 用户工作流是在 dolphin 顶部 Settings → Color Scheme 手动选其他主题)
+  # 显式 "qt6ct" 而不是 "qtct" —— home-manager 把 "qtct" 映射成 QT_QPA_PLATFORMTHEME=qt5ct,
+  # 而 DMS shell 内部强校验 QT_QPA_PLATFORMTHEME ∈ {gtk3, qt6ct},不满足就在 UI 弹告警。
   qt = {
     enable = true;
-    platformTheme.name = "qtct";
+    platformTheme.name = "qt6ct";
     style.name = "kvantum";
+  };
+
+  # 鼠标指针统一走 home.pointerCursor (会同时塞 GTK + XCursor + Wayland)
+  # 单靠 gtk.cursorTheme 不会传给 Qt/Wayland,dolphin 里指针还是默认 Adwaita
+  home.pointerCursor = {
+    name = "Bibata-Modern-Classic";
+    package = pkgs.bibata-cursors;
+    size = 24;
+    gtk.enable = true;
+    x11.enable = true;
+  };
+
+  # DMS "System Default" 主题靠 gsettings 取值 (SettingsData.qml:1644)
+  # 没设值 → DMS 拿不到 -> updateGtkIconTheme 提前 return -> GTK 应用图标也散架
+  dconf.settings = {
+    "org/gnome/desktop/interface" = {
+      icon-theme   = "Papirus-Dark";
+      cursor-theme = "Bibata-Modern-Classic";
+      gtk-theme    = "Materia-dark";
+      color-scheme = "prefer-dark";
+      font-name    = "Rubik 11";
+    };
   };
 
   # fcitx5-rime 默认 schema 是 luna_pinyin (繁体倾向),切到小鹤双拼简体
