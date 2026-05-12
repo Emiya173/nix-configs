@@ -32,4 +32,12 @@
 
   # 让 NixOS 能跑非 Nix 编译的二进制 (animeko AppImage / 其他 ELF)
   programs.nix-ld.enable = true;
+
+  # AppImage: binfmt=true 注册 binfmt_misc,双击/直接 ./xxx.AppImage 自动走 appimage-run
+  # (extract -> 在 FHS 沙盒里跑)。配合上面 nix-ld 一起,绝大多数 AppImage 不用手动 chmod+
+  # appimage-run 拼命令了。
+  programs.appimage = {
+    enable = true;
+    binfmt = true;
+  };
 }

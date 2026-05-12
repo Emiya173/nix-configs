@@ -243,12 +243,14 @@ in
       # Mod+Space 让给 DMS spotlight
 
       # === 焦点 (列内/列间) — vim-style hjkl ===
-      "Mod+H".action            = focus-column-left;
-      "Mod+L".action            = focus-column-right;
+      # H/L 用 *-or-monitor-*,撞到列首/列尾时跨屏到相邻显示器
+      # (布局: DP-2 在左 x=0, DP-1 在右 x=1067)。专门走 Mod+Ctrl+H/L 仍保留。
+      "Mod+H".action            = focus-column-or-monitor-left;
+      "Mod+L".action            = focus-column-or-monitor-right;
       "Mod+K".action            = focus-window-up;
       "Mod+J".action            = focus-window-down;
-      "Mod+BracketLeft".action  = focus-column-left;
-      "Mod+BracketRight".action = focus-column-right;
+      "Mod+BracketLeft".action  = focus-column-or-monitor-left;
+      "Mod+BracketRight".action = focus-column-or-monitor-right;
 
       # === 移动窗口 ===
       "Mod+Shift+H".action      = move-column-left;
