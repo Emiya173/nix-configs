@@ -46,6 +46,10 @@
     # 终端工具 (neofetch 已 unmaintained / 从 nixpkgs 移除,只留 fastfetch)
     fastfetch
 
+    # 音视频转码: ffmpeg-full = 默认 ffmpeg 加上几乎所有可选库 (nvenc/vaapi/svt-av1/
+    # libfdk_aac/x265/webp/...),省得遇到某些 codec 再切包。
+    ffmpeg-full
+
     # NTFS
     ntfs3g
   ];
