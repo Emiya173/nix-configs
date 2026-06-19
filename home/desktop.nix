@@ -90,7 +90,8 @@
 
     # 图像/媒体
     mpv
-    imv
+    imv     # 默认图片查看器 (dolphin 双击 / xdg-open)
+    gthumb  # 轻量编辑: 裁剪/缩放/旋转/调色/红眼/批量重命名/格式转换
     qbittorrent
 
     # 文件管理
