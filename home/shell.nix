@@ -53,7 +53,7 @@
       ngc   = "sudo nh clean all --keep 5 --keep-since 14d";  # GC 老 generations,留 5/14d
 
       # flake --------------------------------------------------
-      nfu = "nix flake update ~/nix_migrate";  # 升 input
+      nfu = "nix flake update --flake ~/nix_migrate";  # 升 input (尾巴可接 input 名,如 nfu nixpkgs)
       nfc = "nix flake check  ~/nix_migrate";  # eval 自检
       nfs = "nix flake show   ~/nix_migrate";  # 看 outputs 树
 

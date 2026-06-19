@@ -1,8 +1,11 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, inputs, ... }:
 
 {
   programs.nixvim = {
     enable = true;
+    # flake.nix 里 inputs.nixvim.inputs.nixpkgs.follows = "nixpkgs",
+    # nixvim 会因此告警"default 值被 follows 改了请显式确认",这里就是显式确认。
+    nixpkgs.source = inputs.nixpkgs;
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
