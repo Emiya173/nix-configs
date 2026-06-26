@@ -4,7 +4,7 @@
   # Docker
   virtualisation.docker = {
     enable = true;
-    enableOnBoot = false;
+    enableOnBoot = true;
     autoPrune.enable = true;
   };
 

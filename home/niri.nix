@@ -360,6 +360,8 @@ in
       # 区域截图直接走 grim+slurp+satty (更接近 hyprshot 体验)
       "Mod+Shift+A".action      = spawn "sh" "-c"
         "grim -g \"$(slurp)\" - | satty --filename - --copy-command wl-copy";
+      # OCR翻译
+      "Mod+Shift+T".action      = spawn "/home/present/dev/michi-ocr/scripts/michi-ocr.sh";
 
       # === 取色 ===
       "Mod+Shift+C".action      = spawn "hyprpicker" "-a";
