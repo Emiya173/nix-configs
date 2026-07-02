@@ -4,6 +4,12 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    # 仅用于把 claude-code 单独升到 unstable 最新版,不影响主 nixpkgs。
+    # 主 nixpkgs 暂时 pin 在旧 commit,规避 fish 4.8.0 缺 create_manpage_completions.py
+    # 导致 asciinema fish 补全构建失败的上游回归。等上游修好后可删掉本 input,
+    # 把 claude-code overlay 一并去掉,恢复整体 flake update。
+    nixpkgs-claude.url = "github:NixOS/nixpkgs/nixos-unstable";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -49,6 +55,18 @@
         specialArgs = { inherit inputs userName hostName; };
         modules = [
           ./hosts/${hostName}/configuration.nix
+          # 只把 claude-code 一个包换成 unstable 最新版(见 nixpkgs-claude input)。
+          # useGlobalPkgs = true,故此 overlay 同样作用于 home-manager 的包。
+          {
+            nixpkgs.overlays = [
+              (final: prev: {
+                claude-code = (import inputs.nixpkgs-claude {
+                  inherit system;
+                  config.allowUnfree = true;
+                }).claude-code;
+              })
+            ];
+          }
           niri.nixosModules.niri
           nix-flatpak.nixosModules.nix-flatpak
           home-manager.nixosModules.home-manager
