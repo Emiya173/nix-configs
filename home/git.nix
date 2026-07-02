@@ -10,8 +10,13 @@
       pull.rebase = false;
       core.editor = "nvim";
     };
-    # 语法高亮 diff pager (git diff/show/log -p 自动走 delta)
-    delta.enable = true;
+  };
+
+  # 语法高亮 diff pager;enableGitIntegration 写进 git config 的 core.pager
+  # (原 programs.git.delta 已改名为顶层 programs.delta)
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
   };
 
   programs.gh = {
