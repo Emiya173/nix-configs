@@ -31,14 +31,5 @@
 
   nixpkgs.config.allowUnfree = true;
 
-  # 临时跳过 openldap test017 (syncrepl 7 秒 sleep,在 busy 系统上 flaky 经常超时);
-  # nixos-unstable 某些 commit hydra 也挂同样测试 -> cache.nixos.org 没缓存 ->
-  # fetch 不到 -> 本地编又挂同一个测试。upstream 修好后可删
-  nixpkgs.overlays = [
-    (final: prev: {
-      openldap = prev.openldap.overrideAttrs (_: { doCheck = false; });
-    })
-  ];
-
   documentation.nixos.enable = false;
 }

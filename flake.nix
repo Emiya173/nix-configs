@@ -2,16 +2,17 @@
   description = "present-pc NixOS configuration (migrated from Arch)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # 主包源走 stable。升 release 用 ./scripts/bump-release.sh <新版本>,
+    # 会一把改掉这里 + home-manager release-* + nixvim nixos-* 并更新 lock
+    # (flake input url 必须是字面量,版本号没法在 Nix 层单点定义)
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # 仅用于把 claude-code 单独升到 unstable 最新版,不影响主 nixpkgs。
-    # 主 nixpkgs 暂时 pin 在旧 commit,规避 fish 4.8.0 缺 create_manpage_completions.py
-    # 导致 asciinema fish 补全构建失败的上游回归。等上游修好后可删掉本 input,
-    # 把 claude-code overlay 一并去掉,恢复整体 flake update。
-    nixpkgs-claude.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # unstable 精选通道: 只有下方 overlay 点名的包 (目前仅 claude-code) 从这里取;
+    # 同时以 pkgs.unstable.* 暴露整棵,临时要新包时写 unstable.foo 即可
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     home-manager = {
-      url = "github:nix-community/home-manager";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -26,7 +27,7 @@
     };
 
     nixvim = {
-      url = "github:nix-community/nixvim";
+      url = "github:nix-community/nixvim/nixos-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -47,16 +48,22 @@
         specialArgs = { inherit inputs userName hostName; };
         modules = [
           ./hosts/${hostName}/configuration.nix
-          # 只把 claude-code 一个包换成 unstable 最新版(见 nixpkgs-claude input)。
+          # unstable 精选: 主系统跟 stable,点名的包例外走 nixpkgs-unstable。
           # useGlobalPkgs = true,故此 overlay 同样作用于 home-manager 的包。
           {
             nixpkgs.overlays = [
-              (final: prev: {
-                claude-code = (import inputs.nixpkgs-claude {
-                  inherit system;
-                  config.allowUnfree = true;
-                }).claude-code;
-              })
+              (final: prev:
+                let
+                  unstablePkgs = import inputs.nixpkgs-unstable {
+                    inherit system;
+                    config.allowUnfree = true;
+                  };
+                in
+                {
+                  inherit (unstablePkgs) claude-code;
+                  # 整棵挂在 pkgs.unstable 下,按需取新包 (unstable.foo)
+                  unstable = unstablePkgs;
+                })
             ];
           }
           niri.nixosModules.niri
