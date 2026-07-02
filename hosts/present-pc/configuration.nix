@@ -18,6 +18,7 @@
     ../../modules/users.nix
     ../../modules/packages.nix
     ../../modules/nix.nix
+    ../../modules/overlays.nix
   ];
 
   networking.hostName = hostName;
