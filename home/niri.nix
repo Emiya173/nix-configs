@@ -168,6 +168,7 @@ in
         inactive.color = "#3b4252";
       };
       focus-ring.enable = false;
+      shadow.enable = true;   # 窗口阴影 (对齐 hyprland/HyDE 的观感),默认柔和参数
       preset-column-widths = [
         { proportion = 0.33333; }
         { proportion = 0.5;     }
