@@ -10,6 +10,10 @@
     };
 
     settings = {
+      # 关掉配置热重载 (kitty 0.47 起每实例带一个 kitten __watch_conf__ inotify
+      # 监视进程,~25MB/个): 声明式配置只在 nos 时变,而 hm 的 store symlink 被
+      # 反复替换正好触发其累积泄漏 (内存 + watcher 配额)。手动重载 ctrl+shift+f5 仍可用
+      auto_reload_config = -1;
       cursor_shape = "beam";
       cursor_trail = 1;
       window_margin_width = "21.75";
