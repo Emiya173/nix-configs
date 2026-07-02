@@ -38,6 +38,9 @@
     # Go
     go
 
+    # Zig
+    zig
+
     # Haskell (NixOS 上 ghcup 动态链接坑多,直接用 nixpkgs 的 GHC + cabal)
     ghc
     cabal-install
