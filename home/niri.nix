@@ -11,6 +11,52 @@ let
   taskManager    = "kitty -e btop";
   # Spotlight (Mod+Space)、剪贴板 (Mod+V)、亮度/音量 等由 DankMaterialShell 接管
   # 这里只保留它没覆盖到的命令
+
+  # 键位脚本走 writeShellApplication: build 期 shellcheck,runtime 依赖显式声明
+  # (niri/kitty 不进 runtimeInputs —— 用会话里的实例,避免 store 里再拖一份)
+
+  # Mod+S scratch toggle: 在 scratch 时回上一个 workspace,否则跳进 scratch,
+  # 空 scratch 自动开 kitty (--class=scratchpad 匹配下面 window-rule 铺满宽度)
+  scratchToggle = pkgs.writeShellApplication {
+    name = "niri-scratch-toggle";
+    runtimeInputs = [ pkgs.jq ];
+    text = ''
+      current=$(niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .name // empty')
+      if [ "$current" = "scratch" ]; then
+        niri msg action focus-workspace-previous
+      else
+        # focus-workspace 会跳到 scratch 当前所在 output (可能在副屏);
+        # 用 move-workspace-to-monitor DP-1 强制把它搬到主屏 (focus 跟随)
+        niri msg action focus-workspace scratch
+        scratch_out=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .output')
+        if [ "$scratch_out" != "DP-1" ]; then
+          niri msg action move-workspace-to-monitor DP-1
+        fi
+        scratch_id=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .id')
+        count=$(niri msg --json windows | jq --argjson id "$scratch_id" '[.[] | select(.workspace_id==$id)] | length')
+        if [ "$count" = "0" ]; then
+          kitty --class scratchpad &
+        fi
+      fi
+    '';
+  };
+
+  # 录制 toggle: 已在录制 -> SIGINT 收尾并提示;否则按参数开始 (region=选区 / audio=全屏带声)
+  recordToggle = pkgs.writeShellApplication {
+    name = "niri-record-toggle";
+    runtimeInputs = [ pkgs.wf-recorder pkgs.slurp pkgs.libnotify pkgs.procps ];
+    text = ''
+      if pkill -INT -x wf-recorder; then
+        notify-send "wf-recorder" "录制已停止,已保存到 ~/Videos"
+        exit 0
+      fi
+      out="$HOME/Videos/$(date +%Y%m%d-%H%M%S).mp4"
+      case "''${1:-region}" in
+        region) wf-recorder -g "$(slurp)" -f "$out" ;;
+        audio)  wf-recorder --audio -f "$out" ;;
+      esac
+    '';
+  };
 in
 {
   # =====================================================
@@ -84,6 +130,9 @@ in
       mode = { width = 3840; height = 2160; refresh = 239.99; };
       scale = 1.5;
       position = { x = 1067; y = 0; };   # = DP-2 旋转后逻辑宽度
+      # FreeSync 按需开: 平时桌面固定 240Hz,只有匹配 VRR window-rule 的
+      # 全屏窗口 (steam 游戏) 在屏上时才启用,避免桌面场景亮度闪烁
+      variable-refresh-rate = "on-demand";
     };
     outputs."DP-2" = {
       mode = { width = 2560; height = 1600; refresh = 160.0; };
@@ -165,14 +214,16 @@ in
       EDITOR = "nvim";
       VISUAL = "nvim";
 
-      DISPLAY = ":0";
+      # DISPLAY 不再手动写死: niri >= 25.08 内建 xwayland-satellite 集成,
+      # 按需拉起并自动注入它分配的 DISPLAY
     };
 
     # ----------------- 启动项 -----------------
     # DMS 自带 dms run (剪贴板/通知/壁纸/动态主题/spotlight 都归它)
-    # 这里只放 DMS 不管的: xwayland、keyring、polkit、输入法
+    # 这里只放 DMS 不管的: 输入法、剪贴板持久化
     spawn-at-startup = [
-      { command = [ "xwayland-satellite" ]; }
+      # xwayland-satellite 不再手动 spawn: niri >= 25.08 内建集成,首个 X11
+      # 客户端连接时按需拉起 (二进制来自 system PATH, modules/desktop.nix)
       # gnome-keyring 走 PAM (services.gnome.gnome-keyring + pam.services.sddm),
       # 登入时 sddm 已经用登录密码解锁了 login keyring,不需要再 spawn 一遍
       # polkit-gnome 由 modules/desktop.nix 的 systemd user service 启动,
@@ -219,10 +270,26 @@ in
         matches = [ { app-id = "^scratchpad$"; } ];
         default-column-width = { proportion = 1.0; };
       }
+      # steam 游戏在屏时启用 FreeSync (配合 outputs."DP-1".variable-refresh-rate = "on-demand")
+      {
+        matches = [ { app-id = "^steam_app_"; } ];
+        variable-refresh-rate = true;
+      }
     ];
 
     # ----------------- 键位 -----------------
-    binds = with config.lib.niri.actions; {
+    binds = with config.lib.niri.actions;
+      let
+        # Mod+N 聚焦 / Mod+Shift+N 搬列到 workspace N (N=10 -> 键 0)
+        # niri-flake 没把 move-column-to-workspace 暴露成函数(它在 niri 里有多参数),只能走 attrs
+        workspaceBinds = lib.mergeAttrsList (map
+          (n: let key = toString (lib.mod n 10); in {
+            "Mod+${key}".action = focus-workspace n;
+            "Mod+Shift+${key}".action.move-column-to-workspace = [ n ];
+          })
+          (lib.range 1 10));
+      in
+      workspaceBinds // {
       # === 应用启动 (DMS 用 Mod+Space 做 spotlight,这里留快捷键给常用程序) ===
       "Mod+Return".action       = spawn terminal;
       "Mod+T".action            = spawn terminal;
@@ -281,56 +348,15 @@ in
       # 原 focus-workspace-previous 被覆盖,需要"回上一个 workspace"用 Mod+Page_Up/Down 替代
       "Mod+Tab".action          = toggle-overview;
 
-      "Mod+1".action            = focus-workspace 1;
-      "Mod+2".action            = focus-workspace 2;
-      "Mod+3".action            = focus-workspace 3;
-      "Mod+4".action            = focus-workspace 4;
-      "Mod+5".action            = focus-workspace 5;
-      "Mod+6".action            = focus-workspace 6;
-      "Mod+7".action            = focus-workspace 7;
-      "Mod+8".action            = focus-workspace 8;
-      "Mod+9".action            = focus-workspace 9;
-      "Mod+0".action            = focus-workspace 10;
-
-      # niri-flake 没把 move-column-to-workspace 暴露成函数(它在 niri 里有多参数),只能走 attrs
-      "Mod+Shift+1".action.move-column-to-workspace = [ 1 ];
-      "Mod+Shift+2".action.move-column-to-workspace = [ 2 ];
-      "Mod+Shift+3".action.move-column-to-workspace = [ 3 ];
-      "Mod+Shift+4".action.move-column-to-workspace = [ 4 ];
-      "Mod+Shift+5".action.move-column-to-workspace = [ 5 ];
-      "Mod+Shift+6".action.move-column-to-workspace = [ 6 ];
-      "Mod+Shift+7".action.move-column-to-workspace = [ 7 ];
-      "Mod+Shift+8".action.move-column-to-workspace = [ 8 ];
-      "Mod+Shift+9".action.move-column-to-workspace = [ 9 ];
-      "Mod+Shift+0".action.move-column-to-workspace = [ 10 ];
+      # Mod+1..9,0 / Mod+Shift+1..9,0 见上方 workspaceBinds (lib.range 1 10 统一生成)
 
       "Mod+Alt+Page_Up".action      = move-workspace-up;
       "Mod+Alt+Page_Down".action    = move-workspace-down;
 
       # === Scratchpad (named workspace "scratch", 类比 hyprland special workspace) ===
-      # Mod+S      : toggle —— 在 scratch 时回上一个 workspace;
-      #              否则跳进 scratch,空 scratch 自动开 kitty
+      # Mod+S      : toggle (脚本见文件顶部 scratchToggle)
       # Mod+Ctrl+S : 把当前 column 扔进 scratch (默认跟随焦点过去)
-      "Mod+S".action = spawn "sh" "-c" ''
-        current=$(niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .name // empty')
-        if [ "$current" = "scratch" ]; then
-          niri msg action focus-workspace-previous
-        else
-          # focus-workspace 会跳到 scratch 当前所在 output (可能在副屏);
-          # 用 move-workspace-to-monitor DP-1 强制把它搬到主屏 (focus 跟随)
-          niri msg action focus-workspace scratch
-          scratch_out=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .output')
-          if [ "$scratch_out" != "DP-1" ]; then
-            niri msg action move-workspace-to-monitor DP-1
-          fi
-          scratch_id=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .id')
-          count=$(niri msg --json windows | jq --argjson id "$scratch_id" '[.[] | select(.workspace_id==$id)] | length')
-          if [ "$count" = "0" ]; then
-            # --class=scratchpad 用来匹配下面的 window-rule (铺满 100% 宽)
-            kitty --class scratchpad &
-          fi
-        fi
-      '';
+      "Mod+S".action = spawn (lib.getExe scratchToggle);
       "Mod+Ctrl+S".action.move-column-to-workspace = [ "scratch" ];
 
       # 滚轮 = 列左右切焦点 (niri 横向布局,滚轮下 = 下一列 = 右)
@@ -361,16 +387,15 @@ in
       "Mod+Shift+A".action      = spawn "sh" "-c"
         "grim -g \"$(slurp)\" - | satty --filename - --copy-command wl-copy";
       # OCR翻译
-      "Mod+Shift+T".action      = spawn "/home/present/dev/michi-ocr/scripts/michi-ocr.sh";
+      "Mod+Shift+T".action      = spawn "${config.home.homeDirectory}/dev/michi-ocr/scripts/michi-ocr.sh";
 
       # === 取色 ===
       "Mod+Shift+C".action      = spawn "hyprpicker" "-a";
 
-      # === 屏幕录制 (wf-recorder) — 避开 Mod+Shift+R (= switch-preset-window-height) ===
-      "Mod+Ctrl+R".action       = spawn "sh" "-c"
-        "wf-recorder -g \"$(slurp)\" -f $HOME/Videos/$(date +%Y%m%d-%H%M%S).mp4";
-      "Mod+Ctrl+Shift+R".action = spawn "sh" "-c"
-        "wf-recorder --audio -f $HOME/Videos/$(date +%Y%m%d-%H%M%S).mp4";
+      # === 屏幕录制 toggle — 避开 Mod+Shift+R (= switch-preset-window-height) ===
+      # 再按一次同键位停止录制 (脚本见文件顶部 recordToggle)
+      "Mod+Ctrl+R".action       = spawn (lib.getExe recordToggle) "region";
+      "Mod+Ctrl+Shift+R".action = spawn (lib.getExe recordToggle) "audio";
 
       # === 音量 / 亮度 ===
       # XF86Audio* / XF86MonBrightness* 由 DMS 接管 (走 dms ipc audio/brightness ...)
@@ -414,12 +439,10 @@ in
   };
 
   # niri 配套包 — 启动器/剪贴板/通知/电源菜单/壁纸都由 DMS 提供
-  # 这里只放 DMS 没覆盖的功能
+  # 这里只放 DMS 没覆盖的功能 (wf-recorder/jq 已是键位脚本的 runtimeInputs,不用再进 PATH)
   home.packages = with pkgs; [
-    wf-recorder    # 屏幕录制 (Mod+Ctrl+R 键位用)
     playerctl      # 媒体键 (Mod+Shift+N/B/P 键位用)
     cliphist       # DMS 剪贴板后端 (spawn-at-startup 里被 wl-paste 喂数据)
-    jq             # Mod+S scratch toggle 脚本读 niri msg --json 用
   ];
 
   # idle / 锁屏 / 熄屏 / 挂起 全交给 DMS 内建 IdleMonitor + 电源管理:

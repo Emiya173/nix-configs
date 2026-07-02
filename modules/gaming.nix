@@ -16,6 +16,10 @@
   # Steam Controller / Index / Steam Deck dock 等 Valve 设备的 udev rules
   hardware.steam-hardware.enable = true;
 
+  # gamemode: 游戏启动项写 `gamemoderun %command%` 时自动调 CPU governor/进程优先级,
+  # 退出游戏自动还原 (装好后 Steam/Lutris 里按游戏手动加,不全局强制)
+  programs.gamemode.enable = true;
+
   # === Lutris (Wine 前端,跑 epic/gog/盗版以及 native Linux 游戏的启动器) ===
   environment.systemPackages = with pkgs; [
     lutris
