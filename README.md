@@ -21,7 +21,7 @@ Flake + Home Manager 结构,所有用户级配置在 `home/`,系统级在 `modul
 │   ├── keyd.nix               # 内核层 tap-hold: LeftMeta tap → F13 (Win 弹 launcher)
 │   ├── fonts.nix              # CJK + Nerd Font
 │   ├── locale.nix             # zh_CN.UTF-8 + Asia/Shanghai (LC_MESSAGES 跟随中文)
-│   ├── services.nix           # docker / waydroid / sunshine / flatpak
+│   ├── services.nix           # docker / waydroid / sunshine / nix-ld / appimage
 │   ├── snapshots.nix          # btrbk 自动快照
 │   ├── users.nix              # present 用户 + fish
 │   ├── packages.nix           # 系统级包
@@ -138,7 +138,8 @@ sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
   rm -rf ~/.local/share/fcitx5/rime/build && fcitx5 -r
   ```
   当前默认: 小鹤双拼简体 (double_pinyin_flypy, simplification reset=1)。
-  词库 (rime-ice 等) 按需自行 clone,nixpkgs 的 rime-data 已自带 double_pinyin_flypy。
+  词库: rime-ice (雾凇拼音) 已声明式注入 (`fcitx5-rime.override { rimeDataPkgs = ... }`,
+  见 modules/input-method.nix),无需手动 clone;用户词频在 `*.userdb`,是 mutable 数据。
 
 ### Neovim — nixvim 声明式
 
@@ -162,7 +163,8 @@ treesitter / gitsigns / which-key / mini.* / flash / trouble / noice / persisten
 - `qq` — 即 linuxqq,腾讯 QQ
 - `feishu` — 飞书 (撰写时 7.62.9)
 
-flatpak 模块仍开着 (`services.flatpak.enable`),备用于 nixpkgs 没及时跟版本时手动 `flatpak install`。
+flatpak 已移除 (从未装过任何 flatpak 应用);nixpkgs 版本跟不上时优先考虑 AppImage
+(programs.appimage 已配 binfmt),或再把 nix-flatpak input + `services.flatpak` 加回来。
 
 ### Quickshell — DankMaterialShell (DMS)
 

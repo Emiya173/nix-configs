@@ -25,8 +25,8 @@
   # 防止笔记本盖子或电源键意外关机的策略 (台式可酌情)
   services.logind.settings.Login.HandlePowerKey = "ignore";
 
-  # Flatpak (中文软件部分用 flatpak 补)
-  services.flatpak.enable = true;
+  # flatpak 已移除: 中文软件 (qq/feishu/wpsoffice-cn) 全部走 nixpkgs,
+  # 一个 flatpak 都没装过;要用时再加回 services.flatpak + nix-flatpak input
 
   # fstrim 已在 modules/boot.nix 启用
 

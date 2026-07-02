@@ -30,15 +30,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # nix-flatpak 已经不再声明 nixpkgs input,follows 会触发 warning
-    nix-flatpak.url = "github:gmodena/nix-flatpak";
-
     # michi-ocr: 自有仓库,经 flake.lock 锁定即可复现。不 follows nixpkgs ——
     # 它刻意 pin nixos-26.05,跟到 unstable 反而可能踩 GTK/torch 接口变化。
     michi-ocr.url = "github:Emiya173/michi-ocr";
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, dms, nixvim, nix-flatpak, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, niri, dms, nixvim, ... }@inputs:
     let
       system = "x86_64-linux";
       hostName = "present-pc";
@@ -63,7 +60,6 @@
             ];
           }
           niri.nixosModules.niri
-          nix-flatpak.nixosModules.nix-flatpak
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
