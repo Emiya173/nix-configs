@@ -129,7 +129,28 @@ in
     # 中文软件 (linuxqq 在 nixpkgs 里就叫 qq)
     wpsoffice-cn
     qq
-    feishu
+
+    # feishu 自带 chromium (Lark): 启动链 (bytedance-feishu -> feishu ->
+    # .feishu-wrapped) 不读任何 flags 文件 (feishu-flags.conf 是 Arch launcher
+    # 补丁,不是 chromium 行为),也不认 NIXOS_OZONE_WL,裸包只会跑 Xwayland。
+    # 包一层注入 ozone flags;desktop Exec 原本直接指 store 启动脚本,一并改指 wrapper
+    (symlinkJoin {
+      name = "feishu-wayland";
+      paths = [ feishu ];
+      nativeBuildInputs = [ makeWrapper ];
+      postBuild = ''
+        wrapProgram $out/bin/bytedance-feishu \
+          --add-flags "--ozone-platform-hint=auto" \
+          --add-flags "--enable-features=WaylandWindowDecorations" \
+          --add-flags "--enable-wayland-ime" \
+          --add-flags "--wayland-text-input-version=3"
+        rm $out/share/applications/bytedance-feishu.desktop
+        substitute ${feishu}/share/applications/bytedance-feishu.desktop \
+          $out/share/applications/bytedance-feishu.desktop \
+          --replace-fail "Exec=${feishu}/opt/bytedance/feishu/bytedance-feishu" \
+                         "Exec=$out/bin/bytedance-feishu"
+      '';
+    })
   ];
 
   # GTK / Qt 主题
