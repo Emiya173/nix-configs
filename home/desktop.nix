@@ -1,5 +1,17 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
+let
+  # ---- Electron 应用全局 flags (telegram/element/feishu/linuxqq/wpsoffice...) ----
+  # ~/.config/electron-flags.conf 是 Electron 通用约定,所有不带专属 wrapper 的 Electron 都会读;
+  # 不同主版本 Electron 也读各自版本号文件,统一生成避免漏
+  electronFlags = ''
+    --ozone-platform-hint=auto
+    --enable-features=WaylandWindowDecorations
+    --enable-wayland-ime
+    --wayland-text-input-version=3
+  '';
+  electronVersions = [ "" "25" "28" "30" "32" "34" "36" ];
+in
 {
   # niri 详细配置见 ./niri.nix
 
@@ -26,43 +38,39 @@
     ];
   };
 
-  # ---- 其他 Electron 应用全局 flags (telegram/element/feishu/linuxqq/wpsoffice...) ----
-  # ~/.config/electron-flags.conf 是 Electron 通用约定,所有不带专属 wrapper 的 Electron 都会读
-  xdg.configFile."electron-flags.conf".text = ''
-    --ozone-platform-hint=auto
-    --enable-features=WaylandWindowDecorations
-    --enable-wayland-ime
-    --wayland-text-input-version=3
-  '';
-
-  # 不同主版本 Electron 也读各自版本号文件,batch 写一份避免漏
-  xdg.configFile."electron25-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
-  xdg.configFile."electron28-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
-  xdg.configFile."electron30-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
-  xdg.configFile."electron32-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
-  xdg.configFile."electron34-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
-  xdg.configFile."electron36-flags.conf".text = config.xdg.configFile."electron-flags.conf".text;
-
-  # ---- VSCode 也是 Electron,但读自己的 code-flags.conf ----
-  xdg.configFile."code-flags.conf".text = ''
-    --ozone-platform-hint=wayland
-    --gtk-version=4
-    --ignore-gpu-blocklist
-    --enable-features=TouchpadOverscrollHistoryNavigation
-    --enable-wayland-ime
-    --wayland-text-input-version=3
-    --password-store=gnome-libsecret
-  '';
+  xdg.configFile =
+    lib.genAttrs
+      (map (v: "electron${v}-flags.conf") electronVersions)
+      (_: { text = electronFlags; })
+    // {
+      # ---- VSCode 也是 Electron,但读自己的 code-flags.conf ----
+      "code-flags.conf".text = ''
+        --ozone-platform-hint=wayland
+        --gtk-version=4
+        --ignore-gpu-blocklist
+        --enable-features=TouchpadOverscrollHistoryNavigation
+        --enable-wayland-ime
+        --wayland-text-input-version=3
+        --password-store=gnome-libsecret
+      '';
+    };
 
   # 默认应用关联 (xdg-open / 各 app 的 "用...打开" 都读这个)
+  # 注意: nixpkgs 的 chromium 提供的是 chromium-browser.desktop (没有 chromium.desktop)
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
-      "text/html"              = "chromium-browser.desktop";
-      "x-scheme-handler/http"  = "chromium-browser.desktop";
-      "x-scheme-handler/https" = "chromium-browser.desktop";
-      "x-scheme-handler/about" = "chromium-browser.desktop";
+      "text/html"                = "chromium-browser.desktop";
+      "application/pdf"          = "chromium-browser.desktop";
+      "x-scheme-handler/http"    = "chromium-browser.desktop";
+      "x-scheme-handler/https"   = "chromium-browser.desktop";
+      "x-scheme-handler/about"   = "chromium-browser.desktop";
       "x-scheme-handler/unknown" = "chromium-browser.desktop";
+      "x-scheme-handler/tonsite" = "org.telegram.desktop.desktop";
+
+      "application/zip"             = "org.kde.ark.desktop";
+      "application/x-rar"           = "org.kde.ark.desktop";
+      "application/x-7z-compressed" = "org.kde.ark.desktop";
 
       "video/mp4"          = "mpv.desktop";
       "video/x-matroska"   = "mpv.desktop";
@@ -75,7 +83,9 @@
       "image/jpeg" = "imv.desktop";
       "image/gif"  = "imv.desktop";
       "image/webp" = "imv.desktop";
+      "image/heif" = "imv.desktop";
 
+      "text/plain"      = "code.desktop";
       "inode/directory" = "org.kde.dolphin.desktop";
     };
   };
@@ -88,14 +98,12 @@
     telegram-desktop
     element-desktop
 
-    # 图像/媒体
-    mpv
+    # 图像/媒体 (mpv 由 programs.mpv.enable 装)
     imv     # 默认图片查看器 (dolphin 双击 / xdg-open)
     gthumb  # 轻量编辑: 裁剪/缩放/旋转/调色/红眼/批量重命名/格式转换
     qbittorrent
 
-    # 文件管理
-    yazi
+    # 文件管理 (yazi 由 home/yazi.nix programs.yazi 装)
     kdePackages.ark
     kdePackages.dolphin
 
@@ -105,14 +113,8 @@
     satty         # 截图标注 (Mod+Shift+A 键位用)
     hyprpicker    # 取色器 (Mod+Shift+C 键位用)
 
-    # 系统监控
-    nvtopPackages.amd
-    btop
-
-    # 其他
-    libnotify
-    pavucontrol
-    blueman
+    # 系统监控/通知/音量面板/蓝牙: btop 走 programs.btop (shell.nix),
+    # nvtop/libnotify/pavucontrol 在 system 模块,blueman 由 services.blueman 装
 
     # 主题
     bibata-cursors

@@ -85,11 +85,11 @@
     };
     Service = {
       Environment = "MICHI_OCR_SURYA=1";
-      ExecStart = "${pkgs.nix}/bin/nix develop /home/present/dev/michi-ocr --command python -m michi_ocr";
-      WorkingDirectory = "/home/present/dev/michi-ocr";
+      ExecStart = "${pkgs.nix}/bin/nix develop ${config.home.homeDirectory}/dev/michi-ocr --command python -m michi_ocr";
+      WorkingDirectory = "${config.home.homeDirectory}/dev/michi-ocr";
       EnvironmentFile = [
-        "/home/present/.config/michi-ocr/deepl.env"
-        "/home/present/.config/michi-ocr/xfyun.env"
+        "${config.xdg.configHome}/michi-ocr/deepl.env"
+        "${config.xdg.configHome}/michi-ocr/xfyun.env"
       ];
       Restart = "on-failure";
       RestartSec = 3;

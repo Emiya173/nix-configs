@@ -43,11 +43,6 @@
       system = "x86_64-linux";
       hostName = "present-pc";
       userName = "present";
-
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-      };
     in
     {
       nixosConfigurations.${hostName} = nixpkgs.lib.nixosSystem {
@@ -73,7 +68,7 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.extraSpecialArgs = { inherit inputs; };
+            home-manager.extraSpecialArgs = { inherit inputs userName; };
             home-manager.users.${userName} = import ./home/home.nix;
             home-manager.backupFileExtension = "hm-backup";
             # 注意:dms.homeModules.niri 自己 import 了 niri.homeModules.niri,

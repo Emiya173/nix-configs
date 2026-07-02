@@ -3,36 +3,26 @@
 {
   home.packages = with pkgs; [
     # CLI 基础工具
+    # bat/eza/btop/fastfetch 走 programs.* (home/shell.nix);
+    # tree/curl/wget/zip/unzip/p7zip 由 system 提供 (modules/packages.nix)
     fd
     ripgrep
     ripgrep-all
-    bat
-    eza
     dust # 原 du-dust,nixpkgs 改名了
     duf
-    btop
-    tree
     jq
     yq-go
     sd
     tealdeer
     ouch
-    fastfetch
     tokei
     hyperfine
     parallel
     asciinema
     httpie
-    curl
-    wget
     nmap
     iperf3
     socat
-
-    # 文件/归档
-    p7zip
-    unzip
-    zip
 
     # 远程 / 网络
     rustdesk-flutter # nixpkgs 中是 rustdesk-flutter,旧 rustdesk 已停更
