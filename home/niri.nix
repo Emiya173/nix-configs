@@ -21,10 +21,23 @@ let
     name = "niri-scratch-toggle";
     runtimeInputs = [ pkgs.jq ];
     text = ''
+      state="''${XDG_RUNTIME_DIR:-/tmp}/niri-scratch-prev"
       current=$(niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .name // empty')
       if [ "$current" = "scratch" ]; then
-        niri msg action focus-workspace-previous
+        # 优先回进入 scratch 前记下的来源 workspace (按 id 解析成当下的 output+idx)。
+        # 不能只靠 niri 自带 previous 历史: scratch 被 move-workspace-to-monitor
+        # 搬过之后历史会指向 scratch 自身 -> focus-workspace-previous 变 no-op
+        prev_id=$(cat "$state" 2>/dev/null || true)
+        target=$(niri msg --json workspaces | jq -r --arg id "$prev_id" \
+          '.[] | select((.id|tostring)==$id) | "\(.output) \(.idx)"')
+        if [ -n "$target" ]; then
+          niri msg action focus-monitor "''${target% *}"
+          niri msg action focus-workspace "''${target#* }"
+        else
+          niri msg action focus-workspace-previous
+        fi
       else
+        niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .id' > "$state"
         # focus-workspace 会跳到 scratch 当前所在 output (可能在副屏);
         # 用 move-workspace-to-monitor DP-1 强制把它搬到主屏 (focus 跟随)
         niri msg action focus-workspace scratch
