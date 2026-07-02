@@ -45,12 +45,13 @@
 
     # ---- nix 工作流 abbr (空格展开,看得见再执行) ----
     shellAbbrs = {
-      # nh / 系统切换 --------------------------------------------------
-      nos   = "nh os switch ~/nix_migrate";              # 切换 (= apt upgrade + dotfile sync)
-      nob   = "nh os build  ~/nix_migrate";              # 只 build 验证,不切换
-      nor   = "nh os rollback";                          # 回上一代 (nh 独立子命令,switch 没有 --rollback flag)
-      ninfo = "nh os info";                              # 看 generations 列表
-      ngc   = "sudo nh clean all --keep 5 --keep-since 14d";  # GC 老 generations,留 5/14d
+      # nh / 系统切换 (flake 路径走 NH_FLAKE,见 modules/nix.nix programs.nh) ----
+      nos   = "nh os switch";               # 切换 (= apt upgrade + dotfile sync)
+      nob   = "nh os build";                # 只 build 验证,不切换
+      nor   = "nh os rollback";             # 回上一代 (nh 独立子命令,switch 没有 --rollback flag)
+      ninfo = "nh os info";                 # 看 generations 列表
+      # GC 已有 programs.nh.clean 定时器 (--keep 5 --keep-since 14d),这里是手动触发
+      ngc   = "sudo nh clean all --keep 5 --keep-since 14d";
 
       # flake --------------------------------------------------
       nfu = "nix flake update --flake ~/nix_migrate";  # 升 input (尾巴可接 input 名,如 nfu nixpkgs)

@@ -35,10 +35,9 @@
     # mitmproxy 等
     mitmproxy
 
-    # nix 周边
+    # nix 周边 (nh 由 system 的 programs.nh 提供)
     nix-tree
     nix-output-monitor
-    nh
     nvd
 
     claude-code
