@@ -143,6 +143,9 @@ in
       mode = { width = 3840; height = 2160; refresh = 239.99; };
       scale = 1.5;
       position = { x = 1067; y = 0; };   # = DP-2 旋转后逻辑宽度
+      # niri 没有 primary monitor 概念,启动焦点默认按 connector 注册顺序 ->
+      # 经常落副屏;focus-at-startup 声明式钉住主屏
+      focus-at-startup = true;
       # FreeSync 按需开: 平时桌面固定 240Hz,只有匹配 VRR window-rule 的
       # 全屏窗口 (steam 游戏) 在屏上时才启用,避免桌面场景亮度闪烁
       variable-refresh-rate = "on-demand";
@@ -245,9 +248,7 @@ in
       # DMS 剪贴板面板靠 cliphist 持久化,wl-paste --watch 把每次复制写进去
       { command = [ "sh" "-c" "wl-paste --type text  --watch cliphist store &
                                 wl-paste --type image --watch cliphist store" ]; }
-      # niri 没有 primary monitor 字段,启动焦点按 connector 注册顺序 -> 经常落副屏
-      # 等 DMS / 输出就绪后强制把焦点切到 DP-1
-      { command = [ "sh" "-c" "sleep 1 && niri msg action focus-monitor DP-1" ]; }
+      # 启动焦点钉主屏改用 outputs."DP-1".focus-at-startup,不再 sleep hack
     ];
 
     # ----------------- 窗口规则 -----------------
