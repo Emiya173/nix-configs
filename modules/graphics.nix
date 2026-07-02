@@ -1,6 +1,11 @@
 { config, pkgs, ... }:
 
 {
+  # LACT: AMD GPU 风扇曲线/降压/功耗墙 (daemon + `lact gui`)
+  # overdrive 解锁 pp table 调节 (加 amdgpu.ppfeaturemask 内核参数)
+  services.lact.enable = true;
+  hardware.amdgpu.overdrive.enable = true;
+
   hardware.graphics = {
     enable = true;
     enable32Bit = true;

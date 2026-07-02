@@ -57,4 +57,8 @@
     interval = "weekly";
     fileSystems = [ "/" ];
   };
+
+  # SMART 盘健康监控: pre-fail 属性/自检失败时告警 (默认 wall 广播到终端),
+  # 配合快照构成完整链: smartd 预警 -> btrbk 快照兜底
+  services.smartd.enable = true;
 }

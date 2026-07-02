@@ -36,9 +36,15 @@
     kernelParams = [ "quiet" ];
 
     kernel.sysctl = {
-      "vm.swappiness" = 10;
+      # zram 时代 swappiness 反着设: 换页去 zram 是纯内存操作 (压缩),成本远低于
+      # 回收 page cache 后重读磁盘,内核文档建议 zram 场景用高值 (最高 200)
+      "vm.swappiness" = 180;
     };
   };
+
+  # zram 一级 swap (priority 5 > 磁盘分区 -1,优先用): 压缩比通常 3:1+,
+  # 16G 磁盘 swap 分区降级为溢出兜底
+  zramSwap.enable = true;
 
   services.fstrim.enable = true;
 }
