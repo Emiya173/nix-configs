@@ -168,8 +168,9 @@
           jsonls.enable = true;
           tailwindcss.enable = true;
 
-          # Python
-          pyright.enable = true;
+          # Python: ruff 管 lint/格式化/import 整理,ty (Astral) 管类型检查/补全
+          ruff.enable = true;
+          ty.enable = true;
 
           # Go
           gopls.enable = true;
