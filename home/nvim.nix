@@ -185,6 +185,12 @@
           kotlin_language_server.enable = true;
           clangd.enable = true;
 
+          # Haskell (GHC 已在 dev.nix 全局装,不让 nixvim 再拖一份)
+          hls = {
+            enable = true;
+            installGhc = false;
+          };
+
           # YAML / TOML / Markdown
           yamlls.enable = true;
           taplo.enable = true;
