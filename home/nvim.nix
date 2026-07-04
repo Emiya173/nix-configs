@@ -149,6 +149,9 @@
       # ----- LSP -----
       lsp = {
         enable = true;
+        # LspAttach 时对支持的 server 开 vim.lsp.inlay_hint
+        # (rust_analyzer/clangd/hls/ts_ls/ty 均支持)
+        inlayHints = true;
         servers = {
           # Nix
           nil_ls.enable = true;
