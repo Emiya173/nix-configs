@@ -285,6 +285,19 @@ in
         matches = [ { app-id = "^scratchpad$"; } ];
         default-column-width = { proportion = 1.0; };
       }
+      # voidmaker 浮动,固定在右下角; 透明窗口,去掉边框/焦点环/阴影/圆角裁切
+      {
+        matches = [ { app-id = "^voidmaker$"; } ];
+        open-floating = true;
+        default-floating-position = { x = 32; y = 32; relative-to = "bottom-right"; };
+        draw-border-with-background = false;
+        border.enable = false;
+        focus-ring.enable = false;
+        shadow.enable = false;
+        geometry-corner-radius =
+          { top-left = 0.0; top-right = 0.0; bottom-left = 0.0; bottom-right = 0.0; };
+        clip-to-geometry = false;
+      }
       # steam 游戏在屏时启用 FreeSync (配合 outputs."DP-1".variable-refresh-rate = "on-demand")
       {
         matches = [ { app-id = "^steam_app_"; } ];
