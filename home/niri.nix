@@ -286,8 +286,10 @@ in
         default-column-width = { proportion = 1.0; };
       }
       # voidmaker 浮动,固定在右下角; 透明窗口,去掉边框/焦点环/阴影/圆角裁切
+      # (记事本窗口除外,它走下面单独的规则)
       {
         matches = [ { app-id = "^voidmaker$"; } ];
+        excludes = [ { title = "^VoidMaker 记事本$"; } ];
         open-floating = true;
         default-floating-position = { x = 32; y = 32; relative-to = "bottom-right"; };
         draw-border-with-background = false;
@@ -297,6 +299,12 @@ in
         geometry-corner-radius =
           { top-left = 0.0; top-right = 0.0; bottom-left = 0.0; bottom-right = 0.0; };
         clip-to-geometry = false;
+      }
+      # voidmaker 记事本窗口: 浮动 + 半宽
+      {
+        matches = [ { app-id = "^voidmaker$"; title = "^VoidMaker 记事本$"; } ];
+        open-floating = true;
+        default-column-width = { proportion = 0.5; };
       }
       # steam 游戏在屏时启用 FreeSync (配合 outputs."DP-1".variable-refresh-rate = "on-demand")
       {
