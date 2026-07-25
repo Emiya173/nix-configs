@@ -32,5 +32,8 @@
     lutris
     wineWow64Packages.stable # 64-bit wine 直接处理 32-bit Win API (wine 9+ 的新方向)
     winetricks               # 装 dll/字体/dotnet 等到 wine prefix
+    # 帧率悬浮显示 (Vulkan/OpenGL overlay)。装好后 Lutris 里:
+    # 偏好设置 → 全局选项 (或单个游戏 → 系统选项) → 开 "FPS counter (MangoHud)"
+    mangohud
   ];
 }
