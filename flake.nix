@@ -7,7 +7,7 @@
     # (flake input url 必须是字面量,版本号没法在 Nix 层单点定义)
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # unstable 精选通道: 只有下方 overlay 点名的包 (目前仅 claude-code) 从这里取;
+    # unstable 精选通道: 只有下方 overlay 点名的包 (目前 claude-code / codex) 从这里取;
     # 同时以 pkgs.unstable.* 暴露整棵,临时要新包时写 unstable.foo 即可
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -36,13 +36,34 @@
     michi-ocr.url = "github:Emiya173/michi-ocr";
   };
 
-  outputs = { self, nixpkgs, home-manager, niri, dms, nixvim, ... }@inputs:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      home-manager,
+      niri,
+      dms,
+      nixvim,
+      ...
+    }@inputs:
     let
       system = "x86_64-linux";
       hostName = "present-pc";
       userName = "present";
+
+      overlay = import ./overlays/default.nix {
+        inherit inputs;
+      };
+
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [
+          overlay
+        ];
+      };
     in
     {
+      packages.${system}.codex = pkgs.codex;
       nixosConfigurations.${hostName} = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = { inherit inputs userName hostName; };

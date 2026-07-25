@@ -27,7 +27,7 @@
     # 远程 / 网络
     rustdesk-flutter # nixpkgs 中是 rustdesk-flutter,旧 rustdesk 已停更
     scrcpy
-    wlvncc          # wayland 原生 VNC 客户端
+    wlvncc # wayland 原生 VNC 客户端
     openssh
     sshfs
     rsync
@@ -41,5 +41,6 @@
     nvd
 
     claude-code
+    codex
   ];
 }
