@@ -9,6 +9,8 @@ let
   officeSoftware = "wps";
   volumeMixer    = "pavucontrol";
   taskManager    = "kitty -e btop";
+  primaryOutput  = "DP-1";
+  virtualOutput  = "HDMI-A-1";
   # Spotlight (Mod+Space)、剪贴板 (Mod+V)、亮度/音量 等由 DankMaterialShell 接管
   # 这里只保留它没覆盖到的命令
 
@@ -68,6 +70,54 @@ let
         region) wf-recorder -g "$(slurp)" -f "$out" ;;
         audio)  wf-recorder --audio -f "$out" ;;
       esac
+    '';
+  };
+
+  # 将当前窗口送到 HDMI 欺骗器，但让键盘焦点和鼠标立即回到来源实体屏。
+  moveWindowToVirtualOutput = pkgs.writeShellApplication {
+    name = "niri-move-window-to-virtual-output";
+    runtimeInputs = [ pkgs.jq ];
+    text = ''
+      windows=$(niri msg --json windows)
+      window_id=$(printf '%s\n' "$windows" |
+        jq -r '.[] | select(.is_focused) | .id')
+      workspace_id=$(printf '%s\n' "$windows" |
+        jq -r '.[] | select(.is_focused) | .workspace_id')
+
+      if [ -z "$window_id" ] || [ -z "$workspace_id" ]; then
+        exit 0
+      fi
+
+      source_output=$(niri msg --json workspaces |
+        jq -r --argjson id "$workspace_id" \
+          '.[] | select(.id == $id) | .output')
+
+      niri msg action move-window-to-monitor --id "$window_id" "${virtualOutput}"
+
+      if [ -n "$source_output" ] && [ "$source_output" != "${virtualOutput}" ]; then
+        niri msg action focus-monitor "$source_output"
+      fi
+    '';
+  };
+
+  # 清空 HDMI 欺骗器：将该输出所有 workspace 中的窗口移回主屏。
+  releaseVirtualOutput = pkgs.writeShellApplication {
+    name = "niri-release-virtual-output";
+    runtimeInputs = [ pkgs.jq ];
+    text = ''
+      workspace_ids=$(niri msg --json workspaces |
+        jq -c --arg output "${virtualOutput}" \
+          '[.[] | select(.output == $output) | .id]')
+
+      niri msg --json windows |
+        jq -r --argjson workspace_ids "$workspace_ids" \
+          '.[] | select(.workspace_id as $id | $workspace_ids | index($id)) | .id' |
+        while IFS= read -r window_id; do
+          [ -n "$window_id" ] || continue
+          niri msg action move-window-to-monitor --id "$window_id" "${primaryOutput}"
+        done
+
+      niri msg action focus-monitor "${primaryOutput}"
     '';
   };
 in
@@ -156,6 +206,13 @@ in
       # niri 旋转方向和直觉相反,90 才是顶部朝左
       transform.rotation = 90;
       position = { x = 0; y = 0; };
+    };
+    outputs."HDMI-A-1" = {
+      mode = { width = 1920; height = 1080; refresh = 60.0; };
+      scale = 1.0;
+      # DP-1 的逻辑右边界为 3627。只留 1 个逻辑像素的间隔：
+      # niri 的鼠标仍无法跨越，同时尽量缩小输出预览的整体边界。
+      position = { x = 3628; y = 0; };
     };
 
     # ----------------- 布局 -----------------
@@ -432,6 +489,16 @@ in
       # 再按一次同键位停止录制 (脚本见文件顶部 recordToggle)
       "Mod+Ctrl+R".action       = spawn (lib.getExe recordToggle) "region";
       "Mod+Ctrl+Shift+R".action = spawn (lib.getExe recordToggle) "audio";
+
+      # === N150 USB-C 投屏 ===
+      # OBS 固定捕获 niri Dynamic Cast Target；快捷键只切换/清空目标窗口
+      "Mod+Alt+P".action       = set-dynamic-cast-window;
+      "Mod+Alt+Shift+P".action = clear-dynamic-cast-target;
+
+      # === HDMI 欺骗器虚拟输出 ===
+      # O = Output：发送当前窗口后焦点仍留在来源实体屏；Shift+O 清空并移回 DP-1
+      "Mod+Alt+O".action       = spawn (lib.getExe moveWindowToVirtualOutput);
+      "Mod+Alt+Shift+O".action = spawn (lib.getExe releaseVirtualOutput);
 
       # === 音量 / 亮度 ===
       # XF86Audio* / XF86MonBrightness* 由 DMS 接管 (走 dms ipc audio/brightness ...)
