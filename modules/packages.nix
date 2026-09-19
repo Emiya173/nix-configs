@@ -15,6 +15,7 @@
     p7zip
     rar
     unrar
+    bubblewrap
 
     # 系统/磁盘
     btrfs-progs

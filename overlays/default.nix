@@ -10,7 +10,6 @@ let
 in
 {
   inherit (unstablePkgs)
-    claude-code
     codex
     ;
 
