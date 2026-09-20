@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   # ---- Electron 应用全局 flags (telegram/element/feishu/linuxqq/wpsoffice...) ----
@@ -10,7 +15,15 @@ let
     --enable-wayland-ime
     --wayland-text-input-version=3
   '';
-  electronVersions = [ "" "25" "28" "30" "32" "34" "36" ];
+  electronVersions = [
+    ""
+    "25"
+    "28"
+    "30"
+    "32"
+    "34"
+    "36"
+  ];
 in
 {
   # niri 详细配置见 ./niri.nix
@@ -31,17 +44,17 @@ in
       "--gtk-version=4"
       "--ignore-gpu-blocklist"
       "--enable-features=WaylandWindowDecorations,TouchpadOverscrollHistoryNavigation,AcceleratedVideoDecodeLinuxGL,VaapiVideoDecodeLinuxGL"
-      "--enable-wayland-ime"                # fcitx5 中文输入 (Wayland text-input-v3)
+      "--enable-wayland-ime" # fcitx5 中文输入 (Wayland text-input-v3)
       "--wayland-text-input-version=3"
-      "--password-store=gnome-libsecret"    # 需要 gnome-keyring (已在 niri spawn 启动)
+      "--password-store=gnome-libsecret" # 需要 gnome-keyring (已在 niri spawn 启动)
       "--disable-features=ExtensionManifestV2Unsupported"
     ];
   };
 
   xdg.configFile =
-    lib.genAttrs
-      (map (v: "electron${v}-flags.conf") electronVersions)
-      (_: { text = electronFlags; })
+    lib.genAttrs (map (v: "electron${v}-flags.conf") electronVersions) (_: {
+      text = electronFlags;
+    })
     // {
       # ---- VSCode 也是 Electron,但读自己的 code-flags.conf ----
       "code-flags.conf".text = ''
@@ -60,32 +73,32 @@ in
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
-      "text/html"                = "chromium-browser.desktop";
-      "application/pdf"          = "chromium-browser.desktop";
-      "x-scheme-handler/http"    = "chromium-browser.desktop";
-      "x-scheme-handler/https"   = "chromium-browser.desktop";
-      "x-scheme-handler/about"   = "chromium-browser.desktop";
+      "text/html" = "chromium-browser.desktop";
+      "application/pdf" = "chromium-browser.desktop";
+      "x-scheme-handler/http" = "chromium-browser.desktop";
+      "x-scheme-handler/https" = "chromium-browser.desktop";
+      "x-scheme-handler/about" = "chromium-browser.desktop";
       "x-scheme-handler/unknown" = "chromium-browser.desktop";
       "x-scheme-handler/tonsite" = "org.telegram.desktop.desktop";
 
-      "application/zip"             = "org.kde.ark.desktop";
-      "application/x-rar"           = "org.kde.ark.desktop";
+      "application/zip" = "org.kde.ark.desktop";
+      "application/x-rar" = "org.kde.ark.desktop";
       "application/x-7z-compressed" = "org.kde.ark.desktop";
 
-      "video/mp4"          = "mpv.desktop";
-      "video/x-matroska"   = "mpv.desktop";
-      "video/webm"         = "mpv.desktop";
-      "video/quicktime"    = "mpv.desktop";
-      "audio/mpeg"         = "mpv.desktop";
-      "audio/flac"         = "mpv.desktop";
+      "video/mp4" = "mpv.desktop";
+      "video/x-matroska" = "mpv.desktop";
+      "video/webm" = "mpv.desktop";
+      "video/quicktime" = "mpv.desktop";
+      "audio/mpeg" = "mpv.desktop";
+      "audio/flac" = "mpv.desktop";
 
-      "image/png"  = "imv.desktop";
+      "image/png" = "imv.desktop";
       "image/jpeg" = "imv.desktop";
-      "image/gif"  = "imv.desktop";
+      "image/gif" = "imv.desktop";
       "image/webp" = "imv.desktop";
       "image/heif" = "imv.desktop";
 
-      "text/plain"      = "code.desktop";
+      "text/plain" = "code.desktop";
       "inode/directory" = "org.kde.dolphin.desktop";
     };
   };
@@ -99,8 +112,8 @@ in
     element-desktop
 
     # 图像/媒体 (mpv 由 programs.mpv.enable 装)
-    imv     # 默认图片查看器 (dolphin 双击 / xdg-open)
-    gthumb  # 轻量编辑: 裁剪/缩放/旋转/调色/红眼/批量重命名/格式转换
+    imv # 默认图片查看器 (dolphin 双击 / xdg-open)
+    gthumb # 轻量编辑: 裁剪/缩放/旋转/调色/红眼/批量重命名/格式转换
     qbittorrent
 
     # 文件管理 (yazi 由 home/yazi.nix programs.yazi 装)
@@ -108,10 +121,10 @@ in
     kdePackages.dolphin
 
     # 截图/取色 (DMS 不提供这些)
-    grim          # 屏幕抓取
-    slurp         # 区域选择
-    satty         # 截图标注 (Mod+Shift+A 键位用)
-    hyprpicker    # 取色器 (Mod+Shift+C 键位用)
+    grim # 屏幕抓取
+    slurp # 区域选择
+    satty # 截图标注 (Mod+Shift+A 键位用)
+    hyprpicker # 取色器 (Mod+Shift+C 键位用)
 
     # 系统监控/通知/音量面板/蓝牙: btop 走 programs.btop (shell.nix),
     # nvtop/libnotify/pavucontrol 在 system 模块,blueman 由 services.blueman 装
@@ -195,7 +208,7 @@ in
   home.pointerCursor = {
     name = "Bibata-Modern-Classic";
     package = pkgs.bibata-cursors;
-    size = 24;
+    size = 32;
     gtk.enable = true;
     x11.enable = true;
   };
@@ -204,11 +217,11 @@ in
   # 没设值 → DMS 拿不到 -> updateGtkIconTheme 提前 return -> GTK 应用图标也散架
   dconf.settings = {
     "org/gnome/desktop/interface" = {
-      icon-theme   = "Papirus-Dark";
+      icon-theme = "Papirus-Dark";
       cursor-theme = "Bibata-Modern-Classic";
-      gtk-theme    = "Materia-dark";
+      gtk-theme = "Materia-dark";
       color-scheme = "prefer-dark";
-      font-name    = "Rubik 11";
+      font-name = "Rubik 11";
     };
   };
 

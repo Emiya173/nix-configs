@@ -7,7 +7,7 @@
     # (flake input url 必须是字面量,版本号没法在 Nix 层单点定义)
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # unstable 精选通道: 只有下方 overlay 点名的包 (目前 claude-code / codex) 从这里取;
+    # unstable 精选通道: overlay 中的 codex,以及显式使用 unstable.qq 的桌面包;
     # 同时以 pkgs.unstable.* 暴露整棵,临时要新包时写 unstable.foo 即可
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -31,8 +31,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # michi-ocr: 自有仓库,经 flake.lock 锁定即可复现。不 follows nixpkgs ——
-    # 它刻意 pin nixos-26.05,跟到 unstable 反而可能踩 GTK/torch 接口变化。
+    # 锁定 OCR 源码及上游模块；本机 ROCm 包由 packages/michi-ocr 构建。
+    # 保留上游自己的 nixpkgs 锁定，避免改变其独立输出的求值环境。
     michi-ocr.url = "github:Emiya173/michi-ocr";
   };
 
@@ -51,19 +51,49 @@
       hostName = "present-pc";
       userName = "present";
 
-      overlay = import ./overlays/default.nix {
-        inherit inputs;
-      };
-
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [
-          overlay
-        ];
-      };
+      # Export exactly the package set used by the host, including its overlays.
+      pkgs = self.nixosConfigurations.${hostName}.pkgs;
     in
     {
-      packages.${system}.codex = pkgs.codex;
+      packages.${system} = {
+        inherit (pkgs) codex michi-ocr voicevox-image;
+        qq = pkgs.unstable.qq;
+      };
+      formatter.${system} = pkgs.nixfmt;
+      devShells.${system}.default = pkgs.mkShell {
+        packages = [
+          pkgs.nixfmt
+          pkgs.shellcheck
+          pkgs.uv
+          (pkgs.python312.withPackages (ps: [ ps.packaging ]))
+        ];
+      };
+      checks.${system} = {
+        scripts =
+          pkgs.runCommand "check-maintenance-scripts"
+            {
+              nativeBuildInputs = [ pkgs.shellcheck ];
+            }
+            ''
+              shellcheck ${./scripts/check.sh} ${./scripts/bump-release.sh}
+              touch $out
+            '';
+        ocr-lock =
+          pkgs.runCommand "check-ocr-wheel-lock"
+            {
+              nativeBuildInputs = [
+                pkgs.uv
+                (pkgs.python312.withPackages (ps: [ ps.packaging ]))
+              ];
+            }
+            ''
+              export UV_CACHE_DIR=$TMPDIR/uv-cache
+              python ${./packages/michi-ocr/lock-wheels.py} ${inputs.michi-ocr} \
+                --extra-hashes ${./packages/michi-ocr/extra-hashes.json} > wheels.json
+              diff -u ${./packages/michi-ocr/wheels.json} wheels.json
+              touch $out
+            '';
+      };
       nixosConfigurations.${hostName} = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = { inherit inputs userName hostName; };

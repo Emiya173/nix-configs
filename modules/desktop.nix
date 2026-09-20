@@ -3,6 +3,7 @@
   pkgs,
   lib,
   inputs,
+  displayConfig,
   ...
 }:
 
@@ -52,8 +53,11 @@ in
   services.xserver.enable = true;
   # SDDM 走 X11 模式,greeter 显示在 Xorg primary output 上 —— 钉到 DP-1 (主屏)
   services.xserver.xrandrHeads = [
-    { output = "DP-1"; primary = true; }
-    { output = "DP-2"; }
+    {
+      output = displayConfig.primary;
+      primary = true;
+    }
+    { output = displayConfig.secondary; }
   ];
   # xrandrHeads 只写 xorg.conf 的 Monitor/Screen section,amdgpu modesetting 经常不认。
   # 仅设 --primary 也不移动 greeter —— sddm-greeter 走 Qt primaryScreen,
@@ -61,8 +65,8 @@ in
   # 直接在 SDDM 阶段关掉 DP-2,让 greeter 只能落主屏;登入后 niri 自己重新
   # 按 outputs 配置点亮 DP-2 + 旋转 + 摆位。
   services.xserver.displayManager.setupCommands = ''
-    ${pkgs.xrandr}/bin/xrandr --output DP-2 --off || true
-    ${pkgs.xrandr}/bin/xrandr --output DP-1 --primary --auto || true
+    ${pkgs.xrandr}/bin/xrandr --output ${lib.escapeShellArg displayConfig.secondary} --off || true
+    ${pkgs.xrandr}/bin/xrandr --output ${lib.escapeShellArg displayConfig.primary} --primary --auto || true
   '';
 
   programs.dconf.enable = true;
@@ -116,7 +120,7 @@ in
     # 见 home/desktop.nix 里 home.packages。
     kdePackages.qtstyleplugin-kvantum
     libsForQt5.qtstyleplugin-kvantum
-    kdePackages.breeze-icons       # 图标兜底 (Papirus / OneUI 没覆盖的 KDE 自家图标)
+    kdePackages.breeze-icons # 图标兜底 (Papirus / OneUI 没覆盖的 KDE 自家图标)
     kdePackages.qqc2-desktop-style # QtQuick Controls 2 走桌面风格
 
     # dolphin 缩略图: 视频 / 图片 / PDF / 字体 / 漫画书 / ePub 等

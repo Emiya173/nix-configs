@@ -1,27 +1,38 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  displayConfig,
+  ...
+}:
 
 let
   # 应用别名 (对应你 hyprland variables.conf 里的 $terminal/$browser/...)
-  terminal       = "kitty";
-  fileManager    = "dolphin";
-  browser        = "chromium";
-  textEditor     = "code";
+  terminal = "kitty";
+  fileManager = "dolphin";
+  browser = "chromium";
+  textEditor = "code";
   officeSoftware = "wps";
-  volumeMixer    = "pavucontrol";
-  taskManager    = "kitty -e btop";
-  primaryOutput  = "DP-1";
-  virtualOutput  = "HDMI-A-1";
+  volumeMixer = "pavucontrol";
+  taskManager = "kitty -e btop";
+  primaryOutput = displayConfig.primary;
+  virtualOutput = displayConfig.virtual;
   # Spotlight (Mod+Space)、剪贴板 (Mod+V)、亮度/音量 等由 DankMaterialShell 接管
   # 这里只保留它没覆盖到的命令
 
   # 键位脚本走 writeShellApplication: build 期 shellcheck,runtime 依赖显式声明
-  # (niri/kitty 不进 runtimeInputs —— 用会话里的实例,避免 store 里再拖一份)
+  # 客户端版本与会话配置一致,不依赖用户 PATH 的优先级。
 
   # Mod+S scratch toggle: 在 scratch 时回上一个 workspace,否则跳进 scratch,
   # 空 scratch 自动开 kitty (--class=scratchpad 匹配下面 window-rule 铺满宽度)
   scratchToggle = pkgs.writeShellApplication {
     name = "niri-scratch-toggle";
-    runtimeInputs = [ pkgs.jq ];
+    runtimeInputs = [
+      pkgs.jq
+      pkgs.coreutils
+      config.programs.niri.package
+      config.programs.kitty.package
+    ];
     text = ''
       state="''${XDG_RUNTIME_DIR:-/tmp}/niri-scratch-prev"
       current=$(niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .name // empty')
@@ -44,8 +55,8 @@ let
         # 用 move-workspace-to-monitor DP-1 强制把它搬到主屏 (focus 跟随)
         niri msg action focus-workspace scratch
         scratch_out=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .output')
-        if [ "$scratch_out" != "DP-1" ]; then
-          niri msg action move-workspace-to-monitor DP-1
+        if [ "$scratch_out" != ${lib.escapeShellArg primaryOutput} ]; then
+          niri msg action move-workspace-to-monitor ${lib.escapeShellArg primaryOutput}
         fi
         scratch_id=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .id')
         count=$(niri msg --json windows | jq --argjson id "$scratch_id" '[.[] | select(.workspace_id==$id)] | length')
@@ -59,7 +70,13 @@ let
   # 录制 toggle: 已在录制 -> SIGINT 收尾并提示;否则按参数开始 (region=选区 / audio=全屏带声)
   recordToggle = pkgs.writeShellApplication {
     name = "niri-record-toggle";
-    runtimeInputs = [ pkgs.wf-recorder pkgs.slurp pkgs.libnotify pkgs.procps ];
+    runtimeInputs = [
+      pkgs.wf-recorder
+      pkgs.slurp
+      pkgs.libnotify
+      pkgs.procps
+      pkgs.coreutils
+    ];
     text = ''
       if pkill -INT -x wf-recorder; then
         notify-send "wf-recorder" "录制已停止,已保存到 ~/Videos"
@@ -76,7 +93,10 @@ let
   # 将当前窗口送到 HDMI 欺骗器，但让键盘焦点和鼠标立即回到来源实体屏。
   moveWindowToVirtualOutput = pkgs.writeShellApplication {
     name = "niri-move-window-to-virtual-output";
-    runtimeInputs = [ pkgs.jq ];
+    runtimeInputs = [
+      pkgs.jq
+      config.programs.niri.package
+    ];
     text = ''
       windows=$(niri msg --json windows)
       window_id=$(printf '%s\n' "$windows" |
@@ -103,7 +123,10 @@ let
   # 清空 HDMI 欺骗器：将该输出所有 workspace 中的窗口移回主屏。
   releaseVirtualOutput = pkgs.writeShellApplication {
     name = "niri-release-virtual-output";
-    runtimeInputs = [ pkgs.jq ];
+    runtimeInputs = [
+      pkgs.jq
+      config.programs.niri.package
+    ];
     text = ''
       workspace_ids=$(niri msg --json workspaces |
         jq -c --arg output "${virtualOutput}" \
@@ -133,19 +156,19 @@ in
     systemd.enable = true;
 
     # 各功能开关 (默认全开)
-    enableSystemMonitoring  = true;
-    enableVPN               = true;
-    enableDynamicTheming    = true;
-    enableAudioWavelength   = true;
-    enableCalendarEvents    = true;
-    enableClipboardPaste    = true;
+    enableSystemMonitoring = true;
+    enableVPN = true;
+    enableDynamicTheming = true;
+    enableAudioWavelength = true;
+    enableCalendarEvents = true;
+    enableClipboardPaste = true;
 
     # niri 集成: 让 DMS 自动注入它的键位 + spawn,不要重复手动写
     niri = {
       enableKeybinds = true;
       # systemd.enable 已经用 user 服务跑 dms run; enableSpawn 会再往
       # niri spawn-at-startup 注入一份 -> 两份 dms 实例 / 两条 bar
-      enableSpawn    = false;
+      enableSpawn = false;
       # enableKeybinds 已经把 DMS 键位塞进 programs.niri.settings.binds,
       # includes.enable 又会通过 raw KDL include 同样的键位 -> 重复,关掉
       includes.enable = false;
@@ -173,7 +196,7 @@ in
         };
         # niri 默认 600ms / 25cps,首次重复触发偏慢
         repeat-delay = 250;
-        repeat-rate  = 40;
+        repeat-rate = 40;
       };
       touchpad = {
         tap = true;
@@ -181,39 +204,13 @@ in
         dwt = true;
       };
       mouse.accel-profile = "flat";
-      focus-follows-mouse.enable = true;     # 与 hyprland 默认 (follow_mouse=1) 一致
-      warp-mouse-to-focus.enable = true;     # 键盘切焦点时鼠标跟着跳,与上一项互补
+      focus-follows-mouse.enable = true; # 与 hyprland 默认 (follow_mouse=1) 一致
+      warp-mouse-to-focus.enable = true; # 键盘切焦点时鼠标跟着跳,与上一项互补
       workspace-auto-back-and-forth = true;
     };
 
-    # ----------------- 输出 / HiDPI -----------------
-    # 主屏 = DP-1 (MSI MAG 272U 4K@240Hz),副屏 DP-2 (2560x1600@160Hz) 270° 竖屏摆左侧
-    # 逻辑坐标 = 物理像素 / scale: DP-2 旋转后 1067x1707, DP-1 -> 2560x1440
-    outputs."DP-1" = {
-      mode = { width = 3840; height = 2160; refresh = 239.99; };
-      scale = 1.5;
-      position = { x = 1067; y = 0; };   # = DP-2 旋转后逻辑宽度
-      # niri 没有 primary monitor 概念,启动焦点默认按 connector 注册顺序 ->
-      # 经常落副屏;focus-at-startup 声明式钉住主屏
-      focus-at-startup = true;
-      # FreeSync 按需开: 平时桌面固定 240Hz,只有匹配 VRR window-rule 的
-      # 全屏窗口 (steam 游戏) 在屏上时才启用,避免桌面场景亮度闪烁
-      variable-refresh-rate = "on-demand";
-    };
-    outputs."DP-2" = {
-      mode = { width = 2560; height = 1600; refresh = 160.0; };
-      scale = 1.5;
-      # niri 旋转方向和直觉相反,90 才是顶部朝左
-      transform.rotation = 90;
-      position = { x = 0; y = 0; };
-    };
-    outputs."HDMI-A-1" = {
-      mode = { width = 1920; height = 1080; refresh = 60.0; };
-      scale = 1.0;
-      # DP-1 的逻辑右边界为 3627。只留 1 个逻辑像素的间隔：
-      # niri 的鼠标仍无法跨越，同时尽量缩小输出预览的整体边界。
-      position = { x = 3628; y = 0; };
-    };
+    # Physical connectors and geometry are shared with SDDM through the host module.
+    outputs = displayConfig.outputs;
 
     # ----------------- 布局 -----------------
     layout = {
@@ -225,19 +222,21 @@ in
         inactive.color = "#3b4252";
       };
       focus-ring.enable = false;
-      shadow.enable = true;   # 窗口阴影 (对齐 hyprland/HyDE 的观感),默认柔和参数
+      shadow.enable = true; # 窗口阴影 (对齐 hyprland/HyDE 的观感),默认柔和参数
       preset-column-widths = [
         { proportion = 0.33333; }
-        { proportion = 0.5;     }
+        { proportion = 0.5; }
         { proportion = 0.66667; }
-        { proportion = 1.0;     }
+        { proportion = 1.0; }
       ];
       preset-window-heights = [
         { proportion = 0.33333; }
-        { proportion = 0.5;     }
+        { proportion = 0.5; }
         { proportion = 0.66667; }
       ];
-      default-column-width = { proportion = 0.5; };
+      default-column-width = {
+        proportion = 0.5;
+      };
       center-focused-column = "never";
       always-center-single-column = false;
     };
@@ -246,7 +245,7 @@ in
     # named workspace (类比 hyprland special workspace / scratchpad)
     # 钉到主屏 DP-1 (副屏太窄,scratch 内容铺满不好用)
     workspaces."scratch" = {
-      open-on-output = "DP-1";
+      open-on-output = primaryOutput;
     };
 
     # ----------------- 杂项 -----------------
@@ -255,8 +254,8 @@ in
     screenshot-path = "~/Pictures/Screenshots/Screenshot_%Y-%m-%d_%H-%M-%S.png";
 
     cursor = {
-      theme = "Bibata-Modern-Classic";
-      size = 32;
+      theme = config.home.pointerCursor.name;
+      size = config.home.pointerCursor.size;
     };
 
     # ----------------- 环境变量 -----------------
@@ -277,16 +276,15 @@ in
       QT_QPA_PLATFORMTHEME = "qt6ct";
 
       # 光标
-      XCURSOR_THEME = "Bibata-Modern-Classic";
-      XCURSOR_SIZE = "32";
+      XCURSOR_THEME = config.home.pointerCursor.name;
+      XCURSOR_SIZE = toString config.home.pointerCursor.size;
 
       # Electron / chromium 系
       ELECTRON_OZONE_PLATFORM_HINT = "auto";
       NIXOS_OZONE_WL = "1";
 
       # editor
-      EDITOR = "nvim";
-      VISUAL = "nvim";
+      inherit (config.home.sessionVariables) EDITOR VISUAL;
 
       # DISPLAY 不再手动写死: niri >= 25.08 内建 xwayland-satellite 集成,
       # 按需拉起并自动注入它分配的 DISPLAY
@@ -302,10 +300,21 @@ in
       # 登入时 sddm 已经用登录密码解锁了 login keyring,不需要再 spawn 一遍
       # polkit-gnome 由 modules/desktop.nix 的 systemd user service 启动,
       # 不需要在这里 spawn (原 Arch 路径 /usr/lib/... 在 NixOS 不存在)
-      { command = [ "fcitx5" "-d" ]; }
+      {
+        command = [
+          "fcitx5"
+          "-d"
+        ];
+      }
       # DMS 剪贴板面板靠 cliphist 持久化,wl-paste --watch 把每次复制写进去
-      { command = [ "sh" "-c" "wl-paste --type text  --watch cliphist store &
-                                wl-paste --type image --watch cliphist store" ]; }
+      {
+        command = [
+          "sh"
+          "-c"
+          "wl-paste --type text  --watch cliphist store &
+                                wl-paste --type image --watch cliphist store"
+        ];
+      }
       # 启动焦点钉主屏改用 outputs."DP-1".focus-at-startup,不再 sleep hack
     ];
 
@@ -314,7 +323,15 @@ in
       # 默认圆角
       {
         geometry-corner-radius =
-          let r = 8.0; in { top-left = r; top-right = r; bottom-left = r; bottom-right = r; };
+          let
+            r = 8.0;
+          in
+          {
+            top-left = r;
+            top-right = r;
+            bottom-left = r;
+            bottom-right = r;
+          };
         clip-to-geometry = true;
       }
       # pavucontrol/blueman 之类弹窗浮动居中
@@ -340,7 +357,9 @@ in
       # 不是 fullscreen,所以仍带边框/bar/可被 Mod+, 收别的窗口进列
       {
         matches = [ { app-id = "^scratchpad$"; } ];
-        default-column-width = { proportion = 1.0; };
+        default-column-width = {
+          proportion = 1.0;
+        };
       }
       # voidmaker 浮动,固定在右下角; 透明窗口,去掉边框/焦点环/阴影/圆角裁切
       # (记事本窗口除外,它走下面单独的规则)
@@ -348,20 +367,35 @@ in
         matches = [ { app-id = "^voidmaker$"; } ];
         excludes = [ { title = "^VoidMaker 记事本$"; } ];
         open-floating = true;
-        default-floating-position = { x = 32; y = 32; relative-to = "bottom-right"; };
+        default-floating-position = {
+          x = 32;
+          y = 32;
+          relative-to = "bottom-right";
+        };
         draw-border-with-background = false;
         border.enable = false;
         focus-ring.enable = false;
         shadow.enable = false;
-        geometry-corner-radius =
-          { top-left = 0.0; top-right = 0.0; bottom-left = 0.0; bottom-right = 0.0; };
+        geometry-corner-radius = {
+          top-left = 0.0;
+          top-right = 0.0;
+          bottom-left = 0.0;
+          bottom-right = 0.0;
+        };
         clip-to-geometry = false;
       }
       # voidmaker 记事本窗口: 浮动 + 半宽
       {
-        matches = [ { app-id = "^voidmaker$"; title = "^VoidMaker 记事本$"; } ];
+        matches = [
+          {
+            app-id = "^voidmaker$";
+            title = "^VoidMaker 记事本$";
+          }
+        ];
         open-floating = true;
-        default-column-width = { proportion = 0.5; };
+        default-column-width = {
+          proportion = 0.5;
+        };
       }
       # steam 游戏在屏时启用 FreeSync (配合 outputs."DP-1".variable-refresh-rate = "on-demand")
       {
@@ -371,168 +405,177 @@ in
     ];
 
     # ----------------- 键位 -----------------
-    binds = with config.lib.niri.actions;
+    binds =
+      with config.lib.niri.actions;
       let
         # Mod+N 聚焦 / Mod+Shift+N 搬列到 workspace N (N=10 -> 键 0)
         # niri-flake 没把 move-column-to-workspace 暴露成函数(它在 niri 里有多参数),只能走 attrs
-        workspaceBinds = lib.mergeAttrsList (map
-          (n: let key = toString (lib.mod n 10); in {
-            "Mod+${key}".action = focus-workspace n;
-            "Mod+Shift+${key}".action.move-column-to-workspace = [ n ];
-          })
-          (lib.range 1 10));
+        workspaceBinds = lib.mergeAttrsList (
+          map (
+            n:
+            let
+              key = toString (lib.mod n 10);
+            in
+            {
+              "Mod+${key}".action = focus-workspace n;
+              "Mod+Shift+${key}".action.move-column-to-workspace = [ n ];
+            }
+          ) (lib.range 1 10)
+        );
       in
-      workspaceBinds // {
-      # === 应用启动 (DMS 用 Mod+Space 做 spotlight,这里留快捷键给常用程序) ===
-      "Mod+Return".action       = spawn terminal;
-      "Mod+T".action            = spawn terminal;
-      "Ctrl+Alt+T".action       = spawn terminal;
-      "Mod+E".action            = spawn fileManager;
-      "Mod+W".action            = spawn browser;
-      "Mod+Shift+X".action      = spawn textEditor;          # vscode (Mod+X 给 DMS 电源菜单)
-      "Ctrl+Shift+Alt+Mod+W".action = spawn officeSoftware;
-      "Ctrl+Mod+V".action       = spawn volumeMixer;
-      "Ctrl+Shift+Escape".action = spawn "sh" "-c" taskManager;
+      workspaceBinds
+      // {
+        # === 应用启动 (DMS 用 Mod+Space 做 spotlight,这里留快捷键给常用程序) ===
+        "Mod+Return".action = spawn terminal;
+        "Mod+T".action = spawn terminal;
+        "Ctrl+Alt+T".action = spawn terminal;
+        "Mod+E".action = spawn fileManager;
+        "Mod+W".action = spawn browser;
+        "Mod+Shift+X".action = spawn textEditor; # vscode (Mod+X 给 DMS 电源菜单)
+        "Ctrl+Shift+Alt+Mod+W".action = spawn officeSoftware;
+        "Ctrl+Mod+V".action = spawn volumeMixer;
+        "Ctrl+Shift+Escape".action = spawn "sh" "-c" taskManager;
 
-      # === 窗口操作 ===
-      "Mod+C".action            = close-window;
-      "Alt+F4".action           = close-window;
-      "Mod+F".action            = fullscreen-window;
-      "Mod+D".action            = maximize-column;           # 对齐 hyprland (Super+D = maximize)
-      "Mod+Alt+Space".action    = toggle-window-floating;
-      # Mod+Space 让给 DMS spotlight
+        # === 窗口操作 ===
+        "Mod+C".action = close-window;
+        "Alt+F4".action = close-window;
+        "Mod+F".action = fullscreen-window;
+        "Mod+D".action = maximize-column; # 对齐 hyprland (Super+D = maximize)
+        "Mod+Alt+Space".action = toggle-window-floating;
+        # Mod+Space 让给 DMS spotlight
 
-      # === 焦点 (列内/列间) — vim-style hjkl ===
-      # H/L 用 *-or-monitor-*,撞到列首/列尾时跨屏到相邻显示器
-      # (布局: DP-2 在左 x=0, DP-1 在右 x=1067)。专门走 Mod+Ctrl+H/L 仍保留。
-      "Mod+H".action            = focus-column-or-monitor-left;
-      "Mod+L".action            = focus-column-or-monitor-right;
-      "Mod+K".action            = focus-window-up;
-      "Mod+J".action            = focus-window-down;
-      "Mod+BracketLeft".action  = focus-column-or-monitor-left;
-      "Mod+BracketRight".action = focus-column-or-monitor-right;
+        # === 焦点 (列内/列间) — vim-style hjkl ===
+        # H/L 用 *-or-monitor-*,撞到列首/列尾时跨屏到相邻显示器
+        # (布局: DP-2 在左 x=0, DP-1 在右 x=1067)。专门走 Mod+Ctrl+H/L 仍保留。
+        "Mod+H".action = focus-column-or-monitor-left;
+        "Mod+L".action = focus-column-or-monitor-right;
+        "Mod+K".action = focus-window-up;
+        "Mod+J".action = focus-window-down;
+        "Mod+BracketLeft".action = focus-column-or-monitor-left;
+        "Mod+BracketRight".action = focus-column-or-monitor-right;
 
-      # === 移动窗口 ===
-      "Mod+Shift+H".action      = move-column-left;
-      "Mod+Shift+L".action      = move-column-right;
-      "Mod+Shift+K".action      = move-window-up;
-      "Mod+Shift+J".action      = move-window-down;
+        # === 移动窗口 ===
+        "Mod+Shift+H".action = move-column-left;
+        "Mod+Shift+L".action = move-column-right;
+        "Mod+Shift+K".action = move-window-up;
+        "Mod+Shift+J".action = move-window-down;
 
-      # 列管理 —— Mod+Comma 默认被 DMS niri 集成绑成设置面板,
-      # 我们已经把设置面板搬到 Mod+I,这里 mkForce 覆盖
-      "Mod+Comma".action        = lib.mkForce consume-window-into-column;
-      "Mod+Period".action       = expel-window-from-column;
-      "Mod+R".action            = switch-preset-column-width;
-      "Mod+Shift+R".action      = switch-preset-window-height;
-      "Mod+Minus".action        = set-column-width "-10%";
-      "Mod+Equal".action        = set-column-width "+10%";
+        # 列管理 —— Mod+Comma 默认被 DMS niri 集成绑成设置面板,
+        # 我们已经把设置面板搬到 Mod+I,这里 mkForce 覆盖
+        "Mod+Comma".action = lib.mkForce consume-window-into-column;
+        "Mod+Period".action = expel-window-from-column;
+        "Mod+R".action = switch-preset-column-width;
+        "Mod+Shift+R".action = switch-preset-window-height;
+        "Mod+Minus".action = set-column-width "-10%";
+        "Mod+Equal".action = set-column-width "+10%";
 
-      # === Workspace (niri 中纵向,用 U/I 类比 hjkl 的上下) ===
-      "Mod+Page_Up".action      = focus-workspace-up;
-      "Mod+Page_Down".action    = focus-workspace-down;
-      "Mod+U".action            = focus-workspace-down;
-      # Mod+I 占用为 DMS 设置面板; workspace-up 改用 Mod+Page_Up / Mod+Tab
-      # 用 "settings toggle" 而不是 "control-center toggle" —— DMS 这个版本里
-      # IPC handler target 名是 settings (control-center 是内部别名,某些参数解析不对)
-      "Mod+I".action            = spawn "dms" "ipc" "settings" "toggle";
-      "Mod+Shift+U".action      = move-column-to-workspace-down;
-      "Mod+Shift+I".action      = move-column-to-workspace-up;
-      # Mod+Tab = niri 自带 overview (所有 workspace + 窗口缩略图)
-      # 原 focus-workspace-previous 被覆盖,需要"回上一个 workspace"用 Mod+Page_Up/Down 替代
-      "Mod+Tab".action          = toggle-overview;
+        # === Workspace (niri 中纵向,用 U/I 类比 hjkl 的上下) ===
+        "Mod+Page_Up".action = focus-workspace-up;
+        "Mod+Page_Down".action = focus-workspace-down;
+        "Mod+U".action = focus-workspace-down;
+        # Mod+I 占用为 DMS 设置面板; workspace-up 改用 Mod+Page_Up / Mod+Tab
+        # 用 "settings toggle" 而不是 "control-center toggle" —— DMS 这个版本里
+        # IPC handler target 名是 settings (control-center 是内部别名,某些参数解析不对)
+        "Mod+I".action = spawn "dms" "ipc" "settings" "toggle";
+        "Mod+Shift+U".action = move-column-to-workspace-down;
+        "Mod+Shift+I".action = move-column-to-workspace-up;
+        # Mod+Tab = niri 自带 overview (所有 workspace + 窗口缩略图)
+        # 原 focus-workspace-previous 被覆盖,需要"回上一个 workspace"用 Mod+Page_Up/Down 替代
+        "Mod+Tab".action = toggle-overview;
 
-      # Mod+1..9,0 / Mod+Shift+1..9,0 见上方 workspaceBinds (lib.range 1 10 统一生成)
+        # Mod+1..9,0 / Mod+Shift+1..9,0 见上方 workspaceBinds (lib.range 1 10 统一生成)
 
-      "Mod+Alt+Page_Up".action      = move-workspace-up;
-      "Mod+Alt+Page_Down".action    = move-workspace-down;
+        "Mod+Alt+Page_Up".action = move-workspace-up;
+        "Mod+Alt+Page_Down".action = move-workspace-down;
 
-      # === Scratchpad (named workspace "scratch", 类比 hyprland special workspace) ===
-      # Mod+S      : toggle (脚本见文件顶部 scratchToggle)
-      # Mod+Ctrl+S : 把当前 column 扔进 scratch (默认跟随焦点过去)
-      "Mod+S".action = spawn (lib.getExe scratchToggle);
-      "Mod+Ctrl+S".action.move-column-to-workspace = [ "scratch" ];
+        # === Scratchpad (named workspace "scratch", 类比 hyprland special workspace) ===
+        # Mod+S      : toggle (脚本见文件顶部 scratchToggle)
+        # Mod+Ctrl+S : 把当前 column 扔进 scratch (默认跟随焦点过去)
+        "Mod+S".action = spawn (lib.getExe scratchToggle);
+        "Mod+Ctrl+S".action.move-column-to-workspace = [ "scratch" ];
 
-      # 滚轮 = 列左右切焦点 (niri 横向布局,滚轮下 = 下一列 = 右)
-      # 列内窗口上下切走 Mod+J/K; workspace 切换走 Mod+U/I/Page_Up/Down
-      "Mod+WheelScrollDown".action       = focus-column-right;
-      "Mod+WheelScrollUp".action         = focus-column-left;
-      # Shift+滚轮 = 移动当前列 (拖着 column 跨 column 走)
-      "Mod+Shift+WheelScrollDown".action = move-column-right;
-      "Mod+Shift+WheelScrollUp".action   = move-column-left;
+        # 滚轮 = 列左右切焦点 (niri 横向布局,滚轮下 = 下一列 = 右)
+        # 列内窗口上下切走 Mod+J/K; workspace 切换走 Mod+U/I/Page_Up/Down
+        "Mod+WheelScrollDown".action = focus-column-right;
+        "Mod+WheelScrollUp".action = focus-column-left;
+        # Shift+滚轮 = 移动当前列 (拖着 column 跨 column 走)
+        "Mod+Shift+WheelScrollDown".action = move-column-right;
+        "Mod+Shift+WheelScrollUp".action = move-column-left;
 
-      # === 屏幕间跳焦点 / 搬窗口 (hjkl) ===
-      "Mod+Ctrl+H".action       = focus-monitor-left;
-      "Mod+Ctrl+L".action       = focus-monitor-right;
-      "Mod+Ctrl+K".action       = focus-monitor-up;
-      "Mod+Ctrl+J".action       = focus-monitor-down;
-      # 把当前列搬到另一个屏 (跟当前焦点走)
-      "Mod+Ctrl+Shift+H".action = move-column-to-monitor-left;
-      "Mod+Ctrl+Shift+L".action = move-column-to-monitor-right;
-      "Mod+Ctrl+Shift+K".action = move-column-to-monitor-up;
-      "Mod+Ctrl+Shift+J".action = move-column-to-monitor-down;
+        # === 屏幕间跳焦点 / 搬窗口 (hjkl) ===
+        "Mod+Ctrl+H".action = focus-monitor-left;
+        "Mod+Ctrl+L".action = focus-monitor-right;
+        "Mod+Ctrl+K".action = focus-monitor-up;
+        "Mod+Ctrl+J".action = focus-monitor-down;
+        # 把当前列搬到另一个屏 (跟当前焦点走)
+        "Mod+Ctrl+Shift+H".action = move-column-to-monitor-left;
+        "Mod+Ctrl+Shift+L".action = move-column-to-monitor-right;
+        "Mod+Ctrl+Shift+K".action = move-column-to-monitor-up;
+        "Mod+Ctrl+Shift+J".action = move-column-to-monitor-down;
 
-      # === 截图 === (niri-flake 把截图当 attrs 而非 action 函数)
-      "Print".action.screenshot = { };
-      "Ctrl+Print".action.screenshot-screen = { };
-      "Alt+Print".action.screenshot-window = { };
-      "Mod+Shift+S".action.screenshot = { };
-      # 区域截图直接走 grim+slurp+satty (更接近 hyprshot 体验)
-      "Mod+Shift+A".action      = spawn "sh" "-c"
-        "grim -g \"$(slurp)\" - | satty --filename - --copy-command wl-copy";
-      # OCR翻译
-      "Mod+Shift+T".action      = spawn "${config.home.homeDirectory}/dev/michi-ocr/scripts/michi-ocr.sh";
+        # === 截图 === (niri-flake 把截图当 attrs 而非 action 函数)
+        "Print".action.screenshot = { };
+        "Ctrl+Print".action.screenshot-screen = { };
+        "Alt+Print".action.screenshot-window = { };
+        "Mod+Shift+S".action.screenshot = { };
+        # 区域截图直接走 grim+slurp+satty (更接近 hyprshot 体验)
+        "Mod+Shift+A".action =
+          spawn "sh" "-c"
+            "grim -g \"$(slurp)\" - | satty --filename - --copy-command wl-copy";
+        # OCR翻译
+        "Mod+Shift+T".action = spawn "${config.services.michi-ocr.package}/bin/michi-ocr-trigger";
 
-      # === 取色 ===
-      "Mod+Shift+C".action      = spawn "hyprpicker" "-a";
+        # === 取色 ===
+        "Mod+Shift+C".action = spawn "hyprpicker" "-a";
 
-      # === 屏幕录制 toggle — 避开 Mod+Shift+R (= switch-preset-window-height) ===
-      # 再按一次同键位停止录制 (脚本见文件顶部 recordToggle)
-      "Mod+Ctrl+R".action       = spawn (lib.getExe recordToggle) "region";
-      "Mod+Ctrl+Shift+R".action = spawn (lib.getExe recordToggle) "audio";
+        # === 屏幕录制 toggle — 避开 Mod+Shift+R (= switch-preset-window-height) ===
+        # 再按一次同键位停止录制 (脚本见文件顶部 recordToggle)
+        "Mod+Ctrl+R".action = spawn (lib.getExe recordToggle) "region";
+        "Mod+Ctrl+Shift+R".action = spawn (lib.getExe recordToggle) "audio";
 
-      # === N150 USB-C 投屏 ===
-      # OBS 固定捕获 niri Dynamic Cast Target；快捷键只切换/清空目标窗口
-      "Mod+Alt+P".action       = set-dynamic-cast-window;
-      "Mod+Alt+Shift+P".action = clear-dynamic-cast-target;
+        # === N150 USB-C 投屏 ===
+        # OBS 固定捕获 niri Dynamic Cast Target；快捷键只切换/清空目标窗口
+        "Mod+Alt+P".action = set-dynamic-cast-window;
+        "Mod+Alt+Shift+P".action = clear-dynamic-cast-target;
 
-      # === HDMI 欺骗器虚拟输出 ===
-      # O = Output：发送当前窗口后焦点仍留在来源实体屏；Shift+O 清空并移回 DP-1
-      "Mod+Alt+O".action       = spawn (lib.getExe moveWindowToVirtualOutput);
-      "Mod+Alt+Shift+O".action = spawn (lib.getExe releaseVirtualOutput);
+        # === HDMI 欺骗器虚拟输出 ===
+        # O = Output：发送当前窗口后焦点仍留在来源实体屏；Shift+O 清空并移回 DP-1
+        "Mod+Alt+O".action = spawn (lib.getExe moveWindowToVirtualOutput);
+        "Mod+Alt+Shift+O".action = spawn (lib.getExe releaseVirtualOutput);
 
-      # === 音量 / 亮度 ===
-      # XF86Audio* / XF86MonBrightness* 由 DMS 接管 (走 dms ipc audio/brightness ...)
-      # Mod+Shift+M 留给手动静音作为快捷键备份
-      "Mod+Shift+M".action           = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
-      "Mod+Alt+M".action             = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle";
+        # === 音量 / 亮度 ===
+        # XF86Audio* / XF86MonBrightness* 由 DMS 接管 (走 dms ipc audio/brightness ...)
+        # Mod+Shift+M 留给手动静音作为快捷键备份
+        "Mod+Shift+M".action = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
+        "Mod+Alt+M".action = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle";
 
-      # === 媒体 ===
-      "XF86AudioPlay".action  = spawn "playerctl" "play-pause";
-      "XF86AudioPause".action = spawn "playerctl" "play-pause";
-      "XF86AudioNext".action  = spawn "playerctl" "next";
-      "XF86AudioPrev".action  = spawn "playerctl" "previous";
-      "Mod+Shift+P".action    = spawn "playerctl" "play-pause";
-      "Mod+Shift+N".action    = spawn "playerctl" "next";
-      "Mod+Shift+B".action    = spawn "playerctl" "previous";
+        # === 媒体 ===
+        "XF86AudioPlay".action = spawn "playerctl" "play-pause";
+        "XF86AudioPause".action = spawn "playerctl" "play-pause";
+        "XF86AudioNext".action = spawn "playerctl" "next";
+        "XF86AudioPrev".action = spawn "playerctl" "previous";
+        "Mod+Shift+P".action = spawn "playerctl" "play-pause";
+        "Mod+Shift+N".action = spawn "playerctl" "next";
+        "Mod+Shift+B".action = spawn "playerctl" "previous";
 
-      # === Session ===
-      # 电源菜单 (DMS) —— 用户偏好 Mod+Backspace
-      "Mod+BackSpace".action               = spawn "dms" "ipc" "powermenu" "toggle";
-      "Mod+Alt+L".action                   = spawn "dms" "ipc" "lock" "lock";
-      "Mod+Shift+E".action                 = quit;        # 退出 niri = logout 回 SDDM
-      "Mod+Shift+Escape".action            = spawn "systemctl" "suspend";
-      "Ctrl+Shift+Alt+Super+Delete".action = spawn "systemctl" "poweroff";
+        # === Session ===
+        # 电源菜单 (DMS) —— 用户偏好 Mod+Backspace
+        "Mod+BackSpace".action = spawn "dms" "ipc" "powermenu" "toggle";
+        "Mod+Alt+L".action = spawn "dms" "ipc" "lock" "lock";
+        "Mod+Shift+E".action = quit; # 退出 niri = logout 回 SDDM
+        "Mod+Shift+Escape".action = spawn "systemctl" "suspend";
+        "Ctrl+Shift+Alt+Super+Delete".action = spawn "systemctl" "poweroff";
 
-      # === Win 单点 launcher ===
-      # keyd (modules/keyd.nix) 把 LeftMeta tap 映射成 KEY_F13,但默认 xkb keymap
-      # 把 keycode F13 解释成 XF86Tools keysym (老 IBM 键盘 Tools 键的遗留),
-      # 所以这里 bind 的是 XF86Tools 而不是 F13。Win 长按仍是 Super modifier
-      "XF86Tools".action = spawn "dms" "ipc" "spotlight" "toggle";
+        # === Win 单点 launcher ===
+        # keyd (modules/keyd.nix) 把 LeftMeta tap 映射成 KEY_F13,但默认 xkb keymap
+        # 把 keycode F13 解释成 XF86Tools keysym (老 IBM 键盘 Tools 键的遗留),
+        # 所以这里 bind 的是 XF86Tools 而不是 F13。Win 长按仍是 Super modifier
+        "XF86Tools".action = spawn "dms" "ipc" "spotlight" "toggle";
 
-      # 键位面板 —— DMS 的 keybinds target.toggleBinds 只对 hyprland 用户生效;
-      # niri 用户走 settings.toggleWith 直接打开设置面板的 keybinds tab
-      "Mod+Slash".action                   = spawn "dms" "ipc" "settings" "toggleWith" "keybinds";
-    };
+        # 键位面板 —— DMS 的 keybinds target.toggleBinds 只对 hyprland 用户生效;
+        # niri 用户走 settings.toggleWith 直接打开设置面板的 keybinds tab
+        "Mod+Slash".action = spawn "dms" "ipc" "settings" "toggleWith" "keybinds";
+      };
 
     # ----------------- 窗口动画 -----------------
     animations = {
@@ -544,8 +587,8 @@ in
   # niri 配套包 — 启动器/剪贴板/通知/电源菜单/壁纸都由 DMS 提供
   # 这里只放 DMS 没覆盖的功能 (wf-recorder/jq 已是键位脚本的 runtimeInputs,不用再进 PATH)
   home.packages = with pkgs; [
-    playerctl      # 媒体键 (Mod+Shift+N/B/P 键位用)
-    cliphist       # DMS 剪贴板后端 (spawn-at-startup 里被 wl-paste 喂数据)
+    playerctl # 媒体键 (Mod+Shift+N/B/P 键位用)
+    cliphist # DMS 剪贴板后端 (spawn-at-startup 里被 wl-paste 喂数据)
   ];
 
   # idle / 锁屏 / 熄屏 / 挂起 全交给 DMS 内建 IdleMonitor + 电源管理:

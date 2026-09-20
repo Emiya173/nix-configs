@@ -1,4 +1,11 @@
-{ config, pkgs, lib, inputs, userName, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  inputs,
+  userName,
+  ...
+}:
 
 {
   imports = [
@@ -9,6 +16,8 @@
     ./desktop.nix
     ./niri.nix
     ./dev.nix
+    ./michi-ocr.nix
+    ./voicevox.nix
     ./nvim.nix
     ./yazi.nix
   ];
@@ -26,7 +35,7 @@
     userDirs = {
       enable = true;
       createDirectories = true;
-      setSessionVariables = true;   # 26.05 默认改成 false,我们显式保留旧行为(让 $XDG_*_DIR 进 env)
+      setSessionVariables = true; # 26.05 默认改成 false,我们显式保留旧行为(让 $XDG_*_DIR 进 env)
     };
 
     # mimeApps 统一在 home/desktop.nix 声明 (单一来源,避免两处合并出重复条目)

@@ -16,16 +16,84 @@
 #   nvme1n1p1  vfat   FAT32          BDCB-F864                    -> /boot
 #   nvme1n1p2  swap                  76877c07-f399-4058-...       -> [SWAP]
 #   nvme1n1p3  btrfs        Present  6c70dc3c-cb9a-...            -> 多子卷
-{ config, lib, pkgs, modulesPath, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  modulesPath,
+  ...
+}:
 
 let
   btrfsDevice = "/dev/disk/by-uuid/6c70dc3c-cb9a-4899-bf8e-966826d297bb";
-  btrfsOpts = [ "compress=zstd:3" "noatime" "ssd" "space_cache=v2" "discard=async" ];
+  btrfsOpts = [
+    "compress=zstd:3"
+    "noatime"
+    "ssd"
+    "space_cache=v2"
+    "discard=async"
+  ];
+  displayConfig = rec {
+    primary = "DP-1";
+    secondary = "DP-2";
+    virtual = "HDMI-A-1";
+    outputs = {
+      ${primary} = {
+        mode = {
+          width = 3840;
+          height = 2160;
+          refresh = 239.99;
+        };
+        scale = 1.5;
+        position = {
+          x = 1067;
+          y = 0;
+        };
+        focus-at-startup = true;
+        variable-refresh-rate = "on-demand";
+      };
+      ${secondary} = {
+        mode = {
+          width = 2560;
+          height = 1600;
+          refresh = 160.0;
+        };
+        scale = 1.5;
+        transform.rotation = 90;
+        position = {
+          x = 0;
+          y = 0;
+        };
+      };
+      ${virtual} = {
+        mode = {
+          width = 1920;
+          height = 1080;
+          refresh = 60.0;
+        };
+        scale = 1.0;
+        # Leave one logical pixel after the primary screen to block cursor travel.
+        position = {
+          x = 3628;
+          y = 0;
+        };
+      };
+    };
+  };
 in
 {
+  _module.args.displayConfig = displayConfig;
+  home-manager.extraSpecialArgs = { inherit displayConfig; };
+
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
 
-  boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "ahci" "usb_storage" "sd_mod" ];
+  boot.initrd.availableKernelModules = [
+    "nvme"
+    "xhci_pci"
+    "ahci"
+    "usb_storage"
+    "sd_mod"
+  ];
   boot.kernelModules = [ "kvm-intel" ];
 
   fileSystems."/" = {
@@ -63,7 +131,10 @@ in
   fileSystems."/boot" = {
     device = "/dev/disk/by-uuid/BDCB-F864";
     fsType = "vfat";
-    options = [ "fmask=0077" "dmask=0077" ];
+    options = [
+      "fmask=0077"
+      "dmask=0077"
+    ];
   };
 
   swapDevices = [

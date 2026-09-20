@@ -1,27 +1,39 @@
 #!/usr/bin/env bash
-# 在 Arch (或任何装了 nix daemon 的非 NixOS 系统) 上验证本 flake
-# 前置:
-#   sudo pacman -S nix
-#   sudo systemctl enable --now nix-daemon
-#   sudo usermod -aG nix-users $USER  # 重登 shell
-
+# Layers: evaluation, build-time checks, critical packages, complete system.
 set -euo pipefail
-
 cd "$(dirname "$0")/.."
 
 NIX_FLAGS=(--extra-experimental-features 'nix-command flakes')
 
-echo "==> nix flake check (eval 全部 outputs / 检查所有 module 能 evaluate)"
-nix "${NIX_FLAGS[@]}" flake check --no-build
+check_eval() {
+  echo "==> Evaluate locked flake outputs"
+  nix "${NIX_FLAGS[@]}" flake check --no-build --no-update-lock-file
+  nix "${NIX_FLAGS[@]}" eval --no-update-lock-file \
+    .#nixosConfigurations.present-pc.config.system.build.toplevel.drvPath --raw
+  echo
+}
 
-echo "==> 单独 eval 系统配置 (确认 hosts/present-pc 整套能 build 出 derivation)"
-nix "${NIX_FLAGS[@]}" eval ".#nixosConfigurations.present-pc.config.system.build.toplevel.drvPath" --raw
-echo
+check_builds() {
+  echo "==> Build checks (script lint and OCR lock consistency)"
+  nix "${NIX_FLAGS[@]}" flake check --no-update-lock-file
+}
 
-echo "==> 列出全部 systemPackages (抽查)"
-nix "${NIX_FLAGS[@]}" eval ".#nixosConfigurations.present-pc.config.environment.systemPackages" \
-  --apply 'pkgs: builtins.length pkgs' \
-  | xargs -I {} echo "    systemPackages count: {}"
+check_packages() {
+  echo "==> Build QQ, OCR (including offline smoke test), and VoiceVox image"
+  nix "${NIX_FLAGS[@]}" build --no-link --no-update-lock-file \
+    .#qq .#michi-ocr .#voicevox-image
+}
 
-echo
-echo "==> 全部检查通过"
+check_system() {
+  echo "==> Build full system without activation"
+  nh os build . -- --no-update-lock-file
+}
+
+case "${1:-eval}" in
+  eval) check_eval ;;
+  checks) check_builds ;;
+  packages) check_packages ;;
+  system) check_system ;;
+  all) check_eval; check_builds; check_packages; check_system ;;
+  *) echo "Usage: $0 [eval|checks|packages|system|all]" >&2; exit 2 ;;
+esac

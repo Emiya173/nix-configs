@@ -127,6 +127,61 @@ sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
 **注意**: flakes 只看 git-tracked 文件 —— 新建的 .nix 文件 build 前必须先 `git add`,
 否则 `nh` 会报 `Path 'xxx.nix' not tracked by Git`。不需要 commit。
 
+### 验证层级与可复现边界
+
+```bash
+./scripts/check.sh             # 快速求值，不下载应用安装包，不代表 build 成功
+./scripts/check.sh checks      # 构建脚本检查与 OCR 依赖清单一致性检查
+./scripts/check.sh packages    # 构建 QQ、完整 OCR、VoiceVox 镜像
+./scripts/check.sh system      # nh os build，不激活系统
+./scripts/check.sh all         # 依次执行以上各层
+nix fmt -- flake.nix           # 使用本 flake 锁定的 nixfmt 格式化指定文件
+```
+
+检查命令禁止自动更新 lock。`packages` 中导出的包与主机共用同一包集，
+可以单独 `nix build --no-link .#michi-ocr` 或 `.#voicevox-image`。
+第一次构建 OCR 会下载较大的 ROCm wheel 和模型权重；后续使用 store 缓存。
+
+OCR 的代码来自锁定的 `michi-ocr` input，Python 3.12 Linux wheel 清单来自该
+input 的 `uv.lock`，Surya 检测和识别模型分别固定为 `2025_05_07` 和 `2025_08_12`。
+所有下载都在构建阶段校验 hash；常驻服务不再依赖 `~/dev/michi-ocr` 或 `.venv`。
+开发 checkout 仍可独立使用，但修改它不会改变已部署服务。
+构建中的 smoke test 检查 ROCm/GTK 导入及模型处理器离线加载；它不验证 GPU
+实际推理、屏幕捕获、翻译 API 或图形会话。模型权重变化必须显式更新
+`packages/michi-ocr/models.nix` 并重新验证。
+
+更新 OCR input 后，在仓库根目录重新生成 wheel 清单：
+
+```bash
+ocr_source=$(nix eval --impure --raw --expr '(builtins.getFlake (toString ./.)).inputs.michi-ocr.outPath')
+nix develop --command python packages/michi-ocr/lock-wheels.py "$ocr_source" \
+  --extra-hashes packages/michi-ocr/extra-hashes.json > /tmp/michi-ocr-wheels.json
+# 审查 /tmp/michi-ocr-wheels.json 后替换 packages/michi-ocr/wheels.json。
+# 上游未提供 hash 的 wheel 必须先独立预取核验，再补入 extra-hashes.json。
+```
+
+源码路径直接从锁定输入读取，避免旧 wheel 清单的过期断言阻止更新。
+随后运行 `./scripts/check.sh checks` 和 `./scripts/check.sh packages`。
+
+VoiceVox 保留 socket 按需启动。镜像归档在 Home Manager 闭包内，首次使用从
+store 加载到 Docker，并按内容 ID 运行；`--pull=never` 保证不会运行时联网拉镜像。
+Docker 清理镜像后，下次使用仍能从闭包中的归档恢复。
+
+显示器接口和布局统一在 `hosts/present-pc/hardware-configuration.nix` 定义，
+SDDM 与 Home Manager 通过模块参数共用；光标主题和大小由
+`home.pointerCursor` 派生到 niri。
+
+以下状态仍需在迁移或恢复时单独处理：
+
+- `~/.config/michi-ocr/deepl.env`、`xfyun.env`：运行时凭据，安全恢复到原路径；不入 Git/store。
+- DMS 壁纸、电源超时和动态主题设置：由 DMS 写入，备份其用户配置；不与 HM 同时写同一文件。
+- Rime 用户词频、应用账号和用户文档：属于用户数据，按现有备份策略恢复。
+- 开发项目 `.venv`、Rust toolchain 等：由各项目自己的 lock/工具链声明重建。
+
+`flake.lock` 固定版本但不能保证上游永久保留下载。长期保留一个部署版本时，
+还需归档对应 Git 提交、flake inputs、系统运行闭包，以及需要从源码重建的依赖。
+当前自动 GC 保留策略不等同于永久归档；闭包归档也不替代用户数据备份。
+
 ## 待办 / 需要本人补全
 
 ### 高优先级 (新机器)
