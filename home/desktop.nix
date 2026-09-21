@@ -6,9 +6,8 @@
 }:
 
 let
-  # ---- Electron 应用全局 flags (telegram/element/feishu/linuxqq/wpsoffice...) ----
-  # ~/.config/electron-flags.conf 是 Electron 通用约定,所有不带专属 wrapper 的 Electron 都会读;
-  # 不同主版本 Electron 也读各自版本号文件,统一生成避免漏
+  # 仅支持读取 flags 文件的 Electron 启动器会使用这些配置。
+  # QQ 的参数在 overlay 中配置，飞书的参数由下面的 wrapper 注入。
   electronFlags = ''
     --ozone-platform-hint=auto
     --enable-features=WaylandWindowDecorations
