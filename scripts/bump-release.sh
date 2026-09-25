@@ -3,7 +3,7 @@
 #
 # flake input 的 url 必须是字面量 (flakes 静态解析 inputs,不能引用变量),
 # 所以 nixpkgs / home-manager / nixvim 三处的版本号没法在 Nix 层收敛,
-# 这里用 sed 一把全改 (只动 url 行,不碰注释里的版本号,比如 michi-ocr 的说明)。
+# 这里用 sed 一把全改 (只动 url 行,不碰注释里的版本号)。
 
 set -euo pipefail
 

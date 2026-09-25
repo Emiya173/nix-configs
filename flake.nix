@@ -30,10 +30,6 @@
       url = "github:nix-community/nixvim/nixos-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # 锁定 OCR 源码及上游模块；本机 ROCm 包由 packages/michi-ocr 构建。
-    # 保留上游自己的 nixpkgs 锁定，避免改变其独立输出的求值环境。
-    michi-ocr.url = "github:Emiya173/michi-ocr";
   };
 
   outputs =
@@ -56,7 +52,7 @@
     in
     {
       packages.${system} = {
-        inherit (pkgs) codex michi-ocr voicevox-image;
+        inherit (pkgs) codex;
         qq = pkgs.unstable.qq;
       };
       formatter.${system} = pkgs.nixfmt;
@@ -64,8 +60,6 @@
         packages = [
           pkgs.nixfmt
           pkgs.shellcheck
-          pkgs.uv
-          (pkgs.python312.withPackages (ps: [ ps.packaging ]))
         ];
       };
       checks.${system} = {
@@ -76,21 +70,6 @@
             }
             ''
               shellcheck ${./scripts/check.sh} ${./scripts/bump-release.sh}
-              touch $out
-            '';
-        ocr-lock =
-          pkgs.runCommand "check-ocr-wheel-lock"
-            {
-              nativeBuildInputs = [
-                pkgs.uv
-                (pkgs.python312.withPackages (ps: [ ps.packaging ]))
-              ];
-            }
-            ''
-              export UV_CACHE_DIR=$TMPDIR/uv-cache
-              python ${./packages/michi-ocr/lock-wheels.py} ${inputs.michi-ocr} \
-                --extra-hashes ${./packages/michi-ocr/extra-hashes.json} > wheels.json
-              diff -u ${./packages/michi-ocr/wheels.json} wheels.json
               touch $out
             '';
       };
@@ -113,7 +92,6 @@
               dms.homeModules.dank-material-shell
               dms.homeModules.niri
               nixvim.homeModules.nixvim
-              inputs.michi-ocr.homeManagerModules.default
             ];
           }
         ];

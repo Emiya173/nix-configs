@@ -1,6 +1,6 @@
 { inputs }:
 
-final: prev:
+_final: prev:
 
 let
   unstablePkgs = import inputs.nixpkgs-unstable {
@@ -28,9 +28,4 @@ in
     ;
 
   unstable = unstablePkgs;
-
-  michi-ocr = final.callPackage ../packages/michi-ocr {
-    src = inputs.michi-ocr;
-  };
-  voicevox-image = final.callPackage ../packages/voicevox-image.nix { };
 }

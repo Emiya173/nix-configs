@@ -16,8 +16,6 @@
     ./desktop.nix
     ./niri.nix
     ./dev.nix
-    ./michi-ocr.nix
-    ./voicevox.nix
     ./nvim.nix
     ./yazi.nix
   ];

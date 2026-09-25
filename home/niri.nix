@@ -522,8 +522,6 @@ in
         "Mod+Shift+A".action =
           spawn "sh" "-c"
             "grim -g \"$(slurp)\" - | satty --filename - --copy-command wl-copy";
-        # OCR翻译
-        "Mod+Shift+T".action = spawn "${config.services.michi-ocr.package}/bin/michi-ocr-trigger";
 
         # === 取色 ===
         "Mod+Shift+C".action = spawn "hyprpicker" "-a";

@@ -14,14 +14,14 @@ check_eval() {
 }
 
 check_builds() {
-  echo "==> Build checks (script lint and OCR lock consistency)"
+  echo "==> Build checks (script lint)"
   nix "${NIX_FLAGS[@]}" flake check --no-update-lock-file
 }
 
 check_packages() {
-  echo "==> Build QQ, OCR (including offline smoke test), and VoiceVox image"
+  echo "==> Build QQ"
   nix "${NIX_FLAGS[@]}" build --no-link --no-update-lock-file \
-    .#qq .#michi-ocr .#voicevox-image
+    .#qq
 }
 
 check_system() {
