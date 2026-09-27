@@ -1,6 +1,6 @@
 { inputs }:
 
-_final: prev:
+final: prev:
 
 let
   unstablePkgs = import inputs.nixpkgs-unstable {
@@ -23,6 +23,8 @@ let
   };
 in
 {
+  baidunetdisk = final.callPackage ../packages/baidunetdisk { };
+
   inherit (unstablePkgs)
     codex
     ;

@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  displayConfig,
   ...
 }:
 
@@ -55,6 +56,9 @@ in
       text = electronFlags;
     })
     // {
+      # 百度网盘会用 xdg-mime/sed 替换符号链接；激活时恢复声明式关联。
+      "mimeapps.list".force = true;
+
       # ---- VSCode 也是 Electron,但读自己的 code-flags.conf ----
       "code-flags.conf".text = ''
         --ozone-platform-hint=wayland
@@ -79,6 +83,7 @@ in
       "x-scheme-handler/about" = "chromium-browser.desktop";
       "x-scheme-handler/unknown" = "chromium-browser.desktop";
       "x-scheme-handler/tonsite" = "org.telegram.desktop.desktop";
+      "x-scheme-handler/baiduyunguanjia" = "baidunetdisk.desktop";
 
       "application/zip" = "org.kde.ark.desktop";
       "application/x-rar" = "org.kde.ark.desktop";
@@ -139,6 +144,12 @@ in
     libsForQt5.qt5ct
 
     # 中文软件
+    # XWayland 下显式沿用主屏缩放；客户端的原生组件暂不支持 Wayland。
+    (baidunetdisk.override {
+      commandLineArgs = [
+        "--force-device-scale-factor=${toString displayConfig.outputs.${displayConfig.primary}.scale}"
+      ];
+    })
     wpsoffice-cn
     unstable.qq
 
