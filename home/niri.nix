@@ -67,6 +67,39 @@ let
     '';
   };
 
+  # 快捷键只切换显隐；首次启动交给 target，完整退出由托盘负责。
+  voidmakerToggle = pkgs.writeShellApplication {
+    name = "voidmaker-toggle";
+    runtimeInputs = [
+      pkgs.systemd
+      pkgs.util-linux
+      pkgs.quickshell
+      pkgs.coreutils
+    ];
+    text = ''
+      exec 9>"$XDG_RUNTIME_DIR/voidmaker-toggle.lock"
+      flock -n 9 || exit 0
+      shell_path=${lib.escapeShellArg "${config.home.homeDirectory}/dev/VoidMaker/apps/shell/shell.qml"}
+      if quickshell --path "$shell_path" ipc call voidmaker toggle 2>/dev/null; then
+        exit 0
+      fi
+      state=$(systemctl --user show --property=ActiveState --value voidmaker.target)
+      if [ "$state" = deactivating ]; then
+        exit 0
+      fi
+      systemctl --user start voidmaker.target
+      # Type=simple 启动完成时，QML 的 IPC 接口可能还未就绪。
+      for ((attempt = 0; attempt < 50; attempt++)); do
+        if quickshell --path "$shell_path" ipc call voidmaker showUi 2>/dev/null; then
+          exit 0
+        fi
+        sleep 0.2
+      done
+      echo "VoidMaker 界面尚未就绪" >&2
+      exit 1
+    '';
+  };
+
   # 录制 toggle: 已在录制 -> SIGINT 收尾并提示;否则按参数开始 (region=选区 / audio=全屏带声)
   recordToggle = pkgs.writeShellApplication {
     name = "niri-record-toggle";
@@ -426,6 +459,11 @@ in
       workspaceBinds
       // {
         # === 应用启动 (DMS 用 Mod+Space 做 spotlight,这里留快捷键给常用程序) ===
+        "Mod+A" = {
+          repeat = false;
+          hotkey-overlay.title = "显示/隐藏 VoidMaker";
+          action = spawn (lib.getExe voidmakerToggle);
+        };
         "Mod+Return".action = spawn terminal;
         "Mod+T".action = spawn terminal;
         "Ctrl+Alt+T".action = spawn terminal;
