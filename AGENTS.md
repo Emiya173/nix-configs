@@ -21,7 +21,8 @@ Manager modules to `home/home.nix`. Keep hardware-specific values in
 - `nh os build .` builds the system closure without activating it.
 - `nh os switch .` builds and activates the configuration; review the diff
   before confirming privileged changes.
-- `nix build .#codex` builds an individual exported package.
+- `nix build .#nixosConfigurations.present-pc.pkgs.codex` builds Codex from the
+  host package set.
 - `nixfmt <file.nix>` formats Nix sources using RFC-style formatting.
 - `./scripts/bump-release.sh 26.11` updates the coordinated stable release
   inputs and lock file.
