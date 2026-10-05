@@ -25,6 +25,11 @@ in
 {
   baidunetdisk = final.callPackage ../packages/baidunetdisk { };
 
+  # Keep Blender and the system HIP runtime on the same stable package set.
+  blender = prev.blender.override {
+    rocmSupport = true;
+  };
+
   codex = final.callPackage ../packages/codex { };
 
   unstable = unstablePkgs;

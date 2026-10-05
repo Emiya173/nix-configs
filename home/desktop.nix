@@ -116,6 +116,7 @@ in
     element-desktop
 
     # 图像/媒体 (mpv 由 programs.mpv.enable 装)
+    blender # stable 构建，启用 AMD HIP 并包含中文翻译
     imv # 默认图片查看器 (dolphin 双击 / xdg-open)
     gthumb # 轻量编辑: 裁剪/缩放/旋转/调色/红眼/批量重命名/格式转换
     qbittorrent

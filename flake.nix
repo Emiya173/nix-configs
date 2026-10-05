@@ -52,7 +52,7 @@
     in
     {
       packages.${system} = {
-        inherit (pkgs) baidunetdisk codex;
+        inherit (pkgs) baidunetdisk blender codex;
         qq = pkgs.unstable.qq;
       };
       formatter.${system} = pkgs.nixfmt;
