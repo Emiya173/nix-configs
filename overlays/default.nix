@@ -25,9 +25,7 @@ in
 {
   baidunetdisk = final.callPackage ../packages/baidunetdisk { };
 
-  inherit (unstablePkgs)
-    codex
-    ;
+  codex = final.callPackage ../packages/codex { };
 
   unstable = unstablePkgs;
 }

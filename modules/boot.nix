@@ -1,8 +1,16 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   boot = {
     kernelPackages = pkgs.linuxPackages_zen;
+
+    # Codex 0.156.1 rejects Btrfs /tmp because stat and mountinfo device IDs differ.
+    tmp.useTmpfs = true;
 
     loader = {
       efi = {
@@ -31,7 +39,10 @@
       timeout = 5;
     };
 
-    supportedFilesystems = [ "btrfs" "ntfs" ];
+    supportedFilesystems = [
+      "btrfs"
+      "ntfs"
+    ];
 
     kernelParams = [ "quiet" ];
 

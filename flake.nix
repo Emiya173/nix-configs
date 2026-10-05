@@ -7,7 +7,7 @@
     # (flake input url 必须是字面量,版本号没法在 Nix 层单点定义)
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # unstable 精选通道: overlay 中的 codex,以及显式使用 unstable.qq 的桌面包;
+    # unstable 精选通道: 显式使用 unstable.qq 等桌面包;
     # 同时以 pkgs.unstable.* 暴露整棵,临时要新包时写 unstable.foo 即可
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
 

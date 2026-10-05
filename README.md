@@ -141,6 +141,10 @@ nix fmt -- flake.nix           # 使用本 flake 锁定的 nixfmt 格式化指�
 检查命令禁止自动更新 lock。`packages` 中导出的包与主机共用同一包集，
 可以单独 `nix build --no-link .#qq` 或 `nix build --no-link .#codex`。
 
+Codex 在 `packages/codex/default.nix` 固定官方发布包的版本与 SHA-256，
+独立于 nixpkgs 更新。升级时同步更新版本与发布包校验值，再运行上述求值检查
+及 `nix build --no-link .#codex`。
+
 显示器接口和布局统一在 `hosts/present-pc/hardware-configuration.nix` 定义，
 SDDM 与 Home Manager 通过模块参数共用；光标主题和大小由
 `home.pointerCursor` 派生到 niri。
