@@ -71,6 +71,9 @@ in
 
   programs.dconf.enable = true;
 
+  # DMS 通过 AccountsService 持久化用户头像；缺少服务时只在当前进程中生效。
+  services.accounts-daemon.enable = true;
+
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [
