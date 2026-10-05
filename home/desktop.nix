@@ -111,6 +111,9 @@ in
   home.packages = with pkgs; [
     # 启动器/剪贴板/通知/电源菜单全归 DMS,不再装 fuzzel/rofi
 
+    # 文档编辑
+    typora
+
     # 通讯
     telegram-desktop
     element-desktop
