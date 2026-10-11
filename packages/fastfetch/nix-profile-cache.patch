@@ -1,0 +1,51 @@
+--- a/src/detection/packages/packages_nix.c
++++ b/src/detection/packages/packages_nix.c
+@@ -1,5 +1,6 @@
+ #include "packages.h"
+ #include "common/io.h"
++#include "common/path.h"
+ #include "common/processing.h"
+ #include "common/stringUtils.h"
+
+@@ -91,17 +92,27 @@
+         return 0;
+     }
+
++    // Resolve once so a profile switch cannot mix the cache key and query target.
++    char resolvedPath[PATH_MAX + 1];
++    if (!realpath(path, resolvedPath)) {
++        return 0;
++    }
++
+     FF_STRBUF_AUTO_DESTROY cacheDir = ffStrbufCreateCopy(&instance.state.platform.cacheDir);
+     ffStrbufEnsureEndsWithC(&cacheDir, '/');
+     ffStrbufAppendS(&cacheDir, "fastfetch/packages/nix");
+     ffStrbufAppendS(&cacheDir, path);
+
+-    // Check the hash first to determine if we need to recompute the count
++    // A canonical store path identifies the immutable profile without querying Nix.
+     FF_STRBUF_AUTO_DESTROY hash = ffStrbufCreateA(64);
+     FF_STRBUF_AUTO_DESTROY cacheHash = ffStrbufCreateA(64);
+     uint32_t count = 0;
+
+-    ffProcessAppendStdOut(&hash, (char* const[]) { "nix-store", "--query", "--hash", path, NULL });
++    if (ffStrStartsWith(resolvedPath, "/nix/store/")) {
++        ffStrbufSetS(&hash, resolvedPath);
++    } else if (ffProcessAppendStdOut(&hash, (char* const[]) { "nix-store", "--query", "--hash", resolvedPath, NULL }) || hash.length == 0) {
++        return 0;
++    }
+
+     if (checkNixCache(&cacheDir, &cacheHash, &count) && ffStrbufEqual(&hash, &cacheHash)) {
+         return count;
+@@ -115,7 +126,10 @@
+
+     FF_STRBUF_AUTO_DESTROY output = ffStrbufCreateA(1024);
+
+-    ffProcessAppendStdOut(&output, (char* const[]) { "nix-store", "--query", "--requisites", path, NULL });
++    if (ffProcessAppendStdOut(&output, (char* const[]) { "nix-store", "--query", "--requisites", resolvedPath, NULL }) || output.length == 0) {
++        // Do not cache a failed or timed-out query; the next invocation can retry.
++        return 0;
++    }
+
+     uint32_t lineLength = 0;
+     for (uint32_t i = 0; i < output.length; i++) {

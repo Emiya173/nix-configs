@@ -235,19 +235,14 @@
           format = "┌──────────────────────────────────────────┐";
         }
         {
-          type = "chassis";
-          key = "  󰇺 Chassis";
-          format = "{2}";
-        }
-        {
           type = "os";
-          key = "  󰣇 OS";
-          format = "{2}";
+          key = "   OS";
+          format = "{pretty-name}";
           keyColor = "red";
         }
         {
           type = "kernel";
-          key = "   Kernel";
+          key = "   Kernel";
           format = "{2}";
           keyColor = "red";
         }
@@ -264,13 +259,13 @@
         }
         {
           type = "terminal";
-          key = "   Terminal";
+          key = "   Terminal";
           keyColor = "yellow";
         }
         {
           type = "wm";
           key = "  󱗃 WM";
-          format = "{2}";
+          format = "{pretty-name} {version} ({protocol-name})";
           keyColor = "yellow";
         }
         {
@@ -280,34 +275,39 @@
         "break"
         {
           type = "title";
-          key = "  ";
-          format = "{6} {7} {8}";
+          key = "   User";
+          format = "{user-name-colored} {at-symbol-colored} {host-name-colored}";
         }
         {
           type = "custom";
           format = "┌──────────────────────────────────────────┐";
         }
         {
+          type = "board";
+          key = "  󰇺 Board";
+          format = "{vendor} {name}";
+        }
+        {
           type = "cpu";
-          key = "   CPU";
+          key = "  󰻠 CPU";
           format = "{1} @ {7}";
           keyColor = "blue";
         }
         {
           type = "gpu";
           key = "  󰊴 GPU";
-          format = "{1} {2}";
+          format = "{2}";
           keyColor = "blue";
         }
         {
-          type = "gpu";
-          key = "   GPU Driver";
-          format = "{3}";
+          type = "vulkan";
+          key = "  󰒓 GPU Driver";
+          format = "{driver} · Vulkan {api-version}";
           keyColor = "magenta";
         }
         {
           type = "memory";
-          key = "   Memory ";
+          key = "  󰍛 Memory ";
           keyColor = "magenta";
         }
         {

@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 NIX_FLAGS=(--extra-experimental-features 'nix-command flakes')
 
 usage() {
-  echo "Usage: $0 [eval|checks|packages [qq|codex|baidunetdisk ...]|system|all]" >&2
+  echo "Usage: $0 [eval|checks|packages [qq|codex|baidunetdisk|fastfetch ...]|system|all]" >&2
 }
 
 mode=${1-eval}
@@ -18,9 +18,9 @@ case "$mode" in
   packages)
     for package in "$@"; do
       case "$package" in
-        qq|codex|baidunetdisk) ;;
+        qq|codex|baidunetdisk|fastfetch) ;;
         *)
-          echo "Unknown package: $package (expected qq, codex, or baidunetdisk)" >&2
+          echo "Unknown package: $package (expected qq, codex, baidunetdisk, or fastfetch)" >&2
           usage
           exit 2
           ;;
@@ -58,7 +58,7 @@ check_packages() {
   local -a packages=("$@") targets=()
   local package
   if (( ${#packages[@]} == 0 )); then
-    packages=(qq codex baidunetdisk)
+    packages=(qq codex baidunetdisk fastfetch)
   fi
   for package in "${packages[@]}"; do
     targets+=(".#$package")

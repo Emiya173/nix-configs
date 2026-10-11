@@ -62,7 +62,7 @@
     {
       packages.${system} = {
         qq = pkgs.unstable.qq;
-        inherit (pkgs) codex baidunetdisk;
+        inherit (pkgs) codex baidunetdisk fastfetch;
       };
       formatter.${system} = pkgs.nixfmt;
       devShells.${system}.default = pkgs.mkShell {

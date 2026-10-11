@@ -133,16 +133,16 @@ sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
 ```bash
 ./scripts/check.sh             # 快速求值，不下载应用安装包，不代表 build 成功
 ./scripts/check.sh checks      # ShellCheck + 全仓库 Nix 格式检查
-./scripts/check.sh packages    # 构建 QQ、Codex、百度网盘
+./scripts/check.sh packages    # 构建 QQ、Codex、百度网盘和带本地补丁的 Fastfetch
 ./scripts/check.sh packages codex baidunetdisk  # 只检查指定包
 ./scripts/check.sh system      # nh os build，不激活系统
 ./scripts/check.sh all         # 依次执行以上各层
 nix fmt -- flake.nix           # 使用本 flake 锁定的 nixfmt 格式化指定文件
 ```
 
-检查命令禁止自动更新 lock。三个包均提供独立构建入口：
-`nix build --no-link --no-update-lock-file .#qq`、`.#codex`、`.#baidunetdisk`。
-`packages` 后只接受这三个包名；默认求值不会执行格式检查或包构建。
+检查命令禁止自动更新 lock。四个维护包均提供独立构建入口：
+`nix build --no-link --no-update-lock-file .#qq`、`.#codex`、`.#baidunetdisk`、`.#fastfetch`。
+`packages` 后只接受这四个包名；默认求值不会执行格式检查或包构建。
 
 Codex 在 `packages/codex/default.nix` 固定官方发布包的版本与 SHA-256，
 独立于 nixpkgs 更新。升级时同步更新版本与发布包校验值，再运行上述求值检查
@@ -237,6 +237,16 @@ nix-locate --minimal --at-root --whole-name /bin/cowsay
 索引随 `nix-index-database` 的 flake lock 更新，来自上游 nixos-unstable，
 不包含本机 overlays。comma 执行仍使用现有 stable nixpkgs registry；
 少数只在 unstable 存在的包需要显式指定来源。
+
+### Fastfetch
+
+Fastfetch 图标在 `home/shell.nix` 配置，使用 Nerd Fonts 字形。
+`packages/fastfetch/` 的本地补丁用 profile 解析后的不可变 Nix store 路径校验包数量缓存，
+缓存命中时不再启动 `nix-store`，避免每次开机首次显示时被 Nix 冷启动拖慢。
+切换系统或用户 profile 后会重新统计；统计口径沿用 Fastfetch 的依赖闭包计数，
+不是直接安装的应用数量。首次生成缓存或清空缓存后，仍需进行一次完整查询。
+
+升级 Fastfetch 时需检查补丁是否仍适用，并运行 `./scripts/check.sh packages fastfetch`。
 
 ### Quickshell — DankMaterialShell (DMS)
 

@@ -32,5 +32,9 @@ in
 
   codex = final.callPackage ../packages/codex { };
 
+  fastfetch = final.callPackage ../packages/fastfetch {
+    base = prev.fastfetch;
+  };
+
   unstable = unstablePkgs;
 }
