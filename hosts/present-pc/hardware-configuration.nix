@@ -128,6 +128,21 @@ in
     options = btrfsOpts ++ [ "subvolid=5" ];
   };
 
+  # 共享游戏盘固定 UUID 和驱动，避免双系统切换后挂载行为变化。
+  fileSystems."/mnt" = {
+    device = "/dev/disk/by-uuid/A2C22FE2C22FBA05";
+    fsType = "ntfs-3g";
+    noCheck = true;
+    options = [
+      "uid=1000"
+      "gid=100"
+      "umask=022"
+      "norecover"
+      "nofail"
+      "x-systemd.device-timeout=10s"
+    ];
+  };
+
   fileSystems."/boot" = {
     device = "/dev/disk/by-uuid/BDCB-F864";
     fsType = "vfat";
