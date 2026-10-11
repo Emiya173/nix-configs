@@ -100,26 +100,64 @@ let
     '';
   };
 
-  # 录制 toggle: 已在录制 -> SIGINT 收尾并提示;否则按参数开始 (region=选区 / audio=全屏带声)
+  # ExecStopPost 在编码器退出后执行，避免发送 SIGINT 就提前声称文件已保存。
+  recordFinished = pkgs.writeShellApplication {
+    name = "niri-record-finished";
+    runtimeInputs = [ pkgs.libnotify ];
+    text = ''
+      if [ "''${SERVICE_RESULT:-}" = success ] && [ -s "$NIRI_RECORD_OUTPUT" ]; then
+        notify-send "录屏" "录制已结束，已保存到 $NIRI_RECORD_OUTPUT" || true
+      else
+        notify-send --urgency=critical "录屏" "录制未正常完成，请检查 journalctl --user -u niri-screen-record.service" || true
+      fi
+    '';
+  };
+
+  # 专用 user service 持有录制进程；同一快捷键只停止自己的录制并等待 SIGINT 收尾。
   recordToggle = pkgs.writeShellApplication {
     name = "niri-record-toggle";
     runtimeInputs = [
       pkgs.wf-recorder
       pkgs.slurp
       pkgs.libnotify
-      pkgs.procps
+      pkgs.systemd
+      pkgs.util-linux
       pkgs.coreutils
     ];
     text = ''
-      if pkill -INT -x wf-recorder; then
-        notify-send "wf-recorder" "录制已停止,已保存到 ~/Videos"
-        exit 0
-      fi
-      out="$HOME/Videos/$(date +%Y%m%d-%H%M%S).mp4"
-      case "''${1:-region}" in
-        region) wf-recorder -g "$(slurp)" -f "$out" ;;
-        audio)  wf-recorder --audio -f "$out" ;;
+      exec 9>"$XDG_RUNTIME_DIR/niri-record-toggle.lock"
+      flock -n 9 || exit 0
+      unit=niri-screen-record.service
+      state=$(systemctl --user show --property=ActiveState --value "$unit" 2>/dev/null || true)
+      case "$state" in
+        active|activating)
+          systemctl --user stop "$unit"
+          exit 0
+          ;;
+        deactivating) exit 0 ;;
       esac
+
+      case "''${1:-region}" in
+        region)
+          geometry=$(slurp) || exit 0
+          [ -n "$geometry" ] || exit 0
+          args=(-g "$geometry")
+          ;;
+        audio) args=(--audio -o ${lib.escapeShellArg primaryOutput}) ;;
+        *) exit 1 ;;
+      esac
+
+      mkdir -p "$HOME/Videos"
+      out="$HOME/Videos/$(date +%Y%m%d-%H%M%S-%N).mp4"
+      if ! systemd-run --user --unit="$unit" --collect --service-type=exec \
+        --property=PartOf=graphical-session.target \
+        --property=KillSignal=SIGINT --property=TimeoutStopSec=60s \
+        --property=ExecStopPost=${lib.getExe recordFinished} \
+        --setenv="NIRI_RECORD_OUTPUT=$out" --setenv="WAYLAND_DISPLAY=$WAYLAND_DISPLAY" \
+        ${lib.getExe pkgs.wf-recorder} "''${args[@]}" -f "$out"; then
+        notify-send --urgency=critical "录屏" "无法启动录制，请检查 journalctl --user -u $unit" || true
+        exit 1
+      fi
     '';
   };
 
@@ -325,27 +363,17 @@ in
 
     # ----------------- 启动项 -----------------
     # DMS 自带 dms run (剪贴板/通知/壁纸/动态主题/spotlight 都归它)
-    # 这里只放 DMS 不管的: 输入法、剪贴板持久化
+    # DMS 使用内建剪贴板历史，这里只保留输入法启动。
     spawn-at-startup = [
       # xwayland-satellite 不再手动 spawn: niri >= 25.08 内建集成,首个 X11
       # 客户端连接时按需拉起 (二进制来自 system PATH, modules/desktop.nix)
       # gnome-keyring 走 PAM (services.gnome.gnome-keyring + pam.services.sddm),
       # 登入时 sddm 已经用登录密码解锁了 login keyring,不需要再 spawn 一遍
-      # polkit-gnome 由 modules/desktop.nix 的 systemd user service 启动,
-      # 不需要在这里 spawn (原 Arch 路径 /usr/lib/... 在 NixOS 不存在)
+      # KDE polkit agent 由 niri-flake 自带的 systemd user service 启动。
       {
         command = [
           "fcitx5"
           "-d"
-        ];
-      }
-      # DMS 剪贴板面板靠 cliphist 持久化,wl-paste --watch 把每次复制写进去
-      {
-        command = [
-          "sh"
-          "-c"
-          "wl-paste --type text  --watch cliphist store &
-                                wl-paste --type image --watch cliphist store"
         ];
       }
       # 启动焦点钉主屏改用 outputs."DP-1".focus-at-startup,不再 sleep hack
@@ -624,7 +652,6 @@ in
   # 这里只放 DMS 没覆盖的功能 (wf-recorder/jq 已是键位脚本的 runtimeInputs,不用再进 PATH)
   home.packages = with pkgs; [
     playerctl # 媒体键 (Mod+Shift+N/B/P 键位用)
-    cliphist # DMS 剪贴板后端 (spawn-at-startup 里被 wl-paste 喂数据)
   ];
 
   # idle / 锁屏 / 熄屏 / 挂起 全交给 DMS 内建 IdleMonitor + 电源管理:

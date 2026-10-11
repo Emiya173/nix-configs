@@ -101,7 +101,7 @@ reboot
 
 ```fish
 sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
-sudo btrbk run                          # 第一轮快照
+sudo systemctl start btrbk-local.service       # 第一轮快照,使用 local 实例配置
 sudo btrfs subvol delete /snapshots/@arch-backup  # 确认无事后清理
 ```
 
@@ -208,7 +208,10 @@ flatpak 已移除 (从未装过任何 flatpak 应用);nixpkgs 版本跟不上时
   避免 spawn-at-startup 又启一份导致两条 bar)
 - 接管: bar / 动态主题 (matugen) / 通知中心 / spotlight / 剪贴板 / 设置 /
   电源菜单 / 系统监控 / 壁纸 / 音量亮度 OSD
-- **不**接管: 锁屏定时 (用 swayidle 调 `dms ipc lock lock`)、键位/显示/光标/
+- 剪贴板历史由 DMS 内置后端管理,无需额外启动 `wl-paste --watch cliphist store`。
+- Polkit 认证沿用 niri-flake 提供的默认 agent,由其 systemd user service 启动。
+- 锁屏、熄屏和挂起超时由 DMS Settings → Power 管理。
+- **不**接管: 键位/显示/光标/
   窗口规则 (这些由 home-manager 写到 niri config —— 见下面"分工"段)
 
 **DMS 设置面板 vs home-manager 分工**
@@ -303,10 +306,12 @@ sudo btdu /
 sudo compsize /home
 
 # rebuild 前手动快一发
-sudo btrfs subvolume snapshot -r /@home /snapshots/@home/manual-(date +%Y%m%d-%H%M)
+sudo btrfs subvolume snapshot -r /btrfs/@home /snapshots/@home-manual-(date +%Y%m%d-%H%M%S)
 ```
 
-**恢复文件**: 直接 `cp /snapshots/@home/<时间>/relative/path ~/`,只读快照不会被误删。
+**恢复文件**: 先用上面的 `list snapshots` 确认快照名称。btrbk 自动快照直接位于
+`/snapshots/@home.<时间戳>` (例如 `@home.20261011T1200`),其中 `present/` 对应用户目录;
+选定文件后用 `cp -- /snapshots/@home.<实际时间戳>/present/relative/path ~/` 恢复。
 
 **整盘还原**: 引导进 NixOS rescue → 重命名当前 `@home` → 把目标快照 `btrfs sub snapshot` 成新 `@home` → reboot。NixOS 系统本身坏了不用动快照,**直接在 GRUB 选 older generation** 即可。
 

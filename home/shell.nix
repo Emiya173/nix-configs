@@ -46,38 +46,39 @@
     # ---- nix 工作流 abbr (空格展开,看得见再执行) ----
     shellAbbrs = {
       # nh / 系统切换 (flake 路径走 NH_FLAKE,见 modules/nix.nix programs.nh) ----
-      nos   = "nh os switch";               # 切换 (= apt upgrade + dotfile sync)
-      nob   = "nh os build";                # 只 build 验证,不切换
-      nor   = "nh os rollback";             # 回上一代 (nh 独立子命令,switch 没有 --rollback flag)
-      ninfo = "nh os info";                 # 看 generations 列表
+      nos = "nh os switch"; # 切换 (= apt upgrade + dotfile sync)
+      nob = "nh os build"; # 只 build 验证,不切换
+      nor = "nh os rollback"; # 回上一代 (nh 独立子命令,switch 没有 --rollback flag)
+      ninfo = "nh os info"; # 看 generations 列表
       # GC 已有 programs.nh.clean 定时器 (--keep 5 --keep-since 14d),这里是手动触发
-      ngc   = "sudo nh clean all --keep 5 --keep-since 14d";
+      ngc = "sudo nh clean all --keep 5 --keep-since 14d";
 
       # flake --------------------------------------------------
-      nfu = "nix flake update --flake ~/nix_migrate";  # 升 input (尾巴可接 input 名,如 nfu nixpkgs)
-      nfc = "nix flake check  ~/nix_migrate";  # eval 自检
-      nfs = "nix flake show   ~/nix_migrate";  # 看 outputs 树
+      nfu = "nix flake update --flake ~/nix_migrate"; # 升 input (尾巴可接 input 名,如 nfu nixpkgs)
+      nfc = "nix flake check  ~/nix_migrate"; # eval 自检
+      nfs = "nix flake show   ~/nix_migrate"; # 看 outputs 树
 
       # 搜索 / 临时拉包 --------------------------------------------------
-      nse   = "nh search";                  # nh search <pkg> (走本地索引,快)
-      nsh   = "nix shell nixpkgs#";         # nix shell nixpkgs#<pkg> (临时 shell)
-      nrun  = "nix run   nixpkgs#";         # nix run   nixpkgs#<pkg> -- args
-      ndev  = "nix develop";                # 进当前目录 flake 的 devShell
+      nse = "nh search"; # nh search <pkg> (走本地索引,快)
+      nsh = "nix shell nixpkgs#"; # nix shell nixpkgs#<pkg> (临时 shell)
+      nrun = "nix run   nixpkgs#"; # nix run   nixpkgs#<pkg> -- args
+      ndev = "nix develop"; # 进当前目录 flake 的 devShell
 
       # 调试 --------------------------------------------------
-      nwhy  = "nix why-depends";            # 谁拖进了某个包
-      ntree = "nix-tree";                   # 交互式依赖树
-      nrepl = "nix repl --expr 'import <nixpkgs> {}'";  # 进 repl 试 nix 表达式
+      nwhy = "nix why-depends"; # 谁拖进了某个包
+      ntree = "nix-tree"; # 交互式依赖树
+      nrepl = "nix repl --expr 'import <nixpkgs> {}'"; # 进 repl 试 nix 表达式
 
       # niri / DMS --------------------------------------------------
-      nmsg = "niri msg";                    # niri msg outputs/windows/action ...
-      dipc = "dms ipc";                     # dms ipc spotlight/lock/audio ...
+      nmsg = "niri msg"; # niri msg outputs/windows/action ...
+      dipc = "dms ipc"; # dms ipc spotlight/lock/audio ...
     };
   };
 
   programs.starship = {
     enable = true;
-    enableFishIntegration = true;
+    # 上面的手动初始化统一保留 Linux TTY 排除和 transient prompt，避免 HM 再初始化一次。
+    enableFishIntegration = false;
     settings = {
       add_newline = false;
       format = ''
@@ -91,7 +92,7 @@
 
       character = {
         success_symbol = "[ ](bold fg:243)";
-        error_symbol   = "[ ](bold fg:244)";
+        error_symbol = "[ ](bold fg:244)";
       };
 
       package.disabled = true;
@@ -113,15 +114,15 @@
 
       git_status = {
         conflicted = " 🏳 ";
-        ahead      = " 🏎💨 ";
-        behind     = " 😰 ";
-        diverged   = " 😵 ";
-        untracked  = " 🤷 ‍";
-        stashed    = " 📦 ";
-        modified   = " 📝 ";
-        staged     = ''[++\($count\)](green)'';
-        renamed    = " ✍️ ";
-        deleted    = " 🗑 ";
+        ahead = " 🏎💨 ";
+        behind = " 😰 ";
+        diverged = " 😵 ";
+        untracked = " 🤷 ‍";
+        stashed = " 📦 ";
+        modified = " 📝 ";
+        staged = ''[++\($count\)](green)'';
+        renamed = " ✍️ ";
+        deleted = " 🗑 ";
       };
 
       hostname = {
@@ -162,13 +163,13 @@
         truncation_symbol = ".../";
         format = "[](bold fg:255)[󰉋 → $path]($style)[](bold fg:255)";
         substitutions = {
-          "Desktop"   = "  ";
+          "Desktop" = "  ";
           "Documents" = "  ";
           "Downloads" = "  ";
-          "Music"     = " 󰎈 ";
-          "Pictures"  = "  ";
-          "Videos"    = "  ";
-          "GitHub"    = " 󰊤 ";
+          "Music" = " 󰎈 ";
+          "Pictures" = "  ";
+          "Videos" = "  ";
+          "GitHub" = " 󰊤 ";
         };
       };
 
@@ -215,27 +216,107 @@
       };
       display.separator = " : ";
       modules = [
-        { type = "custom"; format = "┌──────────────────────────────────────────┐"; }
-        { type = "chassis"; key = "  󰇺 Chassis"; format = "{2}"; }
-        { type = "os";      key = "  󰣇 OS";      format = "{2}"; keyColor = "red"; }
-        { type = "kernel";  key = "   Kernel";  format = "{2}"; keyColor = "red"; }
-        { type = "packages"; key = "  󰏗 Packages"; keyColor = "green"; }
-        { type = "display"; key = "  󰍹 Display"; format = "{1}x{2} @ {3}Hz [{7}]"; keyColor = "green"; }
-        { type = "terminal"; key = "   Terminal"; keyColor = "yellow"; }
-        { type = "wm";      key = "  󱗃 WM"; format = "{2}"; keyColor = "yellow"; }
-        { type = "custom"; format = "└──────────────────────────────────────────┘"; }
+        {
+          type = "custom";
+          format = "┌──────────────────────────────────────────┐";
+        }
+        {
+          type = "chassis";
+          key = "  󰇺 Chassis";
+          format = "{2}";
+        }
+        {
+          type = "os";
+          key = "  󰣇 OS";
+          format = "{2}";
+          keyColor = "red";
+        }
+        {
+          type = "kernel";
+          key = "   Kernel";
+          format = "{2}";
+          keyColor = "red";
+        }
+        {
+          type = "packages";
+          key = "  󰏗 Packages";
+          keyColor = "green";
+        }
+        {
+          type = "display";
+          key = "  󰍹 Display";
+          format = "{1}x{2} @ {3}Hz [{7}]";
+          keyColor = "green";
+        }
+        {
+          type = "terminal";
+          key = "   Terminal";
+          keyColor = "yellow";
+        }
+        {
+          type = "wm";
+          key = "  󱗃 WM";
+          format = "{2}";
+          keyColor = "yellow";
+        }
+        {
+          type = "custom";
+          format = "└──────────────────────────────────────────┘";
+        }
         "break"
-        { type = "title"; key = "  "; format = "{6} {7} {8}"; }
-        { type = "custom"; format = "┌──────────────────────────────────────────┐"; }
-        { type = "cpu"; key = "   CPU"; format = "{1} @ {7}"; keyColor = "blue"; }
-        { type = "gpu"; key = "  󰊴 GPU"; format = "{1} {2}"; keyColor = "blue"; }
-        { type = "gpu"; key = "   GPU Driver"; format = "{3}"; keyColor = "magenta"; }
-        { type = "memory"; key = "   Memory "; keyColor = "magenta"; }
-        { type = "disk"; key = "  󱦟 Disk "; folders = "/"; keyColor = "red";
-          format = "{size-used} / {size-total} ({size-percentage})"; }
-        { type = "uptime"; key = "  󱫐 Uptime "; keyColor = "red"; }
-        { type = "custom"; format = "└──────────────────────────────────────────┘"; }
-        { type = "colors"; paddingLeft = 2; symbol = "circle"; }
+        {
+          type = "title";
+          key = "  ";
+          format = "{6} {7} {8}";
+        }
+        {
+          type = "custom";
+          format = "┌──────────────────────────────────────────┐";
+        }
+        {
+          type = "cpu";
+          key = "   CPU";
+          format = "{1} @ {7}";
+          keyColor = "blue";
+        }
+        {
+          type = "gpu";
+          key = "  󰊴 GPU";
+          format = "{1} {2}";
+          keyColor = "blue";
+        }
+        {
+          type = "gpu";
+          key = "   GPU Driver";
+          format = "{3}";
+          keyColor = "magenta";
+        }
+        {
+          type = "memory";
+          key = "   Memory ";
+          keyColor = "magenta";
+        }
+        {
+          type = "disk";
+          key = "  󱦟 Disk ";
+          folders = "/";
+          keyColor = "red";
+          format = "{size-used} / {size-total} ({size-percentage})";
+        }
+        {
+          type = "uptime";
+          key = "  󱫐 Uptime ";
+          keyColor = "red";
+        }
+        {
+          type = "custom";
+          format = "└──────────────────────────────────────────┘";
+        }
+        {
+          type = "colors";
+          paddingLeft = 2;
+          symbol = "circle";
+        }
         "break"
       ];
     };

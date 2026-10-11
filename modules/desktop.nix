@@ -32,6 +32,7 @@ let
   };
 in
 {
+  # niri-flake 随会话启动 KDE Polkit agent；保持单一认证代理。
   programs.niri.enable = true;
   programs.niri.package = pkgs.niri;
 
@@ -132,21 +133,6 @@ in
     kdePackages.ffmpegthumbs
 
     libnotify
-    polkit_gnome # DMS 不提供 polkit agent
   ];
 
-  # niri 不带 polkit agent,用 gnome 的
-  systemd.user.services.polkit-gnome-authentication-agent-1 = {
-    description = "polkit-gnome-authentication-agent-1";
-    wantedBy = [ "graphical-session.target" ];
-    wants = [ "graphical-session.target" ];
-    after = [ "graphical-session.target" ];
-    serviceConfig = {
-      Type = "simple";
-      ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
-      Restart = "on-failure";
-      RestartSec = 1;
-      TimeoutStopSec = 10;
-    };
-  };
 }
