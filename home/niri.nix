@@ -16,6 +16,7 @@ let
   officeSoftware = "wps";
   volumeMixer = "pavucontrol";
   taskManager = "kitty -e btop";
+  dms = lib.getExe config.programs.dank-material-shell.package;
   primaryOutput = displayConfig.primary;
   virtualOutput = displayConfig.virtual;
   # Spotlight (Mod+Space)、剪贴板 (Mod+V)、亮度/音量 等由 DankMaterialShell 接管
@@ -98,6 +99,26 @@ let
       done
       echo "VoidMaker 界面尚未就绪" >&2
       exit 1
+    '';
+  };
+
+  # DMS 取消选区时返回成功但不输出图像；拿到完整截图后才打开标注窗口。
+  annotateScreenshot = pkgs.writeShellApplication {
+    name = "niri-annotate-screenshot";
+    runtimeInputs = [
+      config.programs.dank-material-shell.package
+      pkgs.satty
+      pkgs.wl-clipboard
+      pkgs.coreutils
+    ];
+    text = ''
+      image_file=$(mktemp "''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/niri-screenshot.XXXXXX.png")
+      trap 'rm -f "$image_file"' EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+      dms screenshot region --stdout > "$image_file"
+      [ -s "$image_file" ] || exit 0
+      satty --filename - --copy-command wl-copy < "$image_file"
     '';
   };
 
@@ -323,7 +344,6 @@ in
     # ----------------- 杂项 -----------------
     prefer-no-csd = true;
     hotkey-overlay.skip-at-startup = true;
-    screenshot-path = "~/Pictures/Screenshots/Screenshot_%Y-%m-%d_%H-%M-%S.png";
 
     cursor = {
       theme = config.home.pointerCursor.name;
@@ -580,15 +600,27 @@ in
         "Mod+Ctrl+Shift+K".action = move-column-to-monitor-up;
         "Mod+Ctrl+Shift+J".action = move-column-to-monitor-down;
 
-        # === 截图 === (niri-flake 把截图当 attrs 而非 action 函数)
-        "Print".action.screenshot = { };
-        "Ctrl+Print".action.screenshot-screen = { };
-        "Alt+Print".action.screenshot-window = { };
-        "Mod+Shift+S".action.screenshot = { };
-        # 区域截图直接走 grim+slurp+satty (更接近 hyprshot 体验)
-        "Mod+Shift+A".action =
-          spawn "sh" "-c"
-            "grim -g \"$(slurp)\" - | satty --filename - --copy-command wl-copy";
+        # DMS 默认保存到 XDG Pictures/Screenshots 并复制到剪贴板。
+        "Print" = {
+          repeat = false;
+          action = spawn dms "screenshot" "region";
+        };
+        "Ctrl+Print" = {
+          repeat = false;
+          action = spawn dms "screenshot" "full";
+        };
+        "Alt+Print" = {
+          repeat = false;
+          action = spawn dms "screenshot" "window";
+        };
+        "Mod+Shift+S" = {
+          repeat = false;
+          action = spawn dms "screenshot" "region";
+        };
+        "Mod+Shift+A" = {
+          repeat = false;
+          action = spawn (lib.getExe annotateScreenshot);
+        };
 
         # === 取色 ===
         "Mod+Shift+C".action = spawn "hyprpicker" "-a";

@@ -46,8 +46,7 @@ in
       "--enable-features=WaylandWindowDecorations,TouchpadOverscrollHistoryNavigation,AcceleratedVideoDecodeLinuxGL,VaapiVideoDecodeLinuxGL"
       "--enable-wayland-ime" # fcitx5 中文输入 (Wayland text-input-v3)
       "--wayland-text-input-version=3"
-      "--password-store=gnome-libsecret" # 需要 gnome-keyring (已在 niri spawn 启动)
-      "--disable-features=ExtensionManifestV2Unsupported"
+      "--password-store=gnome-libsecret" # GNOME Keyring 由 PAM 在登录时解锁
     ];
   };
 
@@ -128,9 +127,7 @@ in
     kdePackages.ark
     kdePackages.dolphin
 
-    # 截图/取色 (DMS 不提供这些)
-    grim # 屏幕抓取
-    slurp # 区域选择
+    # DMS 负责截图，Satty 保留标注；录屏选区的 slurp 由脚本声明依赖。
     satty # 截图标注 (Mod+Shift+A 键位用)
     hyprpicker # 取色器 (Mod+Shift+C 键位用)
 

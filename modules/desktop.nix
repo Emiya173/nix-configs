@@ -1,5 +1,4 @@
 {
-  config,
   pkgs,
   lib,
   inputs,
@@ -8,67 +7,79 @@
 }:
 
 let
-  # 从 Arch HyDE 带过来的 Candy 主题,QML 里 QtGraphicalEffects 已替换为 Qt5Compat.GraphicalEffects
-  sddm-candy = pkgs.stdenv.mkDerivation {
-    name = "sddm-theme-candy";
-    src = ../assets/sddm-theme-candy;
-    installPhase = ''
-      dst=$out/share/sddm/themes/Candy
-      mkdir -p $dst
-      cp -r ./* $dst/
-      # 原仓库没附带 metadata.desktop —— sddm 没这个文件就识别不到主题,
-      # 报 "theme not found / missing resources",这里补上
-      cat > $dst/metadata.desktop <<EOF
-      [SddmGreeterTheme]
-      Name=Candy
-      Description=Candy (HyDE)
-      Type=sddm-theme
-      Version=0.1
-      MainScript=Main.qml
-      ConfigFile=theme.conf
-      QtVersion=6
-      EOF
-    '';
-  };
+  primaryDisplay = displayConfig.outputs.${displayConfig.primary};
+  primaryMode = primaryDisplay.mode;
+  # 沿用 Candy 当前壁纸；直接引用 store 资源，登录器不依赖用户目录权限。
+  greeterWallpaper = ../assets/sddm-theme-candy/backgrounds/seele.png;
+  # configFiles 按 basename 复制，writeTextDir 保留 session.json 的确切文件名。
+  greeterSession = pkgs.writeTextDir "session.json" (
+    builtins.toJSON {
+      wallpaperPath = "${greeterWallpaper}";
+    }
+  );
+  # 原生 greeter 模块直接启动 Quickshell，需补齐 DMS CLI 包装器提供的 Qt 路径。
+  greeterQtPackages = with pkgs.kdePackages; [
+    kirigami.unwrapped
+    sonnet
+    qtmultimedia
+    qtimageformats
+    kimageformats
+  ];
+  greeterQuickshell =
+    pkgs.runCommand "quickshell-dms-greeter"
+      {
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        meta.mainProgram = "quickshell";
+      }
+      ''
+        mkdir -p $out/bin
+        makeWrapper ${lib.getExe pkgs.quickshell} $out/bin/quickshell \
+          --prefix NIXPKGS_QT6_QML_IMPORT_PATH : ${
+            lib.escapeShellArg (
+              lib.concatMapStringsSep ":" (p: "${p}/${pkgs.qt6.qtbase.qtQmlPrefix}") greeterQtPackages
+            )
+          } \
+          --prefix QT_PLUGIN_PATH : ${
+            lib.escapeShellArg (
+              lib.concatMapStringsSep ":" (p: "${p}/${pkgs.qt6.qtbase.qtPluginPrefix}") greeterQtPackages
+            )
+          }
+        ln -s quickshell $out/bin/qs
+      '';
 in
 {
   # niri-flake 随会话启动 KDE Polkit agent；保持单一认证代理。
   programs.niri.enable = true;
   programs.niri.package = pkgs.niri;
 
-  services.displayManager.sddm = {
+  services.displayManager.dms-greeter = {
     enable = true;
-    # wayland greeter 需要额外 wayland 合成器 (kwin_wayland 等),没装直接起不来,关掉
-    wayland.enable = false;
-    theme = "Candy";
-    # Candy QML import: QtQuick.Controls 2.4 / Qt5Compat.GraphicalEffects /
-    # QtQuick.VirtualKeyboard 2.3 —— 都要塞 QML 模块路径
-    extraPackages = with pkgs.kdePackages; [
-      qtdeclarative
-      qt5compat
-      qtvirtualkeyboard
-      qtsvg
-    ];
-  };
+    package = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    quickshell.package = greeterQuickshell;
+    configFiles = [ "${greeterSession}/session.json" ];
+    compositor = {
+      name = "niri";
+      # 登录时只点亮主屏；用户会话启动后再应用 Home Manager 的完整布局。
+      customConfig = ''
+        hotkey-overlay { skip-at-startup; }
+        gestures { hot-corners { off; }; }
+        layout { background-color "#000000"; }
 
-  services.xserver.enable = true;
-  # SDDM 走 X11 模式,greeter 显示在 Xorg primary output 上 —— 钉到 DP-1 (主屏)
-  services.xserver.xrandrHeads = [
-    {
-      output = displayConfig.primary;
-      primary = true;
-    }
-    { output = displayConfig.secondary; }
-  ];
-  # xrandrHeads 只写 xorg.conf 的 Monitor/Screen section,amdgpu modesetting 经常不认。
-  # 仅设 --primary 也不移动 greeter —— sddm-greeter 走 Qt primaryScreen,
-  # 但 amdgpu 默认把 DP-2 排到 (0,0) -> greeter 还是落副屏。
-  # 直接在 SDDM 阶段关掉 DP-2,让 greeter 只能落主屏;登入后 niri 自己重新
-  # 按 outputs 配置点亮 DP-2 + 旋转 + 摆位。
-  services.xserver.displayManager.setupCommands = ''
-    ${pkgs.xrandr}/bin/xrandr --output ${lib.escapeShellArg displayConfig.secondary} --off || true
-    ${pkgs.xrandr}/bin/xrandr --output ${lib.escapeShellArg displayConfig.primary} --primary --auto || true
-  '';
+        output "${displayConfig.primary}" {
+          mode "${toString primaryMode.width}x${toString primaryMode.height}@${toString primaryMode.refresh}"
+          scale ${toString primaryDisplay.scale}
+          position x=0 y=0
+          focus-at-startup
+        }
+        ${lib.concatMapStringsSep "\n"
+          (output: ''
+            output "${output}" { off; }
+          '')
+          (lib.filter (output: output != displayConfig.primary) (builtins.attrNames displayConfig.outputs))
+        }
+      '';
+    };
+  };
 
   programs.dconf.enable = true;
 
@@ -100,12 +111,10 @@ in
   # gnome-keyring + PAM 自动解锁 (登入时用登录密码解 login keyring)
   # chromium --password-store=gnome-libsecret / git credential / ssh 私钥都走这个
   services.gnome.gnome-keyring.enable = true;
-  security.pam.services.sddm.enableGnomeKeyring = true;
+  security.pam.services.greetd.enableGnomeKeyring = true;
   security.pam.services.login.enableGnomeKeyring = true;
 
   environment.systemPackages = with pkgs; [
-    sddm-candy # 自打包的 Candy 主题 (let 里定义)
-
     # niri 周边 (DMS 已接管 wallpaper/clipboard 面板/launcher/通知/电源菜单)
     xwayland-satellite
     wl-clipboard # CLI 脚本备用 (wl-copy/wl-paste)

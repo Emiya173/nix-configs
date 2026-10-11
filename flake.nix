@@ -16,6 +16,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     niri = {
       url = "github:sodiboo/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -37,6 +42,7 @@
       self,
       nixpkgs,
       home-manager,
+      nix-index-database,
       niri,
       dms,
       nixvim,
@@ -101,6 +107,7 @@
               dms.homeModules.dank-material-shell
               dms.homeModules.niri
               nixvim.homeModules.nixvim
+              nix-index-database.homeModules.default
             ];
           }
         ];

@@ -81,6 +81,14 @@
     };
   };
 
+  # 使用上游预构建的 nixos-unstable 文件索引；无需本地运行 nix-index。
+  # 索引跟随 nix-index-database 的锁定版本，不包含本机 overlays。
+  programs.nix-index = {
+    enable = true;
+    enableFishIntegration = true;
+  };
+  programs.nix-index-database.comma.enable = true;
+
   programs.starship = {
     enable = true;
     # 上面的手动初始化统一保留 Linux TTY 排除和 transient prompt，避免 HM 再初始化一次。

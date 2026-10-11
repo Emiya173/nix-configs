@@ -17,7 +17,7 @@ Flake + Home Manager 结构,所有用户级配置在 `home/`,系统级在 `modul
 │   ├── network.nix            # NetworkManager + Bluetooth + Tailscale + SSH
 │   ├── audio.nix              # PipeWire
 │   ├── graphics.nix           # AMD RX 9070 (mesa + ROCm)
-│   ├── desktop.nix            # niri + sddm (X11/Candy) + portal + Qt6 依赖 + 多屏 xrandr
+│   ├── desktop.nix            # niri + DankGreeter + portal + Qt 依赖
 │   ├── input-method.nix       # fcitx5 + rime
 │   ├── keyd.nix               # 内核层 tap-hold: LeftMeta tap → F13 (Win 弹 launcher)
 │   ├── fonts.nix              # CJK + Nerd Font
@@ -29,7 +29,7 @@ Flake + Home Manager 结构,所有用户级配置在 `home/`,系统级在 `modul
 │   └── nix.nix                # flakes / GC / 镜像
 └── home/                      # home-manager
     ├── home.nix
-    ├── shell.nix              # fish + starship + atuin + zoxide + fzf
+    ├── shell.nix              # fish + starship + atuin + zoxide + fzf + nix-index/comma
     ├── kitty.nix
     ├── git.nix
     ├── niri.nix               # niri 全部 settings: outputs/键位/spawn/window-rules + DMS 集成
@@ -166,7 +166,7 @@ VoidMaker 快捷键调用现有 `voidmaker.target`，服务由应用项目维护
 本仓库覆盖的可复现范围如下。
 
 显示器接口和布局统一在 `hosts/present-pc/hardware-configuration.nix` 定义，
-SDDM 与 Home Manager 通过模块参数共用；光标主题和大小由
+DankGreeter 与 Home Manager 通过模块参数共用；光标主题和大小由
 `home.pointerCursor` 派生到 niri。
 
 以下状态仍需在迁移或恢复时单独处理：
@@ -223,6 +223,21 @@ treesitter / gitsigns / which-key / mini.* / flash / trouble / noice / persisten
 flatpak 已移除 (从未装过任何 flatpak 应用);nixpkgs 版本跟不上时优先考虑 AppImage
 (programs.appimage 已配 binfmt),或再把 nix-flatpak input + `services.flatpak` 加回来。
 
+### 命令查包与临时运行
+
+[nix-index-database](https://github.com/nix-community/nix-index-database) 提供预构建文件索引，
+Fish 在命令不存在时提示对应包；不需要本机运行 `nix-index`。
+[comma](https://github.com/nix-community/comma) 可以按命令名临时运行工具：
+
+```fish
+nix-locate --minimal --at-root --whole-name /bin/cowsay
+, cowsay hello
+```
+
+索引随 `nix-index-database` 的 flake lock 更新，来自上游 nixos-unstable，
+不包含本机 overlays。comma 执行仍使用现有 stable nixpkgs registry；
+少数只在 unstable 存在的包需要显式指定来源。
+
 ### Quickshell — DankMaterialShell (DMS)
 
 不再用 illogical-impulse,改用 [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell):
@@ -253,6 +268,8 @@ DMS 设置面板里"键盘快捷键 / 显示 / 光标主题 / 窗口规则"会�
 - `Mod+I`         — DMS 设置面板 (`dms ipc control-center toggle`,覆盖了 DMS 默认 Mod+Comma)
 - `Mod+/`         — DMS 键位面板 (`dms ipc keybinds toggleBinds`,带搜索分组,代替 niri 自带 hotkey overlay)
 - `Mod+Tab`       — niri 自带 overview (所有 workspace + 窗口缩略图)
+- `Print` / `Mod+Shift+S` — DMS 区域截图；`Ctrl+Print` 截当前屏幕，`Alt+Print` 选择窗口
+- `Mod+Shift+A`   — DMS 选区后交给 Satty 标注；取消选区直接退出
 - `Mod+S` / `Mod+Ctrl+S` — scratchpad (named workspace `scratch`,类 hyprland special workspace)
   - `Mod+S` toggle: 在 scratch 时回上个 workspace,否则跳进 scratch;**空 scratch 自动开 kitty**
   - `Mod+Ctrl+S`: 把当前 column 扔进 scratch
@@ -278,14 +295,19 @@ bind 的是 `XF86Tools` (不是 `F13`)。
 ### 显示 / 多屏
 
 主屏 = `DP-1` (4K@240, scale 1.5),副屏 = `DP-2` (2560x1600@160, scale 1.5,
-**90° 顶部朝左**,摆主屏左侧)。配置在 `home/niri.nix` 的 `outputs.*`。
+**90° 顶部朝左**,摆主屏左侧)。配置集中在
+`hosts/present-pc/hardware-configuration.nix` 的 `displayConfig`。
 
-niri 没有 "primary monitor" 字段,启动焦点按 connector 注册顺序 ——
-spawn-at-startup 加了 `sleep 1 && niri msg action focus-monitor DP-1` 强制钉主屏。
+niri 使用主屏的 `focus-at-startup` 设置启动焦点。
 
-SDDM (X11) 的 greeter 走 Qt primaryScreen,但 amdgpu 默认把 DP-2 排到 (0,0) ——
-`modules/desktop.nix` 的 `setupCommands` 在 Xsetup 阶段直接 `--off DP-2` +
-`--primary --auto DP-1`,让 greeter 只能落主屏,登录后 niri 自己重新点亮副屏。
+[DankGreeter](https://danklinux.com/docs/dankgreeter/nixos) 使用 niri Wayland 会话，
+登录时只点亮主屏，分辨率和缩放复用 `displayConfig`；登录后恢复完整桌面布局。
+`modules/desktop.nix` 固定使用原 Candy 壁纸
+`assets/sddm-theme-candy/backgrounds/seele.png`，由 Nix store 提供给登录器，
+独立于桌面 DMS 的壁纸设置。GNOME Keyring 通过 greetd PAM 在密码登录时解锁。
+
+首次从 SDDM 切换登录器时，建议先 `nh os build .` 验证，再 `nh os boot .`，
+重启后使用新登录器。
 
 ### 开发
 - Rust 用 `rustup` 管理 (避开 nixpkgs 版本切换的麻烦)
