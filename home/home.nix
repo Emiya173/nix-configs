@@ -4,6 +4,7 @@
   lib,
   inputs,
   userName,
+  hostPaths,
   ...
 }:
 
@@ -21,7 +22,7 @@
   ];
 
   home.username = userName;
-  home.homeDirectory = "/home/${userName}";
+  home.homeDirectory = hostPaths.home;
   home.stateVersion = "25.11";
 
   programs.home-manager.enable = true;

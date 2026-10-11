@@ -1,8 +1,15 @@
-{ config, pkgs, userName, ... }:
+{
+  config,
+  pkgs,
+  userName,
+  hostPaths,
+  ...
+}:
 
 {
   users.users.${userName} = {
     isNormalUser = true;
+    home = hostPaths.home;
     description = "present";
     shell = pkgs.fish;
     extraGroups = [

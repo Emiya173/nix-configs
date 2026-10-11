@@ -8,7 +8,7 @@
       noto-fonts
       noto-fonts-cjk-sans
       noto-fonts-cjk-serif
-      noto-fonts-color-emoji   # 原 noto-fonts-emoji
+      noto-fonts-color-emoji # 原 noto-fonts-emoji
       # noto-fonts-extra 已并入 noto-fonts
       source-han-sans
       source-han-serif
@@ -33,9 +33,18 @@
 
     fontconfig = {
       defaultFonts = {
-        serif = [ "Noto Serif CJK SC" "Noto Serif" ];
-        sansSerif = [ "Noto Sans CJK SC" "Noto Sans" ];
-        monospace = [ "JetBrainsMono Nerd Font" "Sarasa Mono SC" ];
+        serif = [
+          "Noto Serif CJK SC"
+          "Noto Serif"
+        ];
+        sansSerif = [
+          "Noto Sans CJK SC"
+          "Noto Sans"
+        ];
+        monospace = [
+          "JetBrainsMono Nerd Font"
+          "Sarasa Mono SC"
+        ];
         emoji = [ "Noto Color Emoji" ];
       };
     };

@@ -1,10 +1,17 @@
-{ config, pkgs, lib, inputs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  inputs,
+  hostPaths,
+  ...
+}:
 
 {
   # nh: NH_FLAKE 全局生效 (nos/nob 不用再带路径),clean 定时器替代 nix.gc
   programs.nh = {
     enable = true;
-    flake = "/home/present/nix_migrate";
+    flake = hostPaths.repository;
     clean = {
       enable = true;
       extraArgs = "--keep 5 --keep-since 14d";
@@ -18,9 +25,15 @@
     nixPath = [ "nixpkgs=flake:nixpkgs" ];
 
     settings = {
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       auto-optimise-store = true;
-      trusted-users = [ "root" "@wheel" ];
+      trusted-users = [
+        "root"
+        "@wheel"
+      ];
       substituters = [
         "https://mirrors.ustc.edu.cn/nix-channels/store"
         "https://cache.nixos.org"

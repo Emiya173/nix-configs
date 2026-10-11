@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   # btrbk: 声明式 btrfs 快照 + (可选) 异机备份
@@ -6,7 +11,7 @@
   # systemd timer 自动跑,不用 cron
   services.btrbk = {
     instances.local = {
-      onCalendar = "hourly";          # 触发频率 (实际是否生成由 snapshot_preserve 决定)
+      onCalendar = "hourly"; # 触发频率 (实际是否生成由 snapshot_preserve 决定)
       settings = {
         timestamp_format = "long";
 
@@ -20,10 +25,15 @@
         # 里面没有 @ 这个名字,所以 readlink /@ 会失败。
         # /btrfs 这个挂载点在 hardware-configuration.nix 里挂 subvolid=5
         volume."/btrfs" = {
-          snapshot_dir = "@snapshots";   # = /btrfs/@snapshots,即 /snapshots subvol
+          snapshot_dir = "@snapshots"; # = /btrfs/@snapshots,即 /snapshots subvol
           subvolume = {
-            "@home" = { snapshot_create = "always"; };
-            "@"     = { snapshot_create = "onchange"; snapshot_preserve = "12h 3d"; };
+            "@home" = {
+              snapshot_create = "always";
+            };
+            "@" = {
+              snapshot_create = "onchange";
+              snapshot_preserve = "12h 3d";
+            };
             # @nix 故意不快照
           };
         };
@@ -37,8 +47,8 @@
   # 一些便捷 CLI
   environment.systemPackages = with pkgs; [
     btrbk
-    compsize           # 看 btrfs 实际压缩比
-    btdu               # 类 ncdu,但识别 CoW 共享
+    compsize # 看 btrfs 实际压缩比
+    btdu # 类 ncdu,但识别 CoW 共享
   ];
 
   # 关闭高写入目录的 CoW (重要! 否则 docker/虚拟机镜像碎片飞起)

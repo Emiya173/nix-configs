@@ -49,10 +49,14 @@
 
       # Export exactly the package set used by the host, including its overlays.
       pkgs = self.nixosConfigurations.${hostName}.pkgs;
+      nixSources = builtins.filter (path: nixpkgs.lib.hasSuffix ".nix" (toString path)) (
+        nixpkgs.lib.filesystem.listFilesRecursive ./.
+      );
     in
     {
       packages.${system} = {
         qq = pkgs.unstable.qq;
+        inherit (pkgs) codex baidunetdisk;
       };
       formatter.${system} = pkgs.nixfmt;
       devShells.${system}.default = pkgs.mkShell {
@@ -62,6 +66,12 @@
         ];
       };
       checks.${system} = {
+        formatting = pkgs.runCommand "check-nix-formatting" { } ''
+          ${nixpkgs.lib.concatMapStringsSep "\n" (
+            path: "${pkgs.nixfmt}/bin/nixfmt --check ${path}"
+          ) nixSources}
+          touch $out
+        '';
         scripts =
           pkgs.runCommand "check-maintenance-scripts"
             {

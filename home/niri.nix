@@ -3,6 +3,7 @@
   pkgs,
   lib,
   displayConfig,
+  hostPaths,
   ...
 }:
 
@@ -79,7 +80,7 @@ let
     text = ''
       exec 9>"$XDG_RUNTIME_DIR/voidmaker-toggle.lock"
       flock -n 9 || exit 0
-      shell_path=${lib.escapeShellArg "${config.home.homeDirectory}/dev/VoidMaker/apps/shell/shell.qml"}
+      shell_path=${lib.escapeShellArg "${hostPaths.voidmaker}/apps/shell/shell.qml"}
       if quickshell --path "$shell_path" ipc call voidmaker toggle 2>/dev/null; then
         exit 0
       fi

@@ -1,4 +1,10 @@
-{ config, pkgs, lib, userName, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  userName,
+  ...
+}:
 
 {
   # Docker

@@ -1,10 +1,15 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   programs.yazi = {
     enable = true;
     enableFishIntegration = true;
-    shellWrapperName = "y";   # 与 fish 里 `y` 函数一致
+    shellWrapperName = "y"; # 与 fish 里 `y` 函数一致
 
     # 仅写覆盖项,不重复默认值
     settings = {
@@ -18,7 +23,11 @@
 
     keymap = {
       mgr.prepend_keymap = [
-        { on = [ "C" ]; run = "plugin ouch tar.zst"; desc = "Compress with ouch"; }
+        {
+          on = [ "C" ];
+          run = "plugin ouch tar.zst";
+          desc = "Compress with ouch";
+        }
       ];
     };
 

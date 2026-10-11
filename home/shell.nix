@@ -1,4 +1,10 @@
-{ config, pkgs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  hostPaths,
+  ...
+}:
 
 {
   programs.fish = {
@@ -54,9 +60,9 @@
       ngc = "sudo nh clean all --keep 5 --keep-since 14d";
 
       # flake --------------------------------------------------
-      nfu = "nix flake update --flake ~/nix_migrate"; # 升 input (尾巴可接 input 名,如 nfu nixpkgs)
-      nfc = "nix flake check  ~/nix_migrate"; # eval 自检
-      nfs = "nix flake show   ~/nix_migrate"; # 看 outputs 树
+      nfu = "nix flake update --flake ${lib.escapeShellArg hostPaths.repository}"; # 升 input (尾巴可接 input 名,如 nfu nixpkgs)
+      nfc = "nix flake check ${lib.escapeShellArg hostPaths.repository}"; # 检查 flake 并构建 checks
+      nfs = "nix flake show ${lib.escapeShellArg hostPaths.repository}"; # 看 outputs 树
 
       # 搜索 / 临时拉包 --------------------------------------------------
       nse = "nh search"; # nh search <pkg> (走本地索引,快)

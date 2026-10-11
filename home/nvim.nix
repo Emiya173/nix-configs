@@ -1,4 +1,10 @@
-{ config, pkgs, lib, inputs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  inputs,
+  ...
+}:
 
 {
   programs.nixvim = {
@@ -78,7 +84,7 @@
           "<leader>fb" = "buffers";
           "<leader>fh" = "help_tags";
           "<leader>fr" = "oldfiles";
-          "<leader>/"  = "current_buffer_fuzzy_find";
+          "<leader>/" = "current_buffer_fuzzy_find";
         };
       };
 
@@ -116,11 +122,11 @@
       mini = {
         enable = true;
         modules = {
-          ai = {};
-          surround = {};
-          pairs = {};
-          comment = {};
-          icons = {};
+          ai = { };
+          surround = { };
+          pairs = { };
+          comment = { };
+          icons = { };
         };
       };
 
@@ -160,7 +166,7 @@
           # Rust (注意: rust 项目里建议改用 rustaceanvim,这里给基础)
           rust_analyzer = {
             enable = true;
-            installCargo = false;     # 由 rustup 提供
+            installCargo = false; # 由 rustup 提供
             installRustc = false;
           };
 
@@ -185,7 +191,7 @@
           bashls.enable = true;
 
           # Java / Kotlin / C/C++
-          jdtls.enable = false;        # 项目时再开
+          jdtls.enable = false; # 项目时再开
           kotlin_language_server.enable = true;
           clangd.enable = true;
 
@@ -206,7 +212,7 @@
             "gr" = "references";
             "gI" = "implementation";
             "gy" = "type_definition";
-            "K"  = "hover";
+            "K" = "hover";
             "<leader>cr" = "rename";
             "<leader>ca" = "code_action";
             "<leader>cf" = "format";
@@ -232,11 +238,11 @@
           ];
           mapping = {
             "<C-Space>" = "cmp.mapping.complete()";
-            "<C-d>"     = "cmp.mapping.scroll_docs(-4)";
-            "<C-f>"     = "cmp.mapping.scroll_docs(4)";
-            "<CR>"      = "cmp.mapping.confirm({ select = true })";
-            "<Tab>"     = "cmp.mapping(cmp.mapping.select_next_item(), {'i','s'})";
-            "<S-Tab>"   = "cmp.mapping(cmp.mapping.select_prev_item(), {'i','s'})";
+            "<C-d>" = "cmp.mapping.scroll_docs(-4)";
+            "<C-f>" = "cmp.mapping.scroll_docs(4)";
+            "<CR>" = "cmp.mapping.confirm({ select = true })";
+            "<Tab>" = "cmp.mapping(cmp.mapping.select_next_item(), {'i','s'})";
+            "<S-Tab>" = "cmp.mapping(cmp.mapping.select_prev_item(), {'i','s'})";
           };
         };
       };
@@ -255,16 +261,40 @@
           formatters_by_ft = {
             nix = [ "nixfmt" ];
             lua = [ "stylua" ];
-            python = [ "ruff_format" "black" ];
+            python = [
+              "ruff_format"
+              "black"
+            ];
             rust = [ "rustfmt" ];
-            javascript = [ "prettierd" "prettier" ];
-            typescript = [ "prettierd" "prettier" ];
-            typescriptreact = [ "prettierd" "prettier" ];
-            markdown = [ "prettierd" "prettier" ];
-            yaml = [ "prettierd" "prettier" ];
-            json = [ "prettierd" "prettier" ];
+            javascript = [
+              "prettierd"
+              "prettier"
+            ];
+            typescript = [
+              "prettierd"
+              "prettier"
+            ];
+            typescriptreact = [
+              "prettierd"
+              "prettier"
+            ];
+            markdown = [
+              "prettierd"
+              "prettier"
+            ];
+            yaml = [
+              "prettierd"
+              "prettier"
+            ];
+            json = [
+              "prettierd"
+              "prettier"
+            ];
             sh = [ "shfmt" ];
-            go = [ "gofmt" "goimports" ];
+            go = [
+              "gofmt"
+              "goimports"
+            ];
           };
         };
       };
@@ -282,36 +312,108 @@
 
     # 来自 LazyVim 风格的核心键位 (which-key 会自动捡)
     keymaps = [
-      { mode = "n"; key = "<leader>w"; action = "<cmd>w<cr>"; options.desc = "Save"; }
-      { mode = "n"; key = "<leader>q"; action = "<cmd>q<cr>"; options.desc = "Quit"; }
-      { mode = "n"; key = "<leader>e"; action = "<cmd>Neotree toggle<cr>"; options.desc = "Explorer"; }
-      { mode = "n"; key = "<leader>gg"; action = "<cmd>LazyGit<cr>"; options.desc = "LazyGit"; }
-      { mode = "n"; key = "<leader>xx"; action = "<cmd>Trouble diagnostics toggle<cr>"; options.desc = "Diagnostics"; }
-      { mode = "n"; key = "<leader>bd"; action = "<cmd>bdelete<cr>"; options.desc = "Delete buffer"; }
-      { mode = "n"; key = "<S-h>"; action = "<cmd>BufferLineCyclePrev<cr>"; options.desc = "Prev buffer"; }
-      { mode = "n"; key = "<S-l>"; action = "<cmd>BufferLineCycleNext<cr>"; options.desc = "Next buffer"; }
-      { mode = "n"; key = "<C-h>"; action = "<C-w>h"; options.desc = "Window left"; }
-      { mode = "n"; key = "<C-j>"; action = "<C-w>j"; options.desc = "Window down"; }
-      { mode = "n"; key = "<C-k>"; action = "<C-w>k"; options.desc = "Window up"; }
-      { mode = "n"; key = "<C-l>"; action = "<C-w>l"; options.desc = "Window right"; }
+      {
+        mode = "n";
+        key = "<leader>w";
+        action = "<cmd>w<cr>";
+        options.desc = "Save";
+      }
+      {
+        mode = "n";
+        key = "<leader>q";
+        action = "<cmd>q<cr>";
+        options.desc = "Quit";
+      }
+      {
+        mode = "n";
+        key = "<leader>e";
+        action = "<cmd>Neotree toggle<cr>";
+        options.desc = "Explorer";
+      }
+      {
+        mode = "n";
+        key = "<leader>gg";
+        action = "<cmd>LazyGit<cr>";
+        options.desc = "LazyGit";
+      }
+      {
+        mode = "n";
+        key = "<leader>xx";
+        action = "<cmd>Trouble diagnostics toggle<cr>";
+        options.desc = "Diagnostics";
+      }
+      {
+        mode = "n";
+        key = "<leader>bd";
+        action = "<cmd>bdelete<cr>";
+        options.desc = "Delete buffer";
+      }
+      {
+        mode = "n";
+        key = "<S-h>";
+        action = "<cmd>BufferLineCyclePrev<cr>";
+        options.desc = "Prev buffer";
+      }
+      {
+        mode = "n";
+        key = "<S-l>";
+        action = "<cmd>BufferLineCycleNext<cr>";
+        options.desc = "Next buffer";
+      }
+      {
+        mode = "n";
+        key = "<C-h>";
+        action = "<C-w>h";
+        options.desc = "Window left";
+      }
+      {
+        mode = "n";
+        key = "<C-j>";
+        action = "<C-w>j";
+        options.desc = "Window down";
+      }
+      {
+        mode = "n";
+        key = "<C-k>";
+        action = "<C-w>k";
+        options.desc = "Window up";
+      }
+      {
+        mode = "n";
+        key = "<C-l>";
+        action = "<C-w>l";
+        options.desc = "Window right";
+      }
       # 视觉模式上下移动行
-      { mode = "v"; key = "J"; action = ":m '>+1<CR>gv=gv"; }
-      { mode = "v"; key = "K"; action = ":m '<-2<CR>gv=gv"; }
+      {
+        mode = "v";
+        key = "J";
+        action = ":m '>+1<CR>gv=gv";
+      }
+      {
+        mode = "v";
+        key = "K";
+        action = ":m '<-2<CR>gv=gv";
+      }
       # ESC 取消高亮
-      { mode = "n"; key = "<Esc>"; action = "<cmd>noh<cr><Esc>"; }
+      {
+        mode = "n";
+        key = "<Esc>";
+        action = "<cmd>noh<cr><Esc>";
+      }
     ];
 
     # 把外部依赖的 CLI (formatter/linter) 一起进 PATH
     extraPackages = with pkgs; [
-      nixfmt          # 即原 nixfmt-rfc-style,顶层 alias 已统一
+      nixfmt # 即原 nixfmt-rfc-style,顶层 alias 已统一
       stylua
       shfmt
       shellcheck
       ruff
       black
-      prettierd   # prettierd 已够,不再单独装 prettier
+      prettierd # prettierd 已够,不再单独装 prettier
       markdownlint-cli
-      gopls          # 让 gopls 自动可用 (nixvim 也会装,但保险)
+      gopls # 让 gopls 自动可用 (nixvim 也会装,但保险)
     ];
   };
 }

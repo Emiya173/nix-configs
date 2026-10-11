@@ -10,6 +10,7 @@ Flake + Home Manager 结构,所有用户级配置在 `home/`,系统级在 `modul
 ├── flake.nix                  # 入口,锁定 nixpkgs/home-manager/niri-flake
 ├── hosts/present-pc/
 │   ├── configuration.nix      # 主机配置入口
+│   ├── paths.nix              # 用户目录、配置仓库和本地应用源码路径
 │   └── hardware-configuration.nix  # 占位,安装时替换!
 ├── modules/                   # 系统级
 │   ├── boot.nix               # GRUB + os-prober + linux-zen
@@ -117,7 +118,7 @@ nh os switch ~/nix_migrate
 nh os build ~/nix_migrate
 
 # 更新 flake input 后切换
-nix flake update ~/nix_migrate
+nix flake update --flake ~/nix_migrate
 nh os switch ~/nix_migrate
 
 # 原生命令 (备用)
@@ -131,20 +132,38 @@ sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
 
 ```bash
 ./scripts/check.sh             # 快速求值，不下载应用安装包，不代表 build 成功
-./scripts/check.sh checks      # 构建脚本检查
-./scripts/check.sh packages    # 构建 QQ
+./scripts/check.sh checks      # ShellCheck + 全仓库 Nix 格式检查
+./scripts/check.sh packages    # 构建 QQ、Codex、百度网盘
+./scripts/check.sh packages codex baidunetdisk  # 只检查指定包
 ./scripts/check.sh system      # nh os build，不激活系统
 ./scripts/check.sh all         # 依次执行以上各层
 nix fmt -- flake.nix           # 使用本 flake 锁定的 nixfmt 格式化指定文件
 ```
 
-检查命令禁止自动更新 lock。QQ 保留单独构建入口 `nix build --no-link .#qq`；
-其他包可通过主机包集构建，例如
-`nix build --no-link .#nixosConfigurations.present-pc.pkgs.codex`。
+检查命令禁止自动更新 lock。三个包均提供独立构建入口：
+`nix build --no-link --no-update-lock-file .#qq`、`.#codex`、`.#baidunetdisk`。
+`packages` 后只接受这三个包名；默认求值不会执行格式检查或包构建。
 
 Codex 在 `packages/codex/default.nix` 固定官方发布包的版本与 SHA-256，
 独立于 nixpkgs 更新。升级时同步更新版本与发布包校验值，再运行上述求值检查
-及 `nix build --no-link .#nixosConfigurations.present-pc.pkgs.codex`。
+及 `./scripts/check.sh packages codex`。
+
+升发行版使用 `./scripts/bump-release.sh 26.11`，只同步 nixpkgs、Home Manager
+和 nixvim 的 release URL 与对应 lock。脚本接受 `YY.05` / `YY.11`，更新后自动求值；
+若 lock 更新失败，会保留目标 URL，修复网络或分支问题后可用同一版本重试。
+该操作会更新输入，应检查 `flake.nix` / `flake.lock` 差异，再构建和切换。
+
+### 主机路径与本地开发入口
+
+`hosts/present-pc/paths.nix` 集中定义用户目录、配置仓库和 VoidMaker 源码路径，
+主机配置通过 `hostPaths` 参数同时传给 NixOS 与 Home Manager。系统用户目录、
+`NH_FLAKE`、Fish 的 `nfu/nfc/nfs` 和 VoidMaker 快捷键均使用这些值。
+这些路径是运行时字符串；可变源码不会被复制进 Nix store。
+
+全局开发工具链保持现有配置，项目自身的 devShell 和 lock 继续由各项目维护。
+VoidMaker 快捷键调用现有 `voidmaker.target`，服务由应用项目维护；本仓库不导入
+仓库外的 Nix 文件。换目录时还需按 VoidMaker 项目 README 更新其服务模板中的路径。
+本仓库覆盖的可复现范围如下。
 
 显示器接口和布局统一在 `hosts/present-pc/hardware-configuration.nix` 定义，
 SDDM 与 Home Manager 通过模块参数共用；光标主题和大小由
@@ -155,6 +174,11 @@ SDDM 与 Home Manager 通过模块参数共用；光标主题和大小由
 - DMS 壁纸、电源超时和动态主题设置：由 DMS 写入，备份其用户配置；不与 HM 同时写同一文件。
 - Rime 用户词频、应用账号和用户文档：属于用户数据，按现有备份策略恢复。
 - 开发项目 `.venv`、Rust toolchain 等：由各项目自己的 lock/工具链声明重建。
+- VoidMaker：按项目 README 构建 Host 并安装用户服务模板，包括
+  `docs/voidmaker-host.service` 及 `docs/systemd/` 下的 `voidmaker.target`、
+  `voidmaker-shell.service`、`voidmaker-postgres.service`、`voidmaker-asr.service`、
+  `voidmaker-tts.service`；然后运行 `systemctl --user daemon-reload`。
+  ASR/TTS 依赖的 `qwen3-asr-service` 与 `gpt-sovits` 开发环境也由各自项目准备。
 
 `flake.lock` 固定版本但不能保证上游永久保留下载。长期保留一个部署版本时，
 还需归档对应 Git 提交、flake inputs、系统运行闭包，以及需要从源码重建的依赖。
