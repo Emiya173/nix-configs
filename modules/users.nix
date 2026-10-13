@@ -10,7 +10,7 @@
   users.users.${userName} = {
     isNormalUser = true;
     home = hostPaths.home;
-    description = "present";
+    description = userName;
     shell = pkgs.fish;
     extraGroups = [
       "wheel"

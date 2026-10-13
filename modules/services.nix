@@ -3,6 +3,7 @@
   pkgs,
   lib,
   userName,
+  hostName,
   ...
 }:
 
@@ -15,11 +16,11 @@
   };
 
   # Waydroid
-  virtualisation.waydroid.enable = true;
+  virtualisation.waydroid.enable = lib.mkDefault (hostName == "present-pc");
 
   # Sunshine 串流
   services.sunshine = {
-    enable = true;
+    enable = lib.mkDefault (hostName == "present-pc");
     autoStart = false;
     capSysAdmin = true;
     openFirewall = true;

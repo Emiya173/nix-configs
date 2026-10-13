@@ -5,6 +5,7 @@
   inputs,
   userName,
   hostPaths,
+  hostName,
   ...
 }:
 
@@ -19,6 +20,7 @@
     ./dev.nix
     ./nvim.nix
     ./yazi.nix
+    ./hosts/${hostName}.nix
   ];
 
   home.username = userName;

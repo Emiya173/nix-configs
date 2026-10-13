@@ -2,16 +2,17 @@
 
 ## Project Structure & Module Organization
 
-This repository defines the `present-pc` NixOS system as a flake. Keep machine
-assembly in `hosts/present-pc/`, reusable system configuration in `modules/`,
-and user-scoped Home Manager configuration in `home/`. Custom derivations live
+This repository defines multiple NixOS hosts as a flake. Keep machine assembly
+in `hosts/<hostname>/`, reusable system configuration in `modules/`, and
+user-scoped Home Manager configuration in `home/`. Custom derivations live
 in `packages/` and are exposed through `overlays/`. Static boot, login, and
 Fastfetch resources belong in `assets/`. Maintenance and validation helpers are
 in `scripts/`.
 
-Add new system modules to `hosts/present-pc/configuration.nix`; add new Home
-Manager modules to `home/home.nix`. Keep hardware-specific values in
-`hosts/present-pc/hardware-configuration.nix`.
+Add host-specific system settings to `hosts/<hostname>/configuration.nix`; add
+shared Home Manager modules to `home/home.nix` and per-host Home Manager
+settings to `home/hosts/<hostname>.nix`. Keep hardware-specific values in each
+host's `hardware-configuration.nix`.
 
 ## Build, Test, and Development Commands
 
@@ -41,7 +42,8 @@ should explain constraints or non-obvious decisions, not restate the code.
 
 ## Testing Guidelines
 
-There is no separate unit-test suite. Every change must pass
+Subscription recovery and privacy tests live in `tests/test_subscription.py`
+and run through the flake checks. Every change must pass
 `./scripts/check.sh`; package changes should also pass their targeted
 `nix build`. For changes affecting services, graphics, boot, or the desktop,
 run `nh os build .` before switching. Do not commit generated `result` links.
