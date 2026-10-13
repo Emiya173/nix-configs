@@ -22,4 +22,4 @@ for path in /etc/hysteria/vps-reverse.key /var/lib/nixos-secrets/present-passwor
   if [[ -f "$target$path" && $(stat -c %a "$target$path") != 600 ]]; then printf 'MODE %s must be 600\n' "$path"; failed=1; fi
 done
 [[ $failed -eq 0 ]] || exit 1
-printf '%s\n' 'Required state and mounts are present. Verify independent backups and actual public-key login before install.'
+printf '%s\n' 'Required migration state and mounts are present. Check the target hardware configuration and login credentials before install.'

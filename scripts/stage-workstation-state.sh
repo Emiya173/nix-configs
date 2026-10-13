@@ -44,4 +44,4 @@ else
   unset subscription_url
 fi
 chmod 600 "$target/var/lib/nixos-secrets/present-password-hash" "$target/var/lib/dae-subscription-config/upstream-url"
-printf '%s\n' 'Selected network state, SSH identity and login hash staged. User/work data and Docker exports are separate.'
+printf '%s\n' 'Network state, SSH identity and login hash imported. Reuse @home and recreate EasyConnect from its Compose configuration.'

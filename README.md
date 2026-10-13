@@ -3,7 +3,7 @@
 从 Arch Linux + Hyprland/quickshell-ii 迁移而来,新桌面: **niri + DankMaterialShell**。
 Flake + Home Manager 结构,所有用户级配置在 `home/`,系统级在 `modules/`。
 
-工作机 `arch-pc` 的迁移取舍、网络凭据、计划子卷和安装准备见 [WORKSTATION.md](WORKSTATION.md)。下述首次安装步骤为私人主机 `present-pc` 的历史流程；工作机应按其专属计划保留原 Arch 根。
+工作机 `arch-pc` 的迁移取舍、网络凭据、计划子卷和安装准备见 [WORKSTATION.md](WORKSTATION.md)。下述首次安装步骤为私人主机 `present-pc` 的历史流程；工作机按其专属挂载和凭据导入流程迁移，不要求 Arch 回退或独立备份。
 
 ## 目录结构
 

@@ -25,6 +25,7 @@
     ../../modules/workstation/network.nix
   ];
   networking.hostName = hostName;
+  boot.loader.grub.useOSProber = lib.mkForce false;
   users.users.${userName} = {
     uid = 1000;
     group = userName;
@@ -75,6 +76,8 @@
   };
   services.smartd.enable = true;
   systemd.tmpfiles.rules = [
+    "d /opt/android-sdk 0755 root root - -"
+    "L+ /opt/android-sdk/platform-tools - - - - ${pkgs.android-tools}/bin"
     "d /var/lib/docker 0710 root root - -"
     "h /var/lib/docker - - - - +C"
   ];

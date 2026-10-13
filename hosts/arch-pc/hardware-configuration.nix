@@ -1,6 +1,6 @@
 # Audited hardware and planned subvolumes. Create @nixos/@nix/@snapshots in the
 # installation environment and verify with nixos-generate-config before install.
-# The existing Arch @ is deliberately retained for rollback.
+# The existing Arch @ is a source for runtime data, not a rollback requirement.
 {
   lib,
   pkgs,
