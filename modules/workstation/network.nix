@@ -103,6 +103,25 @@ in
       RestartSec = 5;
     };
   };
+  # Keep VNC independent so a failed desktop connection cannot restart SSH.
+  systemd.services.hysteria-vnc-tunnel = {
+    description = "Reverse VNC over Hysteria";
+    wantedBy = [ "multi-user.target" ];
+    wants = [
+      "network-online.target"
+      "hysteria-client.service"
+    ];
+    after = [
+      "network-online.target"
+      "hysteria-client.service"
+    ];
+    startLimitIntervalSec = 0;
+    serviceConfig = {
+      ExecStart = "${pkgs.openssh}/bin/ssh -NT -p 10022 -i /etc/hysteria/vps-reverse.key -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/hysteria/known_hosts -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=3 -o ServerAliveCountMax=2 -R 127.0.0.1:15903:127.0.0.1:5900 hytunnel@127.0.0.1";
+      Restart = "always";
+      RestartSec = 5;
+    };
+  };
   # Persistent NM profiles and keyring state are restored privately. Never copy
   # /run/NetworkManager profiles (old wg0, Docker bridges and loopback).
   environment.systemPackages = [

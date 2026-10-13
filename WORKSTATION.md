@@ -14,7 +14,7 @@
 - xlog 源码已随仓库保存，依赖 zlib/zstd/OpenSSL3，以 Nix 构建并运行原项目测试，提供 `xlog` 和 `~/.local/bin/xlog`。实际解码密钥仍在 `~/.config/xlog/private.key`，不进仓库或 store。
 - 增加 Beyond Compare、钉钉、腾讯会议、LocalSend、百度网盘与当前 Linux ChatGPT 桌面包；同一个桌面客户端包含 Codex 界面，并提供单独 Codex 桌面入口。CLI `codex` 继续独立提供。登录、界面、会议共享须在目标图形环境验收。
 - 保留 OBS、ffmpeg-full、mpv、imv/gthumb/Satty/hyprpicker。DMS 已内建剪贴板粘贴，所选脚本/快捷键无 ydotool 调用，不迁移旧 ydotool 服务、用户组或专属配置；keyd 继续提供轻点 Super 启动器。移除 claude-code overlay 入口。Toolbox 应用、专属配置和 scripts PATH 不迁移，复用 home 时屏蔽旧菜单和自启动入口。
-- 保留 NetworkManager 持久连接、DAE、EasyConnect、Hysteria/反向 SSH。WireGuard/wstunnel 退役，不迁移。Hysteria 15903/VNC 旧转发默认不恢复，SSH 15023 保留。
+- 保留 NetworkManager 持久连接、DAE、EasyConnect、Hysteria/反向 SSH。WireGuard/wstunnel 退役，不迁移。Hysteria 反向 SSH 15023 保留，VNC 15903 由独立的 hysteria-vnc-tunnel.service 提供。wayvnc 用户服务由 Home Manager 提供，随图形会话启动，沿用 0.0.0.0:5900；不增加防火墙放行，远程可通过 SSH 隧道访问。
 - 工作机关闭 resolvconf 的 EDNS0 扩展：当前 EasyConnect DNS 对携带 OPT 的请求返回空答案，沿用迁移前 Arch 的普通 DNS 行为。
 - DAE 使用已锁定 `nixpkgs-unstable` 中的包，不单独固定版本。工作配置通过运行时 credential 读取，不将含节点凭据的配置嵌入 Nix。
 - EasyConnect 使用原 Compose 工作目录与系统 Docker socket，等待 VPN DNS 监听后初始化转发；DNS 以逐报文方式从 5353 转发至 Sangfor 5373 端口，子进程空闲 5 秒退出；从镜像重新创建容器，不要求搬迁旧匿名卷。旧 `ubuntu:doc_linux_60121` 镜像与 `aibox_build` 容器不迁移。Docker autoPrune 保持关闭。
@@ -94,3 +94,13 @@ nix --extra-experimental-features 'nix-command flakes' build --no-link path:.#ni
 检查脚本使用 path flake，使新文件在暂存前也可求值，保持既有 Git index。提交时仍需加入新文件。构建通过后也需验证工作网络、DAE eBPF、Hysteria 远端15023、会议/共享、桌面登录与锁屏和实际项目构建。
 
 本轮授权范围是配置实现和迁移准备；不执行 `switch`、`boot`、`nixos-install`、分区或旧系统清理。
+
+## 安装后排障记录（2026-10-13）
+
+已在工作机 `/home/present/mirgate/nix-configs` 完成修复并激活：
+
+- Codex CLI 0.160.0 的交互入口调用复用 home 中的 GNU app-server 缓存，因缺少 `libonig.so.5` 无法启动。执行 `codex app-server daemon update --from-cli --yes`，使用 Nix 安装的 musl 包替换并固定后台程序，再执行 `codex app-server daemon start`。交互请求和 shell 执行均已验证成功，认证和会话数据无需重置。以后升级 Nix 中的 Codex 包后，可再次执行 `codex app-server daemon update --from-cli --yes` 同步固定的后台程序。
+- 原 `wayvnc.service` 调用已不存在的 `/usr/bin/wayvnc`，以 `203/EXEC` 失败。现由 `home/hosts/arch-pc.nix` 的 `services.wayvnc` 提供 Nix store 路径、图形会话自动启动和失败重启；旧用户单元保存为 `wayvnc.service.hm-backup`。
+- 完整访问链路为 `10.10.0.1:15900 → VPS 127.0.0.1:15903 → 工作机 127.0.0.1:5900`。迁移遗漏了 VNC 反向转发，现由 `modules/workstation/network.nix` 中独立的 `hysteria-vnc-tunnel.service` 补齐，经 Hysteria 10022 连接 VPS，沿用现有专用密钥。SSH 管理隧道的有效单元保持一致，VPS 和路由器配置无需改动。
+
+远端 `./scripts/check.sh`、`./scripts/check.sh checks` 均通过；缓存站暂时不可达后，`nh os build . --offline` 成功。用户已执行 `nh os switch . --offline`，正式 VNC 隧道为 `active (running)`、`NRestarts=0`。本机实际执行 `wlvncc 10.10.0.1 15900` 成功连接，RFB 客户端收到 2560×1440 画面，用户再次确认远程访问成功。验证用临时隧道已停止。

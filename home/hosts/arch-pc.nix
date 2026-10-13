@@ -59,6 +59,19 @@ in
   };
   # The reused history database has migrations newer than stable Atuin supports.
   programs.atuin.package = pkgs.unstable.atuin;
+  # Replace the reused Arch unit's /usr/bin/wayvnc with the Nix package.
+  services.wayvnc = {
+    enable = true;
+    autoStart = true;
+    settings = {
+      address = "0.0.0.0";
+      port = 5900;
+    };
+  };
+  systemd.user.services.wayvnc.Service = {
+    Restart = "on-failure";
+    RestartSec = 3;
+  };
   # Keep the legacy path used by Yazi and scripts, while building the executable
   # from source. The private key remains in the user's mutable config directory.
   home.file.".local/bin/xlog".source = "${xlog}/bin/xlog";
