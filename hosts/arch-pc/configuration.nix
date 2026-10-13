@@ -28,6 +28,13 @@
   # Sangfor DNS returns empty answers for EDNS requests; keep the Arch resolver
   # behavior on this VPN workstation.
   networking.resolvconf.dnsExtensionMechanism = false;
+  # Runtime libraries for the existing ghcup bindists retained in @home.
+  programs.nix-ld.libraries = with pkgs; [
+    ncurses
+    gmp
+    libffi
+    zlib
+  ];
   boot.loader.grub.useOSProber = lib.mkForce false;
   users.users.${userName} = {
     uid = 1000;

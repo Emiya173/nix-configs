@@ -57,6 +57,8 @@ in
       fish_add_path --prepend "${pkgs.android-tools}/bin"
     '';
   };
+  # The reused history database has migrations newer than stable Atuin supports.
+  programs.atuin.package = pkgs.unstable.atuin;
   # Keep the legacy path used by Yazi and scripts, while building the executable
   # from source. The private key remains in the user's mutable config directory.
   home.file.".local/bin/xlog".source = "${xlog}/bin/xlog";
