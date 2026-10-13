@@ -4,3 +4,6 @@ result-*
 *.swp
 *.swo
 .DS_Store
+__pycache__/
+*.pyc
+packages/xlog/source/bench/results/

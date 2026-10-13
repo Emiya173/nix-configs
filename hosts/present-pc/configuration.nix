@@ -8,13 +8,7 @@
   ...
 }:
 
-let
-  hostPaths = import ./paths.nix { inherit userName; };
-in
 {
-  _module.args.hostPaths = hostPaths;
-  home-manager.extraSpecialArgs = { inherit hostPaths; };
-
   imports = [
     ./hardware-configuration.nix
     ../../modules/boot.nix

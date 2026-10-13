@@ -1,5 +1,5 @@
 {
-  description = "present-pc NixOS configuration (migrated from Arch)";
+  description = "Personal multi-host NixOS configuration";
 
   inputs = {
     # 主包源走 stable。升 release 用 ./scripts/bump-release.sh <新版本>,
@@ -7,17 +7,12 @@
     # (flake input url 必须是字面量,版本号没法在 Nix 层单点定义)
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # unstable 精选通道: 显式使用 unstable.qq 等桌面包;
+    # unstable 精选通道: DAE/Hysteria/QQ 等按需显式使用;
     # 同时以 pkgs.unstable.* 暴露整棵,临时要新包时写 unstable.foo 即可
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nix-index-database = {
-      url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -35,6 +30,11 @@
       url = "github:nix-community/nixvim/nixos-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -42,7 +42,6 @@
       self,
       nixpkgs,
       home-manager,
-      nix-index-database,
       niri,
       dms,
       nixvim,
@@ -50,11 +49,74 @@
     }@inputs:
     let
       system = "x86_64-linux";
-      hostName = "present-pc";
       userName = "present";
 
-      # Export exactly the package set used by the host, including its overlays.
-      pkgs = self.nixosConfigurations.${hostName}.pkgs;
+      mkHost =
+        hostName:
+        let
+          displayConfig = import ./hosts/${hostName}/displays.nix;
+          hostPaths = import ./hosts/${hostName}/paths.nix { inherit userName; };
+          desktopFeatures = {
+            scratch = hostName == "present-pc";
+            casting = hostName == "present-pc";
+            voidmaker = hostName == "present-pc";
+            entertainment = hostName == "present-pc";
+          };
+        in
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = {
+            inherit
+              inputs
+              userName
+              hostName
+              displayConfig
+              hostPaths
+              desktopFeatures
+              ;
+          };
+          modules = [
+            ./hosts/${hostName}/configuration.nix
+            niri.nixosModules.niri
+            home-manager.nixosModules.home-manager
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.extraSpecialArgs = {
+                inherit
+                  inputs
+                  userName
+                  hostName
+                  displayConfig
+                  hostPaths
+                  desktopFeatures
+                  ;
+              };
+              home-manager.users.${userName} = import ./home/home.nix;
+              home-manager.backupFileExtension = "hm-backup";
+              # 注意:dms.homeModules.niri 自己 import 了 niri.homeModules.niri,
+              # 这里再加 niri.homeModules.niri 会让 programs.niri.finalConfig 双重声明
+              home-manager.sharedModules = [
+                dms.homeModules.dank-material-shell
+                dms.homeModules.niri
+                nixvim.homeModules.nixvim
+                inputs.nix-index-database.homeModules.default
+              ];
+            }
+          ];
+        };
+
+      overlay = import ./overlays/default.nix {
+        inherit inputs;
+      };
+
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        overlays = [
+          overlay
+        ];
+      };
       nixSources = builtins.filter (path: nixpkgs.lib.hasSuffix ".nix" (toString path)) (
         nixpkgs.lib.filesystem.listFilesRecursive ./.
       );
@@ -63,6 +125,10 @@
       packages.${system} = {
         qq = pkgs.unstable.qq;
         inherit (pkgs) codex baidunetdisk fastfetch;
+        dingtalk = pkgs.callPackage ./packages/dingtalk { };
+        xlog = pkgs.callPackage ./packages/xlog { };
+        dae-subscription = pkgs.callPackage ./packages/dae-subscription { };
+        chatgpt-desktop = pkgs.callPackage ./packages/chatgpt-desktop { };
       };
       formatter.${system} = pkgs.nixfmt;
       devShells.${system}.default = pkgs.mkShell {
@@ -84,33 +150,21 @@
               nativeBuildInputs = [ pkgs.shellcheck ];
             }
             ''
-              shellcheck ${./scripts/check.sh} ${./scripts/bump-release.sh}
+              shellcheck ${./scripts/check.sh} ${./scripts/bump-release.sh} \
+                ${./scripts/stage-workstation-state.sh} ${./scripts/preflight-workstation.sh}
               touch $out
             '';
+        subscription = pkgs.runCommand "check-dae-subscription" { } ''
+          export PYTHONDONTWRITEBYTECODE=1
+          export SUBSCRIPTION_MODULE=${./packages/dae-subscription/subscription.py}
+          ${pkgs.python3}/bin/python3 ${./tests/test_subscription.py}
+          touch $out
+        '';
       };
-      nixosConfigurations.${hostName} = nixpkgs.lib.nixosSystem {
-        inherit system;
-        specialArgs = { inherit inputs userName hostName; };
-        modules = [
-          ./hosts/${hostName}/configuration.nix
-          niri.nixosModules.niri
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.extraSpecialArgs = { inherit inputs userName; };
-            home-manager.users.${userName} = import ./home/home.nix;
-            home-manager.backupFileExtension = "hm-backup";
-            # 注意:dms.homeModules.niri 自己 import 了 niri.homeModules.niri,
-            # 这里再加 niri.homeModules.niri 会让 programs.niri.finalConfig 双重声明
-            home-manager.sharedModules = [
-              dms.homeModules.dank-material-shell
-              dms.homeModules.niri
-              nixvim.homeModules.nixvim
-              nix-index-database.homeModules.default
-            ];
-          }
-        ];
+      nixosConfigurations = {
+        # 现有 NixOS 机器：双 DP 显示器 + scratch workspace。
+        present-pc = mkHost "present-pc";
+        arch-pc = mkHost "arch-pc";
       };
     };
 }

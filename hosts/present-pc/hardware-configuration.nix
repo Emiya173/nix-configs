@@ -33,58 +33,8 @@ let
     "space_cache=v2"
     "discard=async"
   ];
-  displayConfig = rec {
-    primary = "DP-1";
-    secondary = "DP-2";
-    virtual = "HDMI-A-1";
-    outputs = {
-      ${primary} = {
-        mode = {
-          width = 3840;
-          height = 2160;
-          refresh = 239.99;
-        };
-        scale = 1.5;
-        position = {
-          x = 1067;
-          y = 0;
-        };
-        focus-at-startup = true;
-        variable-refresh-rate = "on-demand";
-      };
-      ${secondary} = {
-        mode = {
-          width = 2560;
-          height = 1600;
-          refresh = 160.0;
-        };
-        scale = 1.5;
-        transform.rotation = 90;
-        position = {
-          x = 0;
-          y = 0;
-        };
-      };
-      ${virtual} = {
-        mode = {
-          width = 1920;
-          height = 1080;
-          refresh = 60.0;
-        };
-        scale = 1.0;
-        # Leave one logical pixel after the primary screen to block cursor travel.
-        position = {
-          x = 3628;
-          y = 0;
-        };
-      };
-    };
-  };
 in
 {
-  _module.args.displayConfig = displayConfig;
-  home-manager.extraSpecialArgs = { inherit displayConfig; };
-
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
 
   boot.initrd.availableKernelModules = [

@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  desktopFeatures,
   displayConfig,
   ...
 }:
@@ -107,75 +108,79 @@ in
   };
 
   # 桌面用户级包
-  home.packages = with pkgs; [
-    # 启动器/剪贴板/通知/电源菜单全归 DMS,不再装 fuzzel/rofi
+  home.packages =
+    with pkgs;
+    [
+      # 启动器/剪贴板/通知/电源菜单全归 DMS,不再装 fuzzel/rofi
 
-    # 文档编辑
-    typora
+      # 文档编辑
+      typora
 
-    # 通讯
-    telegram-desktop
-    element-desktop
+      # 通讯
+      telegram-desktop
+      element-desktop
 
-    # 图像/媒体 (mpv 由 programs.mpv.enable 装)
-    blender # stable 构建，启用 AMD HIP 并包含中文翻译
-    imv # 默认图片查看器 (dolphin 双击 / xdg-open)
-    gthumb # 轻量编辑: 裁剪/缩放/旋转/调色/红眼/批量重命名/格式转换
-    qbittorrent
+      # 图像/媒体 (mpv 由 programs.mpv.enable 装)
+      imv # 默认图片查看器 (dolphin 双击 / xdg-open)
+      gthumb # 轻量编辑: 裁剪/缩放/旋转/调色/红眼/批量重命名/格式转换
 
-    # 文件管理 (yazi 由 home/yazi.nix programs.yazi 装)
-    kdePackages.ark
-    kdePackages.dolphin
+      # 文件管理 (yazi 由 home/yazi.nix programs.yazi 装)
+      kdePackages.ark
+      kdePackages.dolphin
 
-    # DMS 负责截图，Satty 保留标注；录屏选区的 slurp 由脚本声明依赖。
-    satty # 截图标注 (Mod+Shift+A 键位用)
-    hyprpicker # 取色器 (Mod+Shift+C 键位用)
+      # DMS 负责截图，Satty 保留标注；录屏选区的 slurp 由脚本声明依赖。
+      satty # 截图标注 (Mod+Shift+A 键位用)
+      hyprpicker # 取色器 (Mod+Shift+C 键位用)
 
-    # 系统监控/通知/音量面板/蓝牙: btop 走 programs.btop (shell.nix),
-    # nvtop/libnotify/pavucontrol 在 system 模块,blueman 由 services.blueman 装
+      # 系统监控/通知/音量面板/蓝牙: btop 走 programs.btop (shell.nix),
+      # nvtop/libnotify/pavucontrol 在 system 模块,blueman 由 services.blueman 装
 
-    # 主题
-    bibata-cursors
-    papirus-icon-theme
-    materia-theme
+      # 主题
+      bibata-cursors
+      papirus-icon-theme
+      materia-theme
 
-    # qt6ct/qt5ct: 走 user profile 让 dolphin 等 system Qt app 能在 QT_PLUGIN_PATH 里搜到
-    # (home-manager qt.platformTheme.name="qt6ct" 时 platformPackages 表无对应 key,不会自动装,显式补)
-    qt6Packages.qt6ct
-    libsForQt5.qt5ct
+      # qt6ct/qt5ct: 走 user profile 让 dolphin 等 system Qt app 能在 QT_PLUGIN_PATH 里搜到
+      # (home-manager qt.platformTheme.name="qt6ct" 时 platformPackages 表无对应 key,不会自动装,显式补)
+      qt6Packages.qt6ct
+      libsForQt5.qt5ct
 
-    # 中文软件
-    # XWayland 下显式沿用主屏缩放；客户端的原生组件暂不支持 Wayland。
-    (baidunetdisk.override {
-      commandLineArgs = [
-        "--force-device-scale-factor=${toString displayConfig.outputs.${displayConfig.primary}.scale}"
-      ];
-    })
-    wpsoffice-cn
-    unstable.qq
+      # 中文软件
+      # XWayland 下显式沿用主屏缩放；客户端的原生组件暂不支持 Wayland。
+      (baidunetdisk.override {
+        commandLineArgs = [
+          "--force-device-scale-factor=${toString displayConfig.outputs.${displayConfig.primary}.scale}"
+        ];
+      })
+      wpsoffice-cn
+      unstable.qq
 
-    # feishu 自带 chromium (Lark): 启动链 (bytedance-feishu -> feishu ->
-    # .feishu-wrapped) 不读任何 flags 文件 (feishu-flags.conf 是 Arch launcher
-    # 补丁,不是 chromium 行为),也不认 NIXOS_OZONE_WL,裸包只会跑 Xwayland。
-    # 包一层注入 ozone flags;desktop Exec 原本直接指 store 启动脚本,一并改指 wrapper
-    (symlinkJoin {
-      name = "feishu-wayland";
-      paths = [ feishu ];
-      nativeBuildInputs = [ makeWrapper ];
-      postBuild = ''
-        wrapProgram $out/bin/bytedance-feishu \
-          --add-flags "--ozone-platform-hint=auto" \
-          --add-flags "--enable-features=WaylandWindowDecorations" \
-          --add-flags "--enable-wayland-ime" \
-          --add-flags "--wayland-text-input-version=3"
-        rm $out/share/applications/bytedance-feishu.desktop
-        substitute ${feishu}/share/applications/bytedance-feishu.desktop \
-          $out/share/applications/bytedance-feishu.desktop \
-          --replace-fail "Exec=${feishu}/opt/bytedance/feishu/bytedance-feishu" \
-                         "Exec=$out/bin/bytedance-feishu"
-      '';
-    })
-  ];
+      # feishu 自带 chromium (Lark): 启动链 (bytedance-feishu -> feishu ->
+      # .feishu-wrapped) 不读任何 flags 文件 (feishu-flags.conf 是 Arch launcher
+      # 补丁,不是 chromium 行为),也不认 NIXOS_OZONE_WL,裸包只会跑 Xwayland。
+      # 包一层注入 ozone flags;desktop Exec 原本直接指 store 启动脚本,一并改指 wrapper
+      (symlinkJoin {
+        name = "feishu-wayland";
+        paths = [ feishu ];
+        nativeBuildInputs = [ makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/bytedance-feishu \
+            --add-flags "--ozone-platform-hint=auto" \
+            --add-flags "--enable-features=WaylandWindowDecorations" \
+            --add-flags "--enable-wayland-ime" \
+            --add-flags "--wayland-text-input-version=3"
+          rm $out/share/applications/bytedance-feishu.desktop
+          substitute ${feishu}/share/applications/bytedance-feishu.desktop \
+            $out/share/applications/bytedance-feishu.desktop \
+            --replace-fail "Exec=${feishu}/opt/bytedance/feishu/bytedance-feishu" \
+                           "Exec=$out/bin/bytedance-feishu"
+        '';
+      })
+    ]
+    ++ lib.optionals desktopFeatures.entertainment [
+      pkgs.blender
+      pkgs.qbittorrent
+    ];
 
   # GTK / Qt 主题
   gtk = {

@@ -1,17 +1,22 @@
-# present-pc NixOS 配置
+# 多主机 NixOS 配置
 
-从 Arch Linux + Hyprland/quickshell-ii 迁移而来,新桌面: **niri + quickshell**。
+从 Arch Linux + Hyprland/quickshell-ii 迁移而来,新桌面: **niri + DankMaterialShell**。
 Flake + Home Manager 结构,所有用户级配置在 `home/`,系统级在 `modules/`。
+
+工作机 `arch-pc` 的迁移取舍、网络凭据、计划子卷和安装准备见 [WORKSTATION.md](WORKSTATION.md)。下述首次安装步骤为私人主机 `present-pc` 的历史流程；工作机按其专属挂载和凭据导入流程迁移，不要求 Arch 回退或独立备份。
 
 ## 目录结构
 
 ```
 .
 ├── flake.nix                  # 入口,锁定 nixpkgs/home-manager/niri-flake
-├── hosts/present-pc/
-│   ├── configuration.nix      # 主机配置入口
-│   ├── paths.nix              # 用户目录、配置仓库和本地应用源码路径
-│   └── hardware-configuration.nix  # 占位,安装时替换!
+├── hosts/
+│   ├── present-pc/            # 私人主机
+│   └── arch-pc/               # 工作机（Intel，独立网络与工作应用）
+│       ├── configuration.nix  # 主机配置入口
+│       ├── displays.nix       # 主机显示器布局
+│       ├── paths.nix          # 用户目录与配置仓库路径
+│       └── hardware-configuration.nix  # 安装时再次核对硬件与挂载
 ├── modules/                   # 系统级
 │   ├── boot.nix               # GRUB + os-prober + linux-zen
 │   ├── network.nix            # NetworkManager + Bluetooth + Tailscale + SSH
@@ -385,7 +390,7 @@ NTFS 分区 (nvme0n1p2/p4) **不在自动挂载列表**,按需手动添加到
 - 游戏: steam / lutris / wine / ryujinx
 - 媒体: jellyfin-media-player / netease-cloud-music
 - 仿真: torzu / yuzu
-- IDE: jetbrains-toolbox (建议直接用 nix-shell 或下载 tar)
+- Toolbox: 工作机明确不迁移；其他 IDE 保留已选配置
 - VSCode: 已加,见 `home/dev.nix`
 
 ## 移除/合并的旧包
