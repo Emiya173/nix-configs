@@ -3,10 +3,12 @@
 import argparse
 import base64
 import binascii
+from email.utils import parsedate_to_datetime
 import hashlib
 import http.client
 import http.server
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -21,6 +23,8 @@ import urllib.request
 
 MAX_BYTES = 4 * 1024 * 1024
 SCHEMES = {'ss', 'ssr', 'vmess', 'vless', 'trojan', 'hysteria', 'hysteria2', 'hy2', 'tuic', 'socks', 'socks5', 'http', 'https'}
+FETCH_STATE = 'fetch-state.json'
+MAX_TIMESTAMP = 253402300799  # Last second representable by an HTTP date.
 
 
 class InvalidSubscription(ValueError):
@@ -142,6 +146,58 @@ def fetch(url, timeout):
     return validate_nodes(data)
 
 
+def fetch_state_read(directory):
+    """Only accept safe fields; never echo arbitrary state into health or logs."""
+    try:
+        value = json.loads((directory / FETCH_STATE).read_text())
+        if not isinstance(value, dict) or not re.fullmatch('[0-9a-f]{64}', value.get('source_digest', '')):
+            return None
+        if type(value.get('failures')) is not int or not 1 <= value['failures'] <= 31:
+            return None
+        if value.get('error') not in {'http', 'network', 'invalid-response'} or type(value.get('retryable')) is not bool:
+            return None
+        status = value.get('http_status')
+        if status is not None and (type(status) is not int or not 400 <= status <= 599):
+            return None
+        for key in ('attempted_at', 'next_retry_at'):
+            number = value.get(key)
+            if type(number) not in (int, float) or not math.isfinite(number) or not 0 <= number <= MAX_TIMESTAMP:
+                return None
+        return {key: value[key] for key in ('source_digest', 'failures', 'error', 'retryable', 'http_status', 'attempted_at', 'next_retry_at')}
+    except (OSError, ValueError, TypeError, KeyError, OverflowError):
+        return None
+
+
+def retry_after_at(header, now):
+    if not header:
+        return now
+    try:
+        if re.fullmatch(r'[0-9]+', header.strip()):
+            return min(MAX_TIMESTAMP, now + int(header.strip()))
+        date = parsedate_to_datetime(header)
+        if date.tzinfo is not None:
+            return min(MAX_TIMESTAMP, max(now, date.timestamp()))
+    except (ValueError, TypeError, OverflowError):
+        pass
+    return now
+
+
+def report_fetch_failure(state, cached, deferred=False):
+    # Exception text, response bodies and headers may contain credentials.
+    print(json.dumps({
+        'event': 'subscription-fetch-deferred' if deferred else 'subscription-fetch-failed',
+        'error': state['error'], 'http_status': state['http_status'],
+        'next_retry_at': state['next_retry_at'], 'using_cache': cached,
+    }, separators=(',', ':')), file=sys.stderr)
+
+
+def sync_health(directory):
+    state = fetch_state_read(directory)
+    if state is None:
+        return {'degraded': False}
+    return {'degraded': True, **{key: state[key] for key in ('failures', 'error', 'http_status', 'attempted_at', 'next_retry_at')}}
+
+
 def synchronize(args):
     url = Path(args.url_file).read_text().strip()
     parsed = urllib.parse.urlsplit(url)
@@ -158,12 +214,49 @@ def synchronize(args):
     latest = pending if pending and pending.get('source_digest') == source else old
     if latest and latest.get('source_digest') == source and time.time() - latest.get('fetched_at', 0) < args.max_age:
         return
-    content = fetch(url, args.timeout)
+    failure = fetch_state_read(args.state_dir)
+    if failure and failure['source_digest'] != source:
+        failure = None
+    if failure and time.time() < failure['next_retry_at']:
+        usable = cache_read(args.state_dir) is not None
+        report_fetch_failure(failure, usable, deferred=True)
+        if usable and failure['retryable']:
+            return
+        raise InvalidSubscription('upstream-backoff')
+    try:
+        content = fetch(url, args.timeout)
+    except (OSError, http.client.HTTPException, InvalidSubscription) as error:
+        now = time.time()
+        status = None
+        retry_after = now
+        category, retryable = 'network', True
+        if isinstance(error, urllib.error.HTTPError):
+            status = error.code
+            category = 'http'
+            retryable = status in {408, 425, 429} or 500 <= status <= 599
+            retry_after = retry_after_at(error.headers.get('Retry-After') if error.headers else None, now)
+        elif isinstance(error, InvalidSubscription):
+            category, retryable = 'invalid-response', False
+        failures = min(31, failure['failures'] + 1) if failure else 1
+        delay = min(3600, (900 if status == 429 else 60) * 2 ** (failures - 1))
+        state = {
+            'source_digest': source, 'failures': failures,
+            'error': category, 'http_status': status, 'retryable': retryable,
+            'attempted_at': now, 'next_retry_at': max(now + delay, retry_after),
+        }
+        atomic_json(args.state_dir / FETCH_STATE, state)
+        # Bootstrap can create the fallback while the network request is running.
+        usable = cache_read(args.state_dir) is not None
+        report_fetch_failure(state, usable)
+        if usable and retryable:
+            return
+        raise
     current = {'content': content.decode(), 'sha256': digest(content), 'source_digest': source, 'fetched_at': time.time()}
     atomic_json(args.state_dir / 'candidate.json', current)
     if old is None:
         # First boot needs a validated subscription before DAE can start.
         atomic_json(args.state_dir / 'current.json', current)
+    (args.state_dir / FETCH_STATE).unlink(missing_ok=True)
     print('subscription-fetch-ok')
 
 
@@ -183,7 +276,7 @@ def serve(args):
                 self.end_headers()
                 return
             if path == '/health':
-                body = json.dumps({'ready': True, 'sha256': cached['sha256'], 'fetched_at': cached['fetched_at'], 'fallback': cached.get('fallback', False)}).encode()
+                body = json.dumps({'ready': True, 'sha256': cached['sha256'], 'fetched_at': cached['fetched_at'], 'fallback': cached.get('fallback', False), 'sync': sync_health(args.state_dir)}).encode()
                 content_type = 'application/json'
             else:
                 body = cached['content'].encode()
@@ -273,7 +366,7 @@ def main():
         {'serve': serve, 'sync': synchronize, 'ready': ready, 'apply': apply, 'bootstrap': bootstrap}[args.command](args)
     except (OSError, ValueError, http.client.HTTPException, subprocess.SubprocessError):
         # Deliberately never format an upstream/library exception containing secrets.
-        print('subscription-operation-failed', file=sys.stderr)
+        print('subscription-operation-failed command=' + args.command, file=sys.stderr)
         return 1
     return 0
 

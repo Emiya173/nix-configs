@@ -26,14 +26,16 @@ DAE 配置中的订阅入口保持 `http://127.0.0.1:8080/sub`。
 | --- | --- |
 | dae-subscription.service | 仅监听 loopback，持续提供磁盘上的有效缓存，无需先联网；不持有上游 URL |
 | dae-subscription-sync.service | 每次启动加载私密 URL credential，获取、解码并校验候选节点；成功后自动 reload DAE |
-| dae-subscription-sync.timer | 每60秒检查恢复/待应用状态，正常内容获取间隔为1小时；失败自动重试 |
+| dae-subscription-sync.timer | 每60秒检查恢复/待应用状态；正常获取间隔1小时，失败时按磁盘中的退避期限重试上游 |
 | dae-subscription-config.path | 源文件变化触发同步，原子替换也覆盖；并发变更最终由后续检查收敛 |
 
 DAE 首次启动不等待上游订阅：有有效或可恢复缓存时沿用缓存；没有缓存时，从私密配置中的 `ruruka` 静态节点生成兜底缓存，使默认代理可立即启动。订阅继续在后台重试，恢复后自动 reload 切回订阅节点。更新失败保留现有内容。候选与已应用状态分开保存，reload 失败还原发布缓存并保留候选重试。进程重启后重新核对应用状态。订阅同步程序不输出完整 URL、节点或原始异常。DAE 自身的日志策略仍来自私密配置。
 
+HTTP 429 首次退避15分钟，之后30分钟、1小时；其他网络错误首次退避60秒并倍增，最长1小时。两者都遵循更长的 `Retry-After`（秒数或 HTTP 日期）。重试期限保存在 `fetch-state.json`，服务重启或 rebuild 不会重新请求；更换上游地址绕过旧地址的退避。已有有效缓存或兜底时，临时网络错误、HTTP 408/425/429/5xx 不阻断系统激活；没有有效缓存、认证等其他 HTTP 错误、无效订阅、凭据/状态文件错误和 DAE reload 失败仍返回失败。
+
 上游地址只保存在 `/var/lib/dae-subscription-config/upstream-url`，root:root 0600，目录0700。安装准备时输入一次；之后更换这个私密文件即可，无需 rebuild 或手工按顺序启动服务。不要通过命令行参数、shell history 或 Git 保存完整订阅 URL。
 
-缓存位于 `/var/lib/dae-subscription/`，0700/0600。上游请求不继承代理环境，避免首次启动依赖 DAE 的循环。HTTP 健康中的 `fallback` 标识当前是否使用静态兜底；健康只说明已有通过语法检查的节点，不证明所有节点远端可达。
+缓存位于 `/var/lib/dae-subscription/`，0700/0600。上游请求不继承代理环境，避免首次启动依赖 DAE 的循环。`curl -fsS http://127.0.0.1:8080/health` 中的 `fallback` 标识是否使用静态兜底；`sync.degraded`、`sync.error`、`sync.http_status`、`sync.next_retry_at`（Unix 时间戳）显示上次获取失败及下次重试期限，成功获取后清除失败状态。健康只说明已有通过语法检查的节点，不证明所有节点远端可达；`degraded: false` 本身也不证明已成功获取订阅，应同时查看 `fallback` 和 `fetched_at`。
 
 ## Btrfs 与安装前提
 

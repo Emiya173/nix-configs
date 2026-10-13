@@ -8,6 +8,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from contextlib import redirect_stderr
+from email.utils import formatdate
 from unittest.mock import patch
 
 MODULE = Path(os.environ.get('SUBSCRIPTION_MODULE', Path(__file__).parents[1] / 'packages/dae-subscription/subscription.py'))
@@ -46,11 +47,11 @@ class SubscriptionTests(unittest.TestCase):
         self.assertEqual(cached['content'], NODE.decode())
         self.assertEqual((self.directory / 'current.json').stat().st_mode & 0o777, 0o600)
         with patch.object(subscription, 'fetch', side_effect=OSError('offline')) as fetch:
-            with self.assertRaises(OSError):
-                subscription.synchronize(self.args)
+            subscription.synchronize(self.args)
             fetch.assert_called_once()
         self.assertEqual(subscription.cache_read(self.directory)['content'], NODE.decode())
-        self.sync(OTHER)
+        with patch.object(subscription.time, 'time', return_value=subscription.fetch_state_read(self.directory)['next_retry_at']):
+            self.sync(OTHER)
         self.assertEqual(subscription.cache_read(self.directory, 'candidate.json')['content'], OTHER.decode())
         self.assertEqual(subscription.cache_read(self.directory)['content'], NODE.decode())
         self.args.dae = '/bin/fake-dae'
@@ -97,10 +98,129 @@ class SubscriptionTests(unittest.TestCase):
         before = (self.directory / 'current.json').read_bytes()
         self.args.max_age = 0
         with patch.object(subscription, 'fetch', side_effect=OSError('private-token')):
-            with self.assertRaises(OSError):
-                subscription.synchronize(self.args)
+            subscription.synchronize(self.args)
         self.assertEqual((self.directory / 'current.json').read_bytes(), before)
         self.assertEqual(subscription.cache_read(self.directory)['content'], NODE.decode())
+
+    def http_error(self, status=429, retry_after=None):
+        headers = {'Retry-After': retry_after} if retry_after is not None else {}
+        return subscription.urllib.error.HTTPError(self.url_file.read_text(), status, 'private-token', headers, None)
+
+    def test_rate_limit_survives_restarts_and_backoff_grows(self):
+        self.bootstrap()
+        with patch.object(subscription.time, 'time', return_value=1000):
+            with patch.object(subscription, 'fetch', side_effect=self.http_error()) as fetch:
+                subscription.synchronize(self.args)
+                fetch.assert_called_once()
+        state = subscription.fetch_state_read(self.directory)
+        self.assertEqual(state['next_retry_at'], 1900)
+        self.assertEqual(state['failures'], 1)
+        # New invocation reads the persisted deadline instead of hitting upstream.
+        with patch.object(subscription.time, 'time', return_value=1899):
+            with patch.object(subscription, 'fetch') as fetch:
+                subscription.synchronize(self.args)
+                fetch.assert_not_called()
+        for now, delay, failures in [(1900, 1800, 2), (3700, 3600, 3), (7300, 3600, 4)]:
+            with patch.object(subscription.time, 'time', return_value=now):
+                with patch.object(subscription, 'fetch', side_effect=self.http_error()) as fetch:
+                    subscription.synchronize(self.args)
+                    fetch.assert_called_once()
+            state = subscription.fetch_state_read(self.directory)
+            self.assertEqual(state['next_retry_at'], now + delay)
+            self.assertEqual(state['failures'], failures)
+
+    def test_retry_after_seconds_and_http_date_are_honored(self):
+        self.bootstrap()
+        now = 1800000000
+        for header, deadline in [('7200', now + 7200), (formatdate(now + 10800, usegmt=True), now + 10800), ('invalid', now + 900), ('0', now + 900), (formatdate(now - 60, usegmt=True), now + 900)]:
+            with self.subTest(header=header):
+                (self.directory / subscription.FETCH_STATE).unlink(missing_ok=True)
+                with patch.object(subscription.time, 'time', return_value=now):
+                    with patch.object(subscription, 'fetch', side_effect=self.http_error(retry_after=header)):
+                        subscription.synchronize(self.args)
+                self.assertEqual(subscription.fetch_state_read(self.directory)['next_retry_at'], deadline)
+
+    def test_rate_limit_without_cache_still_fails_during_backoff(self):
+        with patch.object(subscription.time, 'time', return_value=1000):
+            with patch.object(subscription, 'fetch', side_effect=self.http_error()):
+                with self.assertRaises(subscription.urllib.error.HTTPError):
+                    subscription.synchronize(self.args)
+            with patch.object(subscription, 'fetch') as fetch:
+                with self.assertRaises(subscription.InvalidSubscription):
+                    subscription.synchronize(self.args)
+                fetch.assert_not_called()
+        self.assertIsNone(subscription.cache_read(self.directory))
+
+    def test_source_change_bypasses_backoff_and_success_clears_failure(self):
+        self.bootstrap()
+        with patch.object(subscription.time, 'time', return_value=1000):
+            with patch.object(subscription, 'fetch', side_effect=self.http_error()):
+                subscription.synchronize(self.args)
+            self.url_file.write_text('https://other.invalid/new-private-token')
+            with patch.object(subscription, 'fetch', return_value=OTHER) as fetch:
+                subscription.synchronize(self.args)
+                fetch.assert_called_once()
+        self.assertFalse((self.directory / subscription.FETCH_STATE).exists())
+        self.assertEqual(subscription.sync_health(self.directory), {'degraded': False})
+        self.assertEqual(subscription.cache_read(self.directory, 'candidate.json')['content'], OTHER.decode())
+
+    def test_transient_failures_succeed_with_cache_and_keep_safe_diagnostics(self):
+        self.bootstrap()
+        for error in [self.http_error(), self.http_error(503), OSError('https://example.invalid/private-token'), subscription.http.client.BadStatusLine('private-token')]:
+            with self.subTest(error=type(error).__name__):
+                (self.directory / subscription.FETCH_STATE).unlink(missing_ok=True)
+                with patch('sys.argv', ['subscription', '--state-dir', str(self.directory), 'sync', '--url-file', str(self.url_file)]):
+                    with patch.object(subscription, 'fetch', side_effect=error):
+                        errors = io.StringIO()
+                        with redirect_stderr(errors):
+                            self.assertEqual(subscription.main(), 0)
+                status = subscription.sync_health(self.directory)
+                self.assertTrue(status['degraded'])
+                self.assertIn(status['error'], {'http', 'network'})
+                state_file = self.directory / subscription.FETCH_STATE
+                self.assertEqual(state_file.stat().st_mode & 0o777, 0o600)
+                for output in (errors.getvalue(), json.dumps(status), state_file.read_text()):
+                    self.assertNotIn('private-token', output)
+                    self.assertNotIn('https://', output)
+
+    def test_auth_and_invalid_responses_remain_errors_with_cache(self):
+        self.bootstrap()
+        for error in [self.http_error(401), self.http_error(403), self.http_error(404), subscription.InvalidSubscription('invalid-node')]:
+            with self.subTest(error=type(error).__name__):
+                (self.directory / subscription.FETCH_STATE).unlink(missing_ok=True)
+                with patch.object(subscription, 'fetch', side_effect=error):
+                    with self.assertRaises((subscription.urllib.error.HTTPError, subscription.InvalidSubscription)):
+                        subscription.synchronize(self.args)
+                self.assertFalse(subscription.fetch_state_read(self.directory)['retryable'])
+                self.assertEqual(subscription.cache_read(self.directory)['content'], NODE.decode())
+
+    def test_missing_credentials_and_state_write_errors_are_not_hidden(self):
+        self.bootstrap()
+        self.url_file.unlink()
+        with self.assertRaises(OSError):
+            subscription.synchronize(self.args)
+        self.url_file.write_text('https://example.invalid/private-token')
+        with patch.object(subscription, 'fetch', side_effect=self.http_error()):
+            with patch.object(subscription, 'atomic_json', side_effect=PermissionError('private-token')):
+                with self.assertRaises(PermissionError):
+                    subscription.synchronize(self.args)
+
+    def test_invalid_retry_metadata_is_ignored_without_leaking_values(self):
+        self.bootstrap()
+        with patch.object(subscription, 'fetch', side_effect=self.http_error()):
+            subscription.synchronize(self.args)
+        state = subscription.fetch_state_read(self.directory)
+        for update in [{'error': 'private-token'}, {'failures': -1}, {'failures': 1000000}, {'source_digest': {}}, {'next_retry_at': float('nan')}, {'next_retry_at': 'private-token'}, {'retryable': 'private-token'}, {'http_status': 'private-token'}]:
+            with self.subTest(fields=tuple(update)):
+                subscription.atomic_json(self.directory / subscription.FETCH_STATE, {**state, **update})
+                self.assertIsNone(subscription.fetch_state_read(self.directory))
+                self.assertNotIn('private-token', json.dumps(subscription.sync_health(self.directory)))
+        subscription.atomic_json(self.directory / subscription.FETCH_STATE, {**state, 'extra': 'private-token'})
+        self.assertNotIn('private-token', json.dumps(subscription.sync_health(self.directory)))
+        (self.directory / subscription.FETCH_STATE).write_text('{')
+        with patch.object(subscription, 'fetch', return_value=OTHER) as fetch:
+            subscription.synchronize(self.args)
+            fetch.assert_called_once()
 
     def test_source_change_bypasses_refresh_interval(self):
         self.sync()
@@ -156,6 +276,7 @@ class SubscriptionTests(unittest.TestCase):
     def test_errors_do_not_print_the_private_source(self):
         for error in [OSError('https://example.invalid/private-token'), subscription.http.client.BadStatusLine('https://example.invalid/private-token')]:
             with self.subTest(error=type(error).__name__):
+                (self.directory / subscription.FETCH_STATE).unlink(missing_ok=True)
                 with patch('sys.argv', ['subscription', '--state-dir', str(self.directory), 'sync', '--url-file', str(self.url_file)]):
                     with patch.object(subscription, 'fetch', side_effect=error):
                         errors = io.StringIO()
