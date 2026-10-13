@@ -93,6 +93,41 @@ class SubscriptionTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(subscription.InvalidSubscription):
                 subscription.validate_nodes(invalid)
 
+    def test_anytls_plain_and_base64_subscription(self):
+        content = (
+            'anytls://fake-password@example.org:443/?sni=tls.example.org#香港 节点\n'
+            'anytls://fake%40password@example.net/?sni=tls.example.net#default-port\n'
+            'anytls://fake-password@[2001:db8::1]:8443/?insecure=0#ipv6\n'
+        ).encode()
+        self.assertEqual(subscription.validate_nodes(content), content)
+        self.assertEqual(subscription.validate_nodes(base64.b64encode(content)), content)
+        self.sync(content)
+        self.assertEqual(subscription.cache_read(self.directory)['content'].encode(), content)
+
+    def test_invalid_anytls_nodes_remain_rejected(self):
+        for content in [b'anytls://fake-password@/', b'anytls://fake-password@example.org:invalid/', b'anytls://fake-password@example.org:0/', b'anytls://fake-password@example.org:65536/', b'anytls://fake password@example.org:443/']:
+            with self.subTest(content=content), self.assertRaises(subscription.InvalidSubscription):
+                subscription.validate_nodes(content)
+
+    def test_validator_upgrade_retries_invalid_format_but_preserves_rate_backoff(self):
+        self.bootstrap()
+        with patch.object(subscription.time, 'time', return_value=1000):
+            for error in [subscription.InvalidSubscription('invalid-node'), self.http_error()]:
+                with self.subTest(error=type(error).__name__):
+                    (self.directory / subscription.FETCH_STATE).unlink(missing_ok=True)
+                    with patch.object(subscription, 'fetch', side_effect=error):
+                        try:
+                            subscription.synchronize(self.args)
+                        except subscription.InvalidSubscription:
+                            pass
+                    state = subscription.fetch_state_read(self.directory)
+                    state.pop('validator_version')
+                    subscription.atomic_json(self.directory / subscription.FETCH_STATE, state)
+                    with patch.object(subscription, 'fetch', return_value=b'anytls://fake-password@example.org:443/\n') as fetch:
+                        subscription.synchronize(self.args)
+                    self.assertEqual(fetch.call_count, 0 if isinstance(error, subscription.urllib.error.HTTPError) else 1)
+                    (self.directory / 'candidate.json').unlink(missing_ok=True)
+
     def test_offline_keeps_persistent_cache(self):
         self.sync()
         before = (self.directory / 'current.json').read_bytes()

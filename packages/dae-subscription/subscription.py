@@ -22,8 +22,9 @@ import urllib.parse
 import urllib.request
 
 MAX_BYTES = 4 * 1024 * 1024
-SCHEMES = {'ss', 'ssr', 'vmess', 'vless', 'trojan', 'hysteria', 'hysteria2', 'hy2', 'tuic', 'socks', 'socks5', 'http', 'https'}
+SCHEMES = {'ss', 'ssr', 'vmess', 'vless', 'trojan', 'hysteria', 'hysteria2', 'hy2', 'tuic', 'anytls', 'socks', 'socks5', 'http', 'https'}
 FETCH_STATE = 'fetch-state.json'
+VALIDATOR_VERSION = 1
 MAX_TIMESTAMP = 253402300799  # Last second representable by an HTTP date.
 
 
@@ -71,7 +72,9 @@ def validate_nodes(raw):
                     raise ValueError()
             else:
                 parsed = urllib.parse.urlsplit(node)
-                if not parsed.hostname or parsed.port is None or not 0 < parsed.port < 65536:
+                # The AnyTLS URI specification defaults an omitted port to 443.
+                port = 443 if scheme == 'anytls' and parsed.port is None else parsed.port
+                if not parsed.hostname or port is None or not 0 < port < 65536:
                     raise ValueError()
                 if scheme in {'vless', 'trojan', 'hysteria', 'hysteria2', 'hy2', 'tuic', 'ss'} and not parsed.username:
                     raise ValueError()
@@ -156,6 +159,9 @@ def fetch_state_read(directory):
             return None
         if value.get('error') not in {'http', 'network', 'invalid-response'} or type(value.get('retryable')) is not bool:
             return None
+        version = value.get('validator_version', 0)
+        if type(version) is not int or not 0 <= version <= VALIDATOR_VERSION:
+            return None
         status = value.get('http_status')
         if status is not None and (type(status) is not int or not 400 <= status <= 599):
             return None
@@ -163,7 +169,7 @@ def fetch_state_read(directory):
             number = value.get(key)
             if type(number) not in (int, float) or not math.isfinite(number) or not 0 <= number <= MAX_TIMESTAMP:
                 return None
-        return {key: value[key] for key in ('source_digest', 'failures', 'error', 'retryable', 'http_status', 'attempted_at', 'next_retry_at')}
+        return {'validator_version': version, **{key: value[key] for key in ('source_digest', 'failures', 'error', 'retryable', 'http_status', 'attempted_at', 'next_retry_at')}}
     except (OSError, ValueError, TypeError, KeyError, OverflowError):
         return None
 
@@ -217,6 +223,9 @@ def synchronize(args):
     failure = fetch_state_read(args.state_dir)
     if failure and failure['source_digest'] != source:
         failure = None
+    # Retry newly supported formats immediately; preserve network/rate backoff.
+    if failure and failure['error'] == 'invalid-response' and failure['validator_version'] != VALIDATOR_VERSION:
+        failure = None
     if failure and time.time() < failure['next_retry_at']:
         usable = cache_read(args.state_dir) is not None
         report_fetch_failure(failure, usable, deferred=True)
@@ -241,6 +250,7 @@ def synchronize(args):
         delay = min(3600, (900 if status == 429 else 60) * 2 ** (failures - 1))
         state = {
             'source_digest': source, 'failures': failures,
+            'validator_version': VALIDATOR_VERSION,
             'error': category, 'http_status': status, 'retryable': retryable,
             'attempted_at': now, 'next_retry_at': max(now + delay, retry_after),
         }
