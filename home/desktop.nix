@@ -107,6 +107,15 @@ in
     };
   };
 
+  xdg.desktopEntries.codex-desktop = {
+    name = "Codex";
+    comment = "Open the Codex desktop workspace";
+    exec = "codex-desktop %U";
+    icon = "chatgpt";
+    terminal = false;
+    categories = [ "Development" ];
+  };
+
   # 桌面用户级包
   home.packages =
     with pkgs;
@@ -115,6 +124,9 @@ in
 
       # 文档编辑
       typora
+
+      # ChatGPT / Codex 桌面应用
+      (pkgs.callPackage ../packages/chatgpt-desktop { })
 
       # 通讯
       telegram-desktop

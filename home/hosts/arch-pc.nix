@@ -36,7 +36,6 @@ in
     (adbScript "close.sh")
     (adbScript "sync_time.sh")
     (adbScript "modifytime.sh")
-    (pkgs.callPackage ../../packages/chatgpt-desktop { })
   ];
   programs.fish = {
     shellAliases = {
@@ -93,14 +92,6 @@ in
       use = "xlog";
     }
   ];
-  xdg.desktopEntries.codex-desktop = {
-    name = "Codex";
-    comment = "Open the Codex desktop workspace";
-    exec = "codex-desktop %U";
-    icon = "chatgpt";
-    terminal = false;
-    categories = [ "Development" ];
-  };
   # The existing home contains a Toolbox launcher; mask it when reusing @home.
   xdg.dataFile."applications/jetbrains-toolbox.desktop".text = ''
     [Desktop Entry]
