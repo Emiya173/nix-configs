@@ -37,14 +37,9 @@
       "input"
       "docker"
       "render"
-      "ydotool"
     ];
   };
   users.groups.${userName}.gid = 1000;
-  # Keep the existing input automation tool through the native system service;
-  # DMS itself now implements clipboard paste without this daemon.
-  programs.ydotool.enable = true;
-  boot.kernelModules = [ "uinput" ];
   programs.localsend = {
     enable = true;
     openFirewall = true;

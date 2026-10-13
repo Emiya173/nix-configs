@@ -99,4 +99,6 @@ in
     Name=JetBrains Toolbox
     Hidden=true
   '';
+  # An empty unit masks the old enabled Arch user service when reusing @home.
+  xdg.configFile."systemd/user/ydotool.service".text = "";
 }

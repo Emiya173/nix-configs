@@ -10,7 +10,7 @@
 - JDK21 为默认命令，JDK11 以低优先级保留；项目可用 `~/.local/share/jdks/jdk11` 或 `jdk21` 明确选择 `JAVA_HOME`。
 - xlog 源码已随仓库保存，依赖 zlib/zstd/OpenSSL3，以 Nix 构建并运行原项目测试，提供 `xlog` 和 `~/.local/bin/xlog`。实际解码密钥仍在 `~/.config/xlog/private.key`，不进仓库或 store。
 - 增加 Beyond Compare、钉钉、腾讯会议、LocalSend、百度网盘与当前 Linux ChatGPT 桌面包；同一个桌面客户端包含 Codex 界面，并提供单独 Codex 桌面入口。CLI `codex` 继续独立提供。登录、界面、会议共享须在目标图形环境验收。
-- 保留 OBS、ffmpeg-full、mpv、imv/gthumb/Satty/hyprpicker。现有 ydotool 自动化改用原生系统服务及受限 socket；DMS 剪贴板本身已内建粘贴。Toolbox 应用、专属配置和 scripts PATH 不迁移，复用 home 时屏蔽旧菜单和自启动入口。
+- 保留 OBS、ffmpeg-full、mpv、imv/gthumb/Satty/hyprpicker。DMS 已内建剪贴板粘贴，所选脚本/快捷键无 ydotool 调用，不迁移旧 ydotool 服务、用户组或专属配置；keyd 继续提供轻点 Super 启动器。移除 claude-code overlay 入口。Toolbox 应用、专属配置和 scripts PATH 不迁移，复用 home 时屏蔽旧菜单和自启动入口。
 - 保留 NetworkManager 持久连接、DAE、EasyConnect、Hysteria/反向 SSH。WireGuard/wstunnel 退役，不迁移。Hysteria 15903/VNC 旧转发默认不恢复，SSH 15023 保留。
 - DAE 使用已锁定 `nixpkgs-unstable` 中的包，不单独固定版本。工作配置通过运行时 credential 读取，不将含节点凭据的配置嵌入 Nix。
 - EasyConnect 使用原 Compose 工作目录与系统 Docker socket，启动后自动初始化 DNS。恢复前 Docker autoPrune 禁用，避免清掉待用镜像/卷。

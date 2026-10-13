@@ -23,7 +23,6 @@ let
   };
 in
 {
-  inherit (unstablePkgs) claude-code;
   baidunetdisk = final.callPackage ../packages/baidunetdisk { };
 
   # Keep Blender and the system HIP runtime on the same stable package set.

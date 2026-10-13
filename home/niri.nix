@@ -255,7 +255,6 @@ in
     enableDynamicTheming = true;
     enableAudioWavelength = true;
     enableCalendarEvents = true;
-    enableClipboardPaste = true;
 
     # niri 集成: 让 DMS 自动注入它的键位 + spawn,不要重复手动写
     niri = {
