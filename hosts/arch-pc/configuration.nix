@@ -25,6 +25,9 @@
     ../../modules/workstation/network.nix
   ];
   networking.hostName = hostName;
+  # Sangfor DNS returns empty answers for EDNS requests; keep the Arch resolver
+  # behavior on this VPN workstation.
+  networking.resolvconf.dnsExtensionMechanism = false;
   boot.loader.grub.useOSProber = lib.mkForce false;
   users.users.${userName} = {
     uid = 1000;

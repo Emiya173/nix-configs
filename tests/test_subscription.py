@@ -33,6 +33,52 @@ class SubscriptionTests(unittest.TestCase):
         with patch.object(subscription, 'fetch', return_value=content):
             subscription.synchronize(self.args)
 
+    def bootstrap(self):
+        self.args.config_file = self.directory / 'config.dae'
+        self.args.node_name = 'ruruka'
+        self.args.config_file.write_text("node {\n  ruruka: '" + NODE.decode().strip() + "'\n}\n")
+        subscription.bootstrap(self.args)
+
+    def test_first_boot_uses_static_proxy_and_keeps_retrying(self):
+        self.bootstrap()
+        cached = subscription.cache_read(self.directory)
+        self.assertTrue(cached['fallback'])
+        self.assertEqual(cached['content'], NODE.decode())
+        self.assertEqual((self.directory / 'current.json').stat().st_mode & 0o777, 0o600)
+        with patch.object(subscription, 'fetch', side_effect=OSError('offline')) as fetch:
+            with self.assertRaises(OSError):
+                subscription.synchronize(self.args)
+            fetch.assert_called_once()
+        self.assertEqual(subscription.cache_read(self.directory)['content'], NODE.decode())
+        self.sync(OTHER)
+        self.assertEqual(subscription.cache_read(self.directory, 'candidate.json')['content'], OTHER.decode())
+        self.assertEqual(subscription.cache_read(self.directory)['content'], NODE.decode())
+        self.args.dae = '/bin/fake-dae'
+        self.args.systemctl = '/bin/fake-systemctl'
+        state = argparse.Namespace(stdout='ActiveState=active\nMainPID=123\nInvocationID=first\n', returncode=0)
+        with patch.object(subscription.subprocess, 'run', side_effect=[state, argparse.Namespace(returncode=0, stdout=b'OK\n')]):
+            subscription.apply(self.args)
+        cached = subscription.cache_read(self.directory)
+        self.assertEqual(cached['content'], OTHER.decode())
+        self.assertFalse(cached.get('fallback', False))
+
+    def test_bootstrap_preserves_good_and_recoverable_subscription(self):
+        self.sync(OTHER)
+        self.bootstrap()
+        self.assertEqual(subscription.cache_read(self.directory)['content'], OTHER.decode())
+        (self.directory / 'current.json').unlink()
+        self.bootstrap()
+        self.assertEqual(subscription.cache_read(self.directory)['content'], OTHER.decode())
+
+    def test_bootstrap_rejects_missing_or_invalid_static_proxy(self):
+        self.args.config_file = self.directory / 'config.dae'
+        self.args.node_name = 'ruruka'
+        for text in ["node {\n}\n", "node {\n ruruka: '<html>error</html>'\n}\n"]:
+            self.args.config_file.write_text(text)
+            with self.assertRaises(subscription.InvalidSubscription):
+                subscription.bootstrap(self.args)
+            self.assertFalse((self.directory / 'current.json').exists())
+
     def test_plain_and_base64(self):
         self.assertEqual(subscription.validate_nodes(NODE), NODE)
         self.assertEqual(subscription.validate_nodes(base64.b64encode(NODE)), NODE)

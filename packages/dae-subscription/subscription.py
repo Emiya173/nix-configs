@@ -8,6 +8,7 @@ import http.client
 import http.server
 import json
 import os
+import re
 from pathlib import Path
 import socket
 import subprocess
@@ -107,6 +108,30 @@ def cache_read(directory, filename='current.json'):
         return None
 
 
+def bootstrap(args):
+    """Keep DAE usable on first boot without weakening subscription validation."""
+    if cache_read(args.state_dir):
+        return
+    recovery = cache_read(args.state_dir, 'previous.json') or cache_read(args.state_dir, 'candidate.json')
+    if recovery:
+        atomic_json(args.state_dir / 'current.json', recovery)
+        return
+    text = Path(args.config_file).read_text()
+    section = re.search(r'(?ms)^node\s*\{\s*\n(.*?)^\s*\}', text)
+    if section is None:
+        raise InvalidSubscription('missing-node-section')
+    pattern = r"""(?m)^\s*""" + re.escape(args.node_name) + r""":\s*(['"])(.*?)\1\s*(?:#.*)?$"""
+    matches = list(re.finditer(pattern, section.group(1)))
+    if len(matches) != 1:
+        raise InvalidSubscription('missing-or-ambiguous-fallback-node')
+    content = validate_nodes(matches[0].group(2).encode())
+    atomic_json(args.state_dir / 'current.json', {
+        'content': content.decode(), 'sha256': digest(content),
+        'source_digest': '', 'fetched_at': 0, 'fallback': True,
+    })
+    print('subscription-fallback-ready')
+
+
 def fetch(url, timeout):
     # Preserve the existing relay's no-User-Agent behavior; avoid inherited proxies
     # so first boot cannot depend on DAE's not-yet-loaded subscription.
@@ -158,7 +183,7 @@ def serve(args):
                 self.end_headers()
                 return
             if path == '/health':
-                body = json.dumps({'ready': True, 'sha256': cached['sha256'], 'fetched_at': cached['fetched_at']}).encode()
+                body = json.dumps({'ready': True, 'sha256': cached['sha256'], 'fetched_at': cached['fetched_at'], 'fallback': cached.get('fallback', False)}).encode()
                 content_type = 'application/json'
             else:
                 body = cached['content'].encode()
@@ -231,6 +256,9 @@ def main():
         command = commands.add_parser(name)
         command.add_argument('--port', type=int, default=8080)
         if name == 'ready': command.add_argument('--timeout', type=int, default=90)
+    bootstrap_command = commands.add_parser('bootstrap')
+    bootstrap_command.add_argument('--config-file', required=True)
+    bootstrap_command.add_argument('--node-name', required=True)
     sync = commands.add_parser('sync')
     sync.add_argument('--url-file', required=True)
     sync.add_argument('--max-age', type=int, default=3600)
@@ -242,7 +270,7 @@ def main():
     args = parser.parse_args()
     os.umask(0o077)
     try:
-        {'serve': serve, 'sync': synchronize, 'ready': ready, 'apply': apply}[args.command](args)
+        {'serve': serve, 'sync': synchronize, 'ready': ready, 'apply': apply, 'bootstrap': bootstrap}[args.command](args)
     except (OSError, ValueError, http.client.HTTPException, subprocess.SubprocessError):
         # Deliberately never format an upstream/library exception containing secrets.
         print('subscription-operation-failed', file=sys.stderr)

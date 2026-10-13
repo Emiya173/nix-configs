@@ -100,9 +100,9 @@ in
       "dae-subscription.service"
       "dae-subscription-sync.service"
     ];
+    # Subscription refresh must not delay the static proxy fallback at boot.
     after = [
       "dae-subscription.service"
-      "dae-subscription-sync.service"
       "docker.service"
       "systemd-sysctl.service"
     ];
@@ -111,7 +111,12 @@ in
       Type = "notify";
       RuntimeDirectory = "dae";
       ExecReload = "${daemon} reload";
-      ExecStartPre = lib.mkAfter [ "${command} ready --timeout 90" ];
+      ExecStartPre = lib.mkForce [
+        ""
+        "${command} bootstrap --config-file \${CREDENTIALS_DIRECTORY}/config.dae --node-name ruruka"
+        "${daemon} validate -c \${CREDENTIALS_DIRECTORY}/config.dae"
+        "${command} ready --timeout 10"
+      ];
       Restart = lib.mkForce "on-failure";
       RestartSec = lib.mkForce 10;
       TimeoutStartSec = 120;

@@ -14,8 +14,9 @@
 - 增加 Beyond Compare、钉钉、腾讯会议、LocalSend、百度网盘与当前 Linux ChatGPT 桌面包；同一个桌面客户端包含 Codex 界面，并提供单独 Codex 桌面入口。CLI `codex` 继续独立提供。登录、界面、会议共享须在目标图形环境验收。
 - 保留 OBS、ffmpeg-full、mpv、imv/gthumb/Satty/hyprpicker。DMS 已内建剪贴板粘贴，所选脚本/快捷键无 ydotool 调用，不迁移旧 ydotool 服务、用户组或专属配置；keyd 继续提供轻点 Super 启动器。移除 claude-code overlay 入口。Toolbox 应用、专属配置和 scripts PATH 不迁移，复用 home 时屏蔽旧菜单和自启动入口。
 - 保留 NetworkManager 持久连接、DAE、EasyConnect、Hysteria/反向 SSH。WireGuard/wstunnel 退役，不迁移。Hysteria 15903/VNC 旧转发默认不恢复，SSH 15023 保留。
+- 工作机关闭 resolvconf 的 EDNS0 扩展：当前 EasyConnect DNS 对携带 OPT 的请求返回空答案，沿用迁移前 Arch 的普通 DNS 行为。
 - DAE 使用已锁定 `nixpkgs-unstable` 中的包，不单独固定版本。工作配置通过运行时 credential 读取，不将含节点凭据的配置嵌入 Nix。
-- EasyConnect 使用原 Compose 工作目录与系统 Docker socket，启动后自动初始化 DNS；从镜像重新创建容器，不要求搬迁旧匿名卷。旧 `ubuntu:doc_linux_60121` 镜像与 `aibox_build` 容器不迁移。Docker autoPrune 保持关闭。
+- EasyConnect 使用原 Compose 工作目录与系统 Docker socket，等待 VPN DNS 监听后初始化转发；DNS 以逐报文方式从 5353 转发至 Sangfor 5373 端口，子进程空闲 5 秒退出；从镜像重新创建容器，不要求搬迁旧匿名卷。旧 `ubuntu:doc_linux_60121` 镜像与 `aibox_build` 容器不迁移。Docker autoPrune 保持关闭。
 
 ## DAE 自动订阅
 
@@ -28,11 +29,11 @@ DAE 配置中的订阅入口保持 `http://127.0.0.1:8080/sub`。
 | dae-subscription-sync.timer | 每60秒检查恢复/待应用状态，正常内容获取间隔为1小时；失败自动重试 |
 | dae-subscription-config.path | 源文件变化触发同步，原子替换也覆盖；并发变更最终由后续检查收敛 |
 
-DAE 首次启动等待有效缓存，无缓存/断网时自动重试。有缓存时离线可启动；更新失败保留现有内容。候选与已应用状态分开保存，reload 失败还原发布缓存并保留候选重试。进程重启后重新核对应用状态。订阅同步程序不输出完整 URL、节点或原始异常。DAE 自身的日志策略仍来自私密配置。
+DAE 首次启动不等待上游订阅：有有效或可恢复缓存时沿用缓存；没有缓存时，从私密配置中的 `ruruka` 静态节点生成兜底缓存，使默认代理可立即启动。订阅继续在后台重试，恢复后自动 reload 切回订阅节点。更新失败保留现有内容。候选与已应用状态分开保存，reload 失败还原发布缓存并保留候选重试。进程重启后重新核对应用状态。订阅同步程序不输出完整 URL、节点或原始异常。DAE 自身的日志策略仍来自私密配置。
 
 上游地址只保存在 `/var/lib/dae-subscription-config/upstream-url`，root:root 0600，目录0700。安装准备时输入一次；之后更换这个私密文件即可，无需 rebuild 或手工按顺序启动服务。不要通过命令行参数、shell history 或 Git 保存完整订阅 URL。
 
-缓存位于 `/var/lib/dae-subscription/`，0700/0600。上游请求不继承代理环境，避免首次启动依赖 DAE 的循环。HTTP 健康只说明已有通过语法检查的节点，不证明所有节点远端可达。
+缓存位于 `/var/lib/dae-subscription/`，0700/0600。上游请求不继承代理环境，避免首次启动依赖 DAE 的循环。HTTP 健康中的 `fallback` 标识当前是否使用静态兜底；健康只说明已有通过语法检查的节点，不证明所有节点远端可达。
 
 ## Btrfs 与安装前提
 

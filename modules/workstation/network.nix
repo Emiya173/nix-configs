@@ -13,19 +13,36 @@ let
       pkgs.gnugrep
     ];
     text = ''
-      for ((attempt = 0; attempt < 60; attempt++)); do
-        if ${docker} inspect -f '{{.State.Running}}' easyconnect 2>/dev/null | grep -q true; then
+      for ((attempt = 0; attempt < 120; attempt++)); do
+        if ${docker} inspect -f '{{.State.Running}}' easyconnect 2>/dev/null | grep -q true &&
+          ${docker} exec easyconnect sh -c '/usr/bin/ss -H -lnu "sport = :5373" | grep -q "127.0.0.1:5373"'; then
           ${docker} exec easyconnect sh -c 'command -v socat >/dev/null || (apt-get update && apt-get install -y socat)'
-          # Compose starts a fresh container on restore. Avoid duplicate forwards
-          # when this oneshot is retried against an already running container.
-          if ! ${docker} exec easyconnect sh -c 'pgrep -f "[s]ocat UDP4-LISTEN:5353" >/dev/null'; then
-            ${docker} exec -d easyconnect socat UDP4-LISTEN:5353,fork,reuseaddr UDP4:127.0.0.1:53
+          # Sangfor DNS listens on 5373. Forward each datagram separately, and
+          # bound child lifetime instead of keeping a UDP session per client.
+          if ! ${docker} exec easyconnect sh -c '
+            found=1
+            for proc in /proc/[0-9]*; do
+              test "$(cat "$proc/comm" 2>/dev/null)" = socat || continue
+              args=$(tr "\000" " " < "$proc/cmdline" 2>/dev/null) || continue
+              case "$args" in
+                "socat UDP4-LISTEN:5353,fork,reuseaddr UDP4:127.0.0.1:53 "*)
+                  kill "''${proc##*/}" 2>/dev/null || true
+                  ;;
+                "socat -T 5 UDP4-RECVFROM:5353,fork,reuseaddr UDP4-SENDTO:127.0.0.1:5373 "*)
+                  found=0
+                  ;;
+              esac
+            done
+            exit "$found"
+          '; then
+            ${docker} exec -d easyconnect socat -T 5 UDP4-RECVFROM:5353,fork,reuseaddr UDP4-SENDTO:127.0.0.1:5373
           fi
+          ${docker} exec easyconnect sh -c '/usr/bin/ss -H -lnu "sport = :5353" | grep -q ":5353"'
           exit 0
         fi
         sleep 1
       done
-      echo 'EasyConnect container did not become ready' >&2
+      echo 'EasyConnect VPN DNS did not become ready' >&2
       exit 1
     '';
   };
