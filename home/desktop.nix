@@ -2,12 +2,52 @@
   config,
   pkgs,
   lib,
+  nixosConfig,
   desktopFeatures,
   displayConfig,
   ...
 }:
 
 let
+  uiFontFamily = builtins.head nixosConfig.fonts.fontconfig.defaultFonts.sansSerif;
+  # 飞书等客户端会显式请求这些字体名，不一定使用 sans-serif。
+  feishuUiFontAliases = [
+    "PingFang SC"
+    "PingFangSC-Regular"
+    "Microsoft YaHei"
+    "Microsoft YaHei UI"
+    "Hiragino Sans GB"
+    "Source Han Sans SC"
+    "WenQuanYi Micro Hei"
+    "WenQuanYi Zen Hei"
+    "Helvetica Neue"
+    "Tahoma"
+    "Arial"
+    "-apple-system"
+    "BlinkMacSystemFont"
+  ];
+  feishuFontConfig = pkgs.writeText "feishu-fontconfig.conf" ''
+    <?xml version="1.0"?>
+    <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+    <fontconfig>
+      <include>/etc/fonts/fonts.conf</include>
+      <dir>${pkgs.harmonyos-sans}/share/fonts/truetype/harmonyos-sans</dir>
+
+      ${lib.concatMapStringsSep "\n" (family: ''
+        <alias binding="strong">
+          <family>${family}</family>
+          <prefer><family>${uiFontFamily}</family></prefer>
+        </alias>
+      '') feishuUiFontAliases}
+
+      <match target="font">
+        <edit name="antialias" mode="assign"><bool>true</bool></edit>
+        <edit name="hinting" mode="assign"><bool>true</bool></edit>
+        <edit name="rgba" mode="assign"><const>none</const></edit>
+      </match>
+    </fontconfig>
+  '';
+
   # 仅支持读取 flags 文件的 Electron 启动器会使用这些配置。
   # QQ 的参数在 overlay 中配置，飞书的参数由下面的 wrapper 注入。
   electronFlags = ''
@@ -56,6 +96,8 @@ in
       text = electronFlags;
     })
     // {
+      "feishu/fontconfig.conf".source = feishuFontConfig;
+
       # 百度网盘会用 xdg-mime/sed 替换符号链接；激活时恢复声明式关联。
       "mimeapps.list".force = true;
 
@@ -177,10 +219,12 @@ in
         nativeBuildInputs = [ makeWrapper ];
         postBuild = ''
           wrapProgram $out/bin/bytedance-feishu \
+            --set FONTCONFIG_FILE "${feishuFontConfig}" \
             --add-flags "--ozone-platform-hint=auto" \
             --add-flags "--enable-features=WaylandWindowDecorations" \
             --add-flags "--enable-wayland-ime" \
-            --add-flags "--wayland-text-input-version=3"
+            --add-flags "--wayland-text-input-version=3" \
+            --add-flags "--disable-font-subpixel-positioning"
           rm $out/share/applications/bytedance-feishu.desktop
           substitute ${feishu}/share/applications/bytedance-feishu.desktop \
             $out/share/applications/bytedance-feishu.desktop \
@@ -218,7 +262,7 @@ in
   };
 
   # Qt 主题全交 DMS: DMS 动态生成
-  #   ~/.config/qt6ct/qt6ct.conf    (kvantum + DankMatugen colors + Rubik 字体)
+  #   ~/.config/qt6ct/qt6ct.conf    (kvantum + DankMatugen colors；字体由 fonts.nix 同步)
   #   ~/.config/Kvantum/MaterialAdw (kvantum 主题本体)
   #   ~/.local/share/color-schemes/DankMatugen*.colors (Matugen 色板)
   # (kdeglobals 是 Arch HyDE 残留, DMS 不写; KDE 应用 "默认" 配色渲染有问题,
@@ -249,7 +293,6 @@ in
       cursor-theme = "Bibata-Modern-Classic";
       gtk-theme = "Materia-dark";
       color-scheme = "prefer-dark";
-      font-name = "Rubik 11";
     };
   };
 

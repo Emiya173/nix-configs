@@ -1,11 +1,16 @@
-{ config, pkgs, ... }:
+{
+  config,
+  pkgs,
+  nixosConfig,
+  ...
+}:
 
 {
   programs.kitty = {
     enable = true;
 
     font = {
-      name = "JetBrainsMono Nerd Font";
+      name = builtins.head nixosConfig.fonts.fontconfig.defaultFonts.monospace;
       size = 11;
     };
 

@@ -16,6 +16,7 @@
     ./git.nix
     ./packages.nix
     ./desktop.nix
+    ./fonts.nix
     ./niri.nix
     ./dev.nix
     ./nvim.nix

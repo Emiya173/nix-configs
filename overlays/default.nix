@@ -36,5 +36,7 @@ in
     base = prev.fastfetch;
   };
 
+  harmonyos-sans = final.callPackage ../packages/harmonyos-sans { };
+
   unstable = unstablePkgs;
 }

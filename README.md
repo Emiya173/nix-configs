@@ -22,6 +22,12 @@
 - **应用**：Chromium、WPS、QQ、飞书、百度网盘、ChatGPT/Codex 桌面入口与独立 Codex CLI；Dolphin、Ark、OBS、ffmpeg、mpv、imv/gthumb、Satty 等文件和媒体工具。
 - **系统**：linux-zen、UEFI GRUB、zram 与磁盘 swap、PipeWire、NetworkManager、蓝牙、Tailscale、OpenSSH、Docker、nix-ld 和 AppImage 支持。
 
+系统无衬线界面统一使用华为官方 HarmonyOS Sans SC，覆盖简体中文、英文和数字；GTK、Qt、DMS 与飞书同步使用该字体及其原生字重。等宽字体统一为 FiraCode Nerd Font Mono，中文回退到 Noto Sans Mono CJK SC；Kitty、VS Code、JetBrains/Android Studio 和 Qt 固定字体由共享配置同步。原用户字体、编辑器与主题配置在首次修改前备份，应用的其他设置保留。
+
+等宽字体的包定义与下载校验值由 `flake.lock` 锁定的 Nixpkgs 固定：当前 FiraCode Nerd Font 为 `3.4.0+6.2`，Noto CJK 为静态版 `2.004`。Fontconfig 只允许这两个等宽字族使用对应 Nix store 包中的文件，同名字族的用户目录副本不会参与匹配，原文件仍保留。系统与 Home Manager 共用该来源规则；无需从旧机器复制字体或手动下载，更新锁文件后才可能随包集升级。
+
+HarmonyOS Sans 使用未修改的华为官方字体，许可随字体包保存在 `share/licenses/harmonyos-sans-sc/LICENSE.txt`。飞书继续通过独立 Fontconfig 配置覆盖其显式字体名并关闭字形亚像素定位，副本位于 `~/.config/feishu/fontconfig.conf`。
+
 工作机另外提供 Beyond Compare、钉钉、腾讯会议、LocalSend、JDK 11、Maven、ADB 脚本和 xlog 解码工具。私人主机另外提供游戏、串流及 Blender 等应用。完整包清单见 [modules/packages.nix](modules/packages.nix)、[home/packages.nix](home/packages.nix)、[home/desktop.nix](home/desktop.nix)、[home/dev.nix](home/dev.nix) 和 [home/hosts/arch-pc.nix](home/hosts/arch-pc.nix)。
 
 ## 配置结构
