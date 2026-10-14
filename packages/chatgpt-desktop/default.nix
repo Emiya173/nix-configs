@@ -81,6 +81,33 @@ buildFHSEnv {
   '';
   runScript = writeShellScript "chatgpt-desktop-launch" ''
     set -euo pipefail
+
+    # The local executor copies bundled plugins and rewrites their MCP config.
+    # fs.cp preserves modes, so using Nix store files directly makes it fail.
+    plugins_cache="''${XDG_CACHE_HOME:-$HOME/.cache}/chatgpt-desktop"
+    plugins_resources="$plugins_cache/${builtins.baseNameOf unwrapped}"
+    if [ ! -f "$plugins_resources/.ready" ]; then
+      mkdir -p "$plugins_cache"
+      staging=$(mktemp -d "$plugins_cache/.bundled-plugins.XXXXXX")
+      trap 'rm -rf "$staging"' EXIT
+      cp -r ${unwrapped}/usr/lib/chatgpt/resources/{plugins,plugin-signatures} "$staging/"
+      chmod -R u+w "$staging"
+      touch "$staging/.ready"
+      if ! mv -T "$staging" "$plugins_resources" 2>/dev/null; then
+        # Another launch may have published the same package's cache first.
+        [ -f "$plugins_resources/.ready" ] || exit 1
+      fi
+      rm -rf "$staging"
+      trap - EXIT
+    fi
+    export CODEX_ELECTRON_BUNDLED_PLUGINS_RESOURCES_PATH="$plugins_resources"
+
+    # Repair generated directories left read-only by an earlier launch.
+    executor_plugin="''${XDG_CONFIG_HOME:-$HOME/.config}/Codex/executor-plugins/codex-app-tools"
+    if [ -d "$executor_plugin" ]; then
+      chmod -R u+w "$executor_plugin"
+    fi
+
     flags=(--disable-setuid-sandbox --ozone-platform-hint=auto --enable-wayland-ime --wayland-text-input-version=3)
     flags_file="''${XDG_CONFIG_HOME:-$HOME/.config}/chatgpt-flags.conf"
     if [ -r "$flags_file" ]; then
