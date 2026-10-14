@@ -1,402 +1,248 @@
 # 多主机 NixOS 配置
 
-从 Arch Linux + Hyprland/quickshell-ii 迁移而来,新桌面: **niri + DankMaterialShell**。
-Flake + Home Manager 结构,所有用户级配置在 `home/`,系统级在 `modules/`。
+使用 Flake 和 Home Manager 管理私人电脑与工作机，统一 **niri + DankMaterialShell（DMS）** 桌面、中文输入、终端和开发工具，并按主机选择硬件、网络服务与应用。
 
-工作机 `arch-pc` 的迁移取舍、网络凭据、计划子卷和安装准备见 [WORKSTATION.md](WORKSTATION.md)。下述首次安装步骤为私人主机 `present-pc` 的历史流程；工作机按其专属挂载和凭据导入流程迁移，不要求 Arch 回退或独立备份。
+当前支持 `x86_64-linux`。基础包集为 `nixos-26.05`，部分应用显式使用 `nixpkgs-unstable`；输入的具体提交由 [flake.lock](flake.lock) 锁定。Home Manager 集成在 NixOS 中，系统与用户配置随同一次系统切换生效。
 
-## 目录结构
+## 主机与功能
 
-```
+| 主机 | 用途与硬件 | 主机专属配置 |
+| --- | --- | --- |
+| [`present-pc`](hosts/present-pc/configuration.nix) | 私人电脑，AMD 显卡，双 DP 显示器 | AMD/ROCm、Steam/Lutris/Wine、Waydroid、Sunshine、Scratch 工作区、投屏与虚拟输出、VoidMaker 入口 |
+| [`arch-pc`](hosts/arch-pc/configuration.nix) | 工作机，Intel UHD 770，单 HDMI 显示器 | 工作应用、Android/ADB 工具、xlog、DAE 自动订阅、EasyConnect、Hysteria 与反向隧道、wayvnc |
+
+两台主机共享桌面与基本操作习惯，工作机关闭娱乐功能、Scratch、投屏和 VoidMaker 入口。功能选择集中在 [flake.nix](flake.nix) 的 `desktopFeatures`；硬件与系统服务由各自主机的模块导入和覆盖决定。
+
+### 共享环境
+
+- **桌面**：niri 滚动平铺、DMS 面板/启动器/通知/剪贴板/壁纸/动态主题、DankGreeter 登录和 DMS 锁屏；通过 XWayland Satellite 运行 X11 应用。
+- **中文与外观**：Fcitx5 + Rime，雾凇词库、小鹤双拼、默认简体；中文 locale、CJK/Nerd 字体、GTK/Qt 主题和应用缩放配置。
+- **终端**：Kitty、Fish、Starship、Atuin 历史搜索、fzf、zoxide、bat、eza、Yazi、lazygit，以及 nix-index/comma 命令查找。
+- **开发**：VS Code、Android Studio、Nixvim、Git、direnv/nix-direnv；Rust、Node.js、Java、Python、C/C++、Go、Zig、Haskell、Typst 等工具。项目自己的 devShell 与 lock 由各项目维护。
+- **应用**：Chromium、WPS、QQ、飞书、百度网盘、ChatGPT/Codex 桌面入口与独立 Codex CLI；Dolphin、Ark、OBS、ffmpeg、mpv、imv/gthumb、Satty 等文件和媒体工具。
+- **系统**：linux-zen、UEFI GRUB、zram 与磁盘 swap、PipeWire、NetworkManager、蓝牙、Tailscale、OpenSSH、Docker、nix-ld 和 AppImage 支持。
+
+工作机另外提供 Beyond Compare、钉钉、腾讯会议、LocalSend、JDK 11、Maven、ADB 脚本和 xlog 解码工具。私人主机另外提供游戏、串流及 Blender 等应用。完整包清单见 [modules/packages.nix](modules/packages.nix)、[home/packages.nix](home/packages.nix)、[home/desktop.nix](home/desktop.nix)、[home/dev.nix](home/dev.nix) 和 [home/hosts/arch-pc.nix](home/hosts/arch-pc.nix)。
+
+## 配置结构
+
+```text
 .
-├── flake.nix                  # 入口,锁定 nixpkgs/home-manager/niri-flake
+├── flake.nix / flake.lock       # 输入、主机组装、功能选择和构建输出
 ├── hosts/
-│   ├── present-pc/            # 私人主机
-│   └── arch-pc/               # 工作机（Intel，独立网络与工作应用）
-│       ├── configuration.nix  # 主机配置入口
-│       ├── displays.nix       # 主机显示器布局
-│       ├── paths.nix          # 用户目录与配置仓库路径
-│       └── hardware-configuration.nix  # 安装时再次核对硬件与挂载
-├── modules/                   # 系统级
-│   ├── boot.nix               # GRUB + os-prober + linux-zen
-│   ├── network.nix            # NetworkManager + Bluetooth + Tailscale + SSH
-│   ├── audio.nix              # PipeWire
-│   ├── graphics.nix           # AMD RX 9070 (mesa + ROCm)
-│   ├── desktop.nix            # niri + DankGreeter + portal + Qt 依赖
-│   ├── input-method.nix       # fcitx5 + rime
-│   ├── keyd.nix               # 内核层 tap-hold: LeftMeta tap → F13 (Win 弹 launcher)
-│   ├── fonts.nix              # CJK + Nerd Font
-│   ├── locale.nix             # zh_CN.UTF-8 + Asia/Shanghai (LC_MESSAGES 跟随中文)
-│   ├── services.nix           # docker / waydroid / sunshine / nix-ld / appimage
-│   ├── snapshots.nix          # btrbk 自动快照
-│   ├── users.nix              # present 用户 + fish
-│   ├── packages.nix           # 系统级包
-│   └── nix.nix                # flakes / GC / 镜像
-└── home/                      # home-manager
-    ├── home.nix
-    ├── shell.nix              # fish + starship + atuin + zoxide + fzf + nix-index/comma
-    ├── kitty.nix
-    ├── git.nix
-    ├── niri.nix               # niri 全部 settings: outputs/键位/spawn/window-rules + DMS 集成
-    ├── desktop.nix            # GTK/Qt 主题 + chromium/electron flags + rime custom.yaml
-    ├── nvim.nix               # nixvim (LazyVim 风格)
-    ├── yazi.nix               # programs.yazi 声明式
-    ├── dev.nix                # rust/node/jdk21/python/typst/mdbook
-    └── packages.nix           # 用户 CLI 包
+│   ├── present-pc/
+│   └── arch-pc/
+│       ├── configuration.nix   # 主机系统入口与覆盖
+│       ├── hardware-configuration.nix
+│       ├── displays.nix        # 输出名称、模式、缩放、位置和主屏
+│       └── paths.nix           # 用户目录、仓库和外部项目路径
+├── modules/                    # 可复用的 NixOS 系统模块
+│   └── workstation/            # 工作机网络及 DAE 服务
+├── home/                       # 共享 Home Manager 配置
+│   └── hosts/                  # 主机专属用户配置
+├── overlays/                   # 包集覆盖和 unstable 入口
+├── packages/                   # 自定义打包、补丁和工作脚本
+├── assets/                     # 引导、登录和 Fastfetch 静态资源
+├── scripts/                    # 验证与维护脚本
+└── tests/                      # DAE 订阅恢复与隐私测试
 ```
 
-## 首次安装步骤
+[flake.nix](flake.nix) 中的 `mkHost` 为每台主机加载系统入口，并将 `userName`、`hostName`、`displayConfig`、`hostPaths` 和 `desktopFeatures` 同时传给 NixOS 与 Home Manager。共享用户入口 [home/home.nix](home/home.nix) 再加载 `home/hosts/<hostname>.nix`。
 
-**前提**: 现有 Arch 的 btrfs 布局只有 `@` (root) 和 `@home`。`@home` 全保留,`@`
-要替换为 NixOS,并新建 `@nix` 和 `@snapshots`。
+### 修改入口
 
-### 1. 装机前 (在 Arch 里)
+| 要调整的内容 | 配置位置 |
+| --- | --- |
+| 磁盘 UUID、挂载、内核硬件模块、主机硬件支持 | `hosts/<hostname>/hardware-configuration.nix` |
+| 显示器名称、分辨率、刷新率、缩放和位置 | `hosts/<hostname>/displays.nix` |
+| 用户 home、仓库位置、VoidMaker 源码目录 | `hosts/<hostname>/paths.nix` |
+| 共享启动、网络、音频、输入法、用户和系统服务 | [modules/](modules/) |
+| 主机专属服务、防火墙与系统覆盖 | `hosts/<hostname>/configuration.nix`，工作网络在 [modules/workstation/](modules/workstation/) |
+| 共享终端、应用、开发工具、编辑器与文件管理器 | [home/](home/) 中的对应模块 |
+| 主机专属应用、Fish alias/PATH 和用户服务 | `home/hosts/<hostname>.nix` |
+| niri 快捷键、窗口规则、输入设备和 DMS 集成 | [home/niri.nix](home/niri.nix) |
+| GTK/Qt、光标、默认应用与 Rime 用户配置 | [home/desktop.nix](home/desktop.nix) |
+| 自定义包、补丁与包集选择 | [packages/](packages/)、[overlays/default.nix](overlays/default.nix) |
 
-- 备份关键数据 (尤其 ssh keys、gpg、未提交的 dev 项目)
-- 把本仓库 push 到 GitHub,U 盘里 NixOS 安装环境再 clone
-- 记录: `~/.dotfiles/` bare repo 仍在 `@home`,迁移后是否继续用看个人
+`paths.nix` 中的路径是运行时字符串，外部源码目录不会因此复制进 Nix store。改变仓库位置后也应更新这里的 `repository`，供 `NH_FLAKE` 和 Fish 维护命令使用。
 
-### 2. 用 NixOS minimal ISO 启动 → 调整子卷
+niri 的快捷键、显示器、光标和窗口规则由 Home Manager 管理；修改对应 Nix 文件后重建。DMS 设置面板负责壁纸、面板、动态主题和电源/空闲超时等可变状态；其中接管 niri 配置的导入提示可以关闭。
+
+## 构建与切换
+
+在已安装 Nix、启用 `nix-command` 和 `flakes` 的环境中获取仓库：
 
 ```bash
-sudo mkdir -p /mnt-top
-sudo mount -o subvolid=5 /dev/nvme1n1p3 /mnt-top
-sudo btrfs subvol list /mnt-top   # 确认 @ + @home
-
-# (可选) 备份 Arch 的 @,装完 NixOS 没问题再删
-sudo btrfs subvol snapshot -r /mnt-top/@ /mnt-top/@arch-backup
-
-sudo btrfs subvol delete /mnt-top/@
-sudo btrfs subvol create /mnt-top/@
-sudo btrfs subvol create /mnt-top/@nix
-sudo btrfs subvol create /mnt-top/@snapshots
-sudo umount /mnt-top
+git clone https://github.com/Emiya173/nix-configs.git
+cd nix-configs
+./scripts/check.sh
 ```
 
-### 3. 按目标布局挂载
+以下命令均在仓库目录执行。现有主机的 hostname 与 flake 输出同名，`nh` 可选择本机配置：
 
 ```bash
-MOPT="compress=zstd:3,noatime,ssd,space_cache=v2,discard=async"
-sudo mount -o "$MOPT,subvol=@"          /dev/nvme1n1p3 /mnt
-sudo mkdir -p /mnt/{boot,home,nix,snapshots}
-sudo mount -o "$MOPT,subvol=@home"      /dev/nvme1n1p3 /mnt/home
-sudo mount -o "$MOPT,subvol=@nix"       /dev/nvme1n1p3 /mnt/nix
-sudo mount -o "$MOPT,subvol=@snapshots" /dev/nvme1n1p3 /mnt/snapshots
-sudo mount                              /dev/nvme1n1p1 /mnt/boot
+nh os build .                 # 构建并查看差异
+nh os switch .                # 构建并激活系统与用户配置
 ```
 
-### 4. 生成 hardware-configuration.nix
+也可以明确指定目标。构建另一台主机的系统不会激活它：
 
 ```bash
-sudo nixos-generate-config --root /mnt --dir /tmp/nixcfg
-diff /tmp/nixcfg/hardware-configuration.nix \
-     /mnt/home/present/nix_migrate/hosts/present-pc/hardware-configuration.nix
-# 把 boot.initrd.availableKernelModules / boot.kernelModules 等
-# 缺失项合并进仓库版本 (UUID/subvol 我已写好,不要被覆盖)
+nix build --no-link .#nixosConfigurations.present-pc.config.system.build.toplevel
+nix build --no-link .#nixosConfigurations.arch-pc.config.system.build.toplevel
+
+# 在对应目标主机上激活，以工作机为例
+sudo nixos-rebuild switch --flake .#arch-pc
 ```
 
-### 5. 装机
+Git 仓库形式的 flake 只包含已跟踪的文件，新增模块或资源应先 `git add`，无需先提交。[scripts/check.sh](scripts/check.sh) 使用 `path:` 输入，能够在不修改暂存区的情况下检查新增文件。
+
+### 更新与格式化
 
 ```bash
-sudo nixos-install --flake /mnt/home/present/nix_migrate#present-pc
-sudo nixos-enter --root /mnt -c 'passwd present'
-reboot
+nix flake update              # 更新所有输入的锁定版本
+# 或只更新一个输入
+nix flake update nixpkgs-unstable
+
+./scripts/check.sh
+nh os build .
+nh os switch .
+
+nix develop                   # 仓库维护环境：nixfmt、ShellCheck
+nix fmt -- flake.nix           # 格式化指定 Nix 文件
 ```
 
-### 6. 进入 NixOS
+提交前检查 `flake.nix` 和 `flake.lock` 的变化。发行版升级使用 `./scripts/bump-release.sh <YY.05 或 YY.11>`，例如 `./scripts/bump-release.sh 26.11`；它同步 nixpkgs、Home Manager、Nixvim 的 release URL 和 lock，然后执行求值检查。应先确认目标分支存在，并继续完成 checks 与目标系统构建。
 
-```fish
-sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
-sudo systemctl start btrbk-local.service       # 第一轮快照,使用 local 实例配置
-sudo btrfs subvol delete /snapshots/@arch-backup  # 确认无事后清理
-```
+`system.stateVersion` / `home.stateVersion` 记录状态兼容基线，不随发行版升级自动修改。目前私人主机为 `25.11`，工作机为 `26.05`。
 
-## 后续日常
+## 验证与自定义包
 
-home-manager 作为 NixOS 模块整合,只需一条命令同步系统+用户。推荐用 `nh` 包装:
+[scripts/check.sh](scripts/check.sh) 提供独立验证层级，均禁止自动更新 lock：
 
-```fish
-# 重建系统 (推荐, nh 自带 diff + nom 输出)
-nh os switch ~/nix_migrate
+| 命令 | 检查范围 |
+| --- | --- |
+| `./scripts/check.sh` 或 `./scripts/check.sh eval` | 求值所有 flake 输出与两台主机的完整系统配置，不构建应用或系统 |
+| `./scripts/check.sh checks` | 构建 flake checks：Nix 格式、维护脚本 ShellCheck、订阅恢复与隐私测试 |
+| `./scripts/check.sh packages` | 构建全部 8 个维护包 |
+| `./scripts/check.sh packages codex dae-subscription` | 只构建指定维护包 |
+| `./scripts/check.sh system arch-pc` | 构建工作机完整系统，不激活 |
+| `./scripts/check.sh all arch-pc` | 依次求值、构建 checks、全部维护包与工作机系统 |
 
-# 只 build 不切换 (验证 eval / 编译)
-nh os build ~/nix_migrate
+`system` 和 `all` 省略主机名时默认选择 `present-pc`。每次修改至少通过求值检查；包变更增加目标包构建，服务、桌面、图形和启动变更增加对应完整系统构建。订阅测试位于 [tests/test_subscription.py](tests/test_subscription.py)。协作约定见 [AGENTS.md](AGENTS.md)。
 
-# 更新 flake input 后切换
-nix flake update --flake ~/nix_migrate
-nh os switch ~/nix_migrate
+flake 导出的维护包均可通过 `nix build --no-link .#<包名>` 单独构建：
 
-# 原生命令 (备用)
-sudo nixos-rebuild switch --flake ~/nix_migrate#present-pc
-```
+| 输出 | 维护内容 |
+| --- | --- |
+| `qq` | unstable QQ，注入原生 Wayland 和输入法参数 |
+| `codex` | 官方 Codex CLI 发布包，单独固定版本和 SHA-256 |
+| `baidunetdisk` | 百度网盘打包及启动参数支持 |
+| `fastfetch` | 基于上游包增加本地 Nix profile 缓存补丁 |
+| `dingtalk` | 钉钉桌面包 |
+| `chatgpt-desktop` | ChatGPT/Codex 桌面客户端的 NixOS FHS 运行环境 |
+| `xlog` | 随仓库保存的 Haskell 源码、构建与原项目测试 |
+| `dae-subscription` | 本地订阅中继、同步、缓存和 DAE 应用逻辑 |
 
-**注意**: flakes 只看 git-tracked 文件 —— 新建的 .nix 文件 build 前必须先 `git add`,
-否则 `nh` 会报 `Path 'xxx.nix' not tracked by Git`。不需要 commit。
+更新固定发布包时同步版本与源码校验值，再执行求值和目标包构建。DAE、Hysteria 等直接跟随已锁定的 unstable 包集；具体选择见 overlay 和相应服务模块。
 
-### 验证层级与可复现边界
+## 桌面与终端操作
+
+`Mod` 为 Super/Win。常用共享快捷键如下，完整设置见 [home/niri.nix](home/niri.nix)：
+
+| 快捷键 | 操作 |
+| --- | --- |
+| 轻点左 Super / `Mod+Space` | DMS 启动器；按住 Super 仍作为修饰键 |
+| `Mod+V` | 剪贴板历史 |
+| `Mod+I` / `Mod+/` | DMS 设置 / 快捷键面板 |
+| `Mod+Tab` | niri 工作区总览 |
+| `Mod+Alt+L` | 锁屏 |
+| `Mod+BackSpace` | 电源菜单 |
+| `Print` / `Mod+Shift+S` | 区域截图 |
+| `Ctrl+Print` / `Alt+Print` | 全屏 / 窗口截图 |
+| `Mod+Shift+A` | 区域截图后用 Satty 标注 |
+
+私人主机另有 Scratch、投屏与 VoidMaker 快捷键。VoidMaker 的运行服务由外部项目维护，本仓库声明启动入口和源码路径。
+
+Fish 中 `Ctrl+R` 由 Atuin 搜索历史；`y` 启动 Yazi 并在退出时切换目录。系统维护缩写在输入空格时展开为可见命令：
+
+| 缩写 | 命令用途 |
+| --- | --- |
+| `nob` / `nos` | `nh os build` / `nh os switch`，仓库路径由 `NH_FLAKE` 提供 |
+| `nfu` / `nfc` / `nfs` | 更新输入 / 构建 flake checks / 查看输出 |
+| `ngc` | 按现有保留策略执行 `nh clean all` |
+| `ntree` / `nwhy` | `nix-tree` / `nix why-depends` |
+| `ndev` | 进入当前项目的 `nix develop` |
+
+工作机还提供 `adbs=adb shell`、`rn=Perl rename`、`tar=bsdtar`、`pip=uv pip`，以及 `~/script`、ADB 和 ghcup 的兼容路径；JDK 11/21 可通过 `~/.local/share/jdks/` 明确选择。
+
+## 工作机网络服务与私密状态
+
+工作网络集中在 [modules/workstation/](modules/workstation/)，其运行配置、账号和密钥独立保存在目标主机：
+
+- **DAE**：本地中继提供有效缓存，后台自动获取、校验订阅并 reload；网络失败按退避期限重试，保留现有缓存。上游 URL 位于 `/var/lib/dae-subscription-config/upstream-url`，通过 systemd credential 加载，修改后自动触发同步，无需手动依次启动 Python 与 DAE。
+- **EasyConnect**：systemd 管理现有 Compose 项目，并等待、初始化 VPN DNS；Compose 文件和登录状态属于主机本地数据。
+- **Hysteria**：使用 `/etc/hysteria/` 下的运行配置和密钥，分别维护客户端、反向 SSH 与 VNC 隧道。wayvnc 是随图形会话启动的用户服务。
+- **NetworkManager**：持久连接及其凭据保存在主机运行目录。工作机另有局域网 ADB/scrcpy 的接口防火墙规则。
+
+DAE 健康状态可通过 `curl -fsS http://127.0.0.1:8080/health` 查看；结合 `fallback`、`fetched_at` 和 `sync` 判断是否已获取真实订阅及是否处于退避。详细的服务、凭据路径、远程连接命令与历史安装记录见 [WORKSTATION.md](WORKSTATION.md)。
+
+仓库声明软件和配置结构；登录密码 hash、SSH/GPG/ADB 私钥、订阅 URL、VPN 凭据、xlog 解码密钥及应用登录状态不写入 Git 或 Nix store。用户文件、DMS 可变设置、Rime 学习数据、SDK 和外部工具链也有各自的运行状态，需要在目标主机独立准备或保留。
+
+## 存储与日常维护
+
+### Btrfs 快照
+
+现有主机均将 home、Nix store 和快照拆为独立子卷，实际设备 UUID 与挂载参数以各自硬件配置为准：
+
+| 挂载点 | `present-pc` | `arch-pc` |
+| --- | --- | --- |
+| `/` | `@` | `@nixos` |
+| `/home` | `@home` | `@home` |
+| `/nix` | `@nix` | `@nix` |
+| `/snapshots` | `@snapshots` | `@snapshots` |
+| `/btrfs` | 顶层 `subvolid=5` | 顶层 `subvolid=5` |
+| `/boot` | 本机 ESP | 本机 ESP |
+
+`btrbk-local.timer` 每小时运行，快照写入 `/snapshots`；私人主机策略在 [modules/snapshots.nix](modules/snapshots.nix)，工作机在其系统入口中声明：
+
+| 源子卷 | 创建方式 | 保留策略 |
+| --- | --- | --- |
+| `@home` | 每次运行创建 | 最近 24 小时、7 天、4 周分层保留，最小保留窗口 2 小时 |
+| 根子卷 `@` / `@nixos` | 有变化时创建 | 最近 12 小时、3 天分层保留，最小保留窗口 2 小时 |
+| `@nix` | 不创建快照 | 由 Nix 构建与垃圾回收管理 |
+
+这是同一文件系统内的本地快照，当前没有异机备份目标。两台主机另有每周 Btrfs scrub、SMART 监控和 fstrim。
 
 ```bash
-./scripts/check.sh             # 快速求值，不下载应用安装包，不代表 build 成功
-./scripts/check.sh checks      # ShellCheck + 全仓库 Nix 格式检查
-./scripts/check.sh packages    # 构建 QQ、Codex、百度网盘和带本地补丁的 Fastfetch
-./scripts/check.sh packages codex baidunetdisk  # 只检查指定包
-./scripts/check.sh system      # nh os build，不激活系统
-./scripts/check.sh all         # 依次执行以上各层
-nix fmt -- flake.nix           # 使用本 flake 锁定的 nixfmt 格式化指定文件
+systemctl status btrbk-local.timer
+journalctl -u btrbk-local.service
+sudo btrfs subvolume list /snapshots
+sudo systemctl start btrbk-local.service   # 手动执行一次当前策略
 ```
 
-检查命令禁止自动更新 lock。四个维护包均提供独立构建入口：
-`nix build --no-link --no-update-lock-file .#qq`、`.#codex`、`.#baidunetdisk`、`.#fastfetch`。
-`packages` 后只接受这四个包名；默认求值不会执行格式检查或包构建。
+### Nix 空间与依赖
 
-Codex 在 `packages/codex/default.nix` 固定官方发布包的版本与 SHA-256，
-独立于 nixpkgs 更新。升级时同步更新版本与发布包校验值，再运行上述求值检查
-及 `./scripts/check.sh packages codex`。
+[modules/nix.nix](modules/nix.nix) 启用 store 自动优化，并由 `nh clean` 定时清理，保留参数为 `--keep 5 --keep-since 14d`。旧 generation、profile 和其他 GC root 会影响可回收空间。
 
-升发行版使用 `./scripts/bump-release.sh 26.11`，只同步 nixpkgs、Home Manager
-和 nixvim 的 release URL 与对应 lock。脚本接受 `YY.05` / `YY.11`，更新后自动求值；
-若 lock 更新失败，会保留目标 URL，修复网络或分支问题后可用同一版本重试。
-该操作会更新输入，应检查 `flake.nix` / `flake.lock` 差异，再构建和切换。
-
-### 主机路径与本地开发入口
-
-`hosts/present-pc/paths.nix` 集中定义用户目录、配置仓库和 VoidMaker 源码路径，
-主机配置通过 `hostPaths` 参数同时传给 NixOS 与 Home Manager。系统用户目录、
-`NH_FLAKE`、Fish 的 `nfu/nfc/nfs` 和 VoidMaker 快捷键均使用这些值。
-这些路径是运行时字符串；可变源码不会被复制进 Nix store。
-
-全局开发工具链保持现有配置，项目自身的 devShell 和 lock 继续由各项目维护。
-VoidMaker 快捷键调用现有 `voidmaker.target`，服务由应用项目维护；本仓库不导入
-仓库外的 Nix 文件。换目录时还需按 VoidMaker 项目 README 更新其服务模板中的路径。
-本仓库覆盖的可复现范围如下。
-
-显示器接口和布局统一在 `hosts/present-pc/hardware-configuration.nix` 定义，
-DankGreeter 与 Home Manager 通过模块参数共用；光标主题和大小由
-`home.pointerCursor` 派生到 niri。
-
-以下状态仍需在迁移或恢复时单独处理：
-
-- DMS 壁纸、电源超时和动态主题设置：由 DMS 写入，备份其用户配置；不与 HM 同时写同一文件。
-- Rime 用户词频、应用账号和用户文档：属于用户数据，按现有备份策略恢复。
-- 开发项目 `.venv`、Rust toolchain 等：由各项目自己的 lock/工具链声明重建。
-- VoidMaker：按项目 README 构建 Host 并安装用户服务模板，包括
-  `docs/voidmaker-host.service` 及 `docs/systemd/` 下的 `voidmaker.target`、
-  `voidmaker-shell.service`、`voidmaker-postgres.service`、`voidmaker-asr.service`、
-  `voidmaker-tts.service`；然后运行 `systemctl --user daemon-reload`。
-  ASR/TTS 依赖的 `qwen3-asr-service` 与 `gpt-sovits` 开发环境也由各自项目准备。
-
-`flake.lock` 固定版本但不能保证上游永久保留下载。长期保留一个部署版本时，
-还需归档对应 Git 提交、flake inputs、系统运行闭包，以及需要从源码重建的依赖。
-当前自动 GC 保留策略不等同于永久归档；闭包归档也不替代用户数据备份。
-
-## 待办 / 需要本人补全
-
-### 高优先级 (新机器)
-- [ ] **替换 hardware-configuration.nix** (nixos-generate-config 输出)
-- [ ] 检查 `hosts/present-pc/hardware-configuration.nix` 中 btrfs `subvol=` 选项
-- [ ] **DMS 壁纸**: 由 DankMaterialShell 自身管理,首次进桌面后在 DMS 设置面板里挑
-- [ ] **rime schema 部署**: 切换 schema 或改 `*.custom.yaml` 后:
-  ```fish
-  rm -rf ~/.local/share/fcitx5/rime/build && fcitx5 -r
-  ```
-  当前默认: 小鹤双拼简体 (double_pinyin_flypy, simplification reset=1)。
-  词库: rime-ice (雾凇拼音) 已声明式注入 (`fcitx5-rime.override { rimeDataPkgs = ... }`,
-  见 modules/input-method.nix),无需手动 clone;用户词频在 `*.userdb`,是 mutable 数据。
-
-### Neovim — nixvim 声明式
-
-`home/nvim.nix` 用 [nixvim](https://github.com/nix-community/nixvim) 全声明式接管,
-LazyVim 风格起步配置: tokyonight 主题 / neo-tree / telescope / lualine / bufferline /
-treesitter / gitsigns / which-key / mini.* / flash / trouble / noice / persistence /
-完整 LSP (rust/ts/python/go/lua/nix/...) / cmp 自动补全 / conform 格式化 / nvim-lint。
-
-迭代时直接编辑 `home/nvim.nix` 后 `nixos-rebuild switch`,无需自管 lazy.nvim。
-原 `~/.config/nvim` 不再生效 (但因为 home-manager `backupFileExtension="hm-backup"`,
-首次切换时会被改名为 `nvim.hm-backup` 而不是删除)。
-
-### Yazi — programs.yazi 声明式
-
-`home/yazi.nix` 通过 home-manager 模块管理 settings/keymap/plugins。
-插件来自 `pkgs.yaziPlugins.*` (git / smart-enter / full-border 已加),按需添加。
-
-### 中文软件
-全部在 nixpkgs 里,已写进 `home/desktop.nix`:
-- `wpsoffice-cn` — WPS 中国版
-- `qq` — 即 linuxqq,腾讯 QQ
-- `feishu` — 飞书 (撰写时 7.62.9)
-
-flatpak 已移除 (从未装过任何 flatpak 应用);nixpkgs 版本跟不上时优先考虑 AppImage
-(programs.appimage 已配 binfmt),或再把 nix-flatpak input + `services.flatpak` 加回来。
-
-### 命令查包与临时运行
-
-[nix-index-database](https://github.com/nix-community/nix-index-database) 提供预构建文件索引，
-Fish 在命令不存在时提示对应包；不需要本机运行 `nix-index`。
-[comma](https://github.com/nix-community/comma) 可以按命令名临时运行工具：
-
-```fish
-nix-locate --minimal --at-root --whole-name /bin/cowsay
-, cowsay hello
+```bash
+nix-tree /run/current-system
+nix path-info -rSh /run/current-system
+nix why-depends /run/current-system /nix/store/<目标路径>
 ```
 
-索引随 `nix-index-database` 的 flake lock 更新，来自上游 nixos-unstable，
-不包含本机 overlays。comma 执行仍使用现有 stable nixpkgs registry；
-少数只在 unstable 存在的包需要显式指定来源。
+依赖的 closure 大小包含共享依赖，不能逐项相加当作实际磁盘占用。Btrfs 快照保留的旧数据也独立影响文件系统剩余空间。
 
-### Fastfetch
+Docker 两台主机都启用；私人主机启用镜像自动清理，工作机关闭 `autoPrune`。容器内容与卷属于运行数据，生命周期由对应项目维护。
 
-Fastfetch 图标在 `home/shell.nix` 配置，使用 Nerd Fonts 字形。
-`packages/fastfetch/` 的本地补丁用 profile 解析后的不可变 Nix store 路径校验包数量缓存，
-缓存命中时不再启动 `nix-store`，避免每次开机首次显示时被 Nix 冷启动拖慢。
-切换系统或用户 profile 后会重新统计；统计口径沿用 Fastfetch 的依赖闭包计数，
-不是直接安装的应用数量。首次生成缓存或清空缓存后，仍需进行一次完整查询。
+## 适配与部署新主机
 
-升级 Fastfetch 时需检查补丁是否仍适用，并运行 `./scripts/check.sh packages fastfetch`。
+复用配置时，先准备目标主机的硬件、挂载、用户和运行凭据。仓库中的设备 UUID、显示器名称与路径均对应已有机器。
 
-### Quickshell — DankMaterialShell (DMS)
+1. 新建 `hosts/<hostname>/` 的系统入口、硬件配置、`displays.nix` 和 `paths.nix`，选择所需共享模块。可用 `nixos-generate-config` 获取目标硬件信息，再核对实际挂载。
+2. 新建 `home/hosts/<hostname>.nix`，放置专属应用、用户服务和覆盖。
+3. 在 `flake.nix` 中注册 `nixosConfigurations.<hostname> = mkHost "<hostname>"`，设置功能选择；改变用户名或架构时同步调整入口参数。
+4. 更新 [scripts/check.sh](scripts/check.sh) 中的主机枚举和完整求值列表，执行求值、checks 与目标系统构建。
+5. 在目标系统使用 `nixos-rebuild --flake` 激活；首次安装时，在安装环境正确挂载目标到 `/mnt`，准备登录凭据及服务所需私密文件后，使用 `nixos-install --flake` 指定目标主机。
 
-不再用 illogical-impulse,改用 [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell):
-- 官方支持 niri,通过 flake input `dms` + home-manager 模块接入
-- 自动注入 niri 键位 (Mod+Space spotlight / Mod+V 剪贴板 / Mod+N 通知 等)
-- DMS 进程由 user systemd 服务跑 (`systemd.enable=true` + `enableSpawn=false`,
-  避免 spawn-at-startup 又启一份导致两条 bar)
-- 接管: bar / 动态主题 (matugen) / 通知中心 / spotlight / 剪贴板 / 设置 /
-  电源菜单 / 系统监控 / 壁纸 / 音量亮度 OSD
-- 剪贴板历史由 DMS 内置后端管理,无需额外启动 `wl-paste --watch cliphist store`。
-- Polkit 认证沿用 niri-flake 提供的默认 agent,由其 systemd user service 启动。
-- 锁屏、熄屏和挂起超时由 DMS Settings → Power 管理。
-- **不**接管: 键位/显示/光标/
-  窗口规则 (这些由 home-manager 写到 niri config —— 见下面"分工"段)
-
-**DMS 设置面板 vs home-manager 分工**
-
-DMS 设置面板里"键盘快捷键 / 显示 / 光标主题 / 窗口规则"会提示
-"找到配置文件,未导入" —— 那是它想接管 `~/.config/niri/config.kdl`,
-但这个文件是 home-manager 写的 nix-store 只读 symlink,DMS 写不回去。
-**约定**: 这四类全在 `home/niri.nix` 声明式管理,DMS 设置面板只当只读展示,
-导入提示直接 Dismiss。
-
-**自定义键位补充** (在 home/niri.nix 里手写,非 DMS 注入):
-- `Mod+BackSpace` — DMS 电源菜单 (`dms ipc powermenu toggle`)
-- `Mod+Alt+L`     — 锁屏 (`dms ipc lock lock`)
-- `Win` 单点      — DMS spotlight (走 keyd: LeftMeta tap → F13 → xkb XF86Tools)
-- `Mod+I`         — DMS 设置面板 (`dms ipc control-center toggle`,覆盖了 DMS 默认 Mod+Comma)
-- `Mod+/`         — DMS 键位面板 (`dms ipc keybinds toggleBinds`,带搜索分组,代替 niri 自带 hotkey overlay)
-- `Mod+Tab`       — niri 自带 overview (所有 workspace + 窗口缩略图)
-- `Print` / `Mod+Shift+S` — DMS 区域截图；`Ctrl+Print` 截当前屏幕，`Alt+Print` 选择窗口
-- `Mod+Shift+A`   — DMS 选区后交给 Satty 标注；取消选区直接退出
-- `Mod+S` / `Mod+Ctrl+S` — scratchpad (named workspace `scratch`,类 hyprland special workspace)
-  - `Mod+S` toggle: 在 scratch 时回上个 workspace,否则跳进 scratch;**空 scratch 自动开 kitty**
-  - `Mod+Ctrl+S`: 把当前 column 扔进 scratch
-- `Mod+,` / `Mod+.` — column 管理: consume-window-into-column / expel-window-from-column
-- `Mod+滚轮`       — **列内**窗口上下切焦点 (workspace 切换走 `Mod+U`/`Mod+I`/`Mod+Page_Up/Down`)
-- `Mod+Ctrl+hjkl` — 屏幕间跳焦点; 加 `Shift` 把当前列搬过去
-- `Mod+Shift+E`   — 退出 niri (回 SDDM)
-
-### 输入 — keyd
-
-niri 本身没有 tap-vs-hold 区分,需要在内核层做。`modules/keyd.nix`:
-
-```
-leftmeta = overload(meta, f13)
-```
-
-长按 LeftMeta 仍是 Super modifier (Mod 组合键照旧),单点发 KEY_F13。
-F13 在默认 xkb keymap 里被解释成 `XF86Tools` keysym,所以 niri.nix 里
-bind 的是 `XF86Tools` (不是 `F13`)。
-
-调试: `sudo keyd monitor` 看实时事件。
-
-### 显示 / 多屏
-
-主屏 = `DP-1` (4K@240, scale 1.5),副屏 = `DP-2` (2560x1600@160, scale 1.5,
-**90° 顶部朝左**,摆主屏左侧)。配置集中在
-`hosts/present-pc/hardware-configuration.nix` 的 `displayConfig`。
-
-niri 使用主屏的 `focus-at-startup` 设置启动焦点。
-
-[DankGreeter](https://danklinux.com/docs/dankgreeter/nixos) 使用 niri Wayland 会话，
-登录时只点亮主屏，分辨率和缩放复用 `displayConfig`；登录后恢复完整桌面布局。
-`modules/desktop.nix` 固定使用原 Candy 壁纸
-`assets/sddm-theme-candy/backgrounds/seele.png`，由 Nix store 提供给登录器，
-独立于桌面 DMS 的壁纸设置。GNOME Keyring 通过 greetd PAM 在密码登录时解锁。
-
-首次从 SDDM 切换登录器时，建议先 `nh os build .` 验证，再 `nh os boot .`，
-重启后使用新登录器。
-
-### 开发
-- Rust 用 `rustup` 管理 (避开 nixpkgs 版本切换的麻烦)
-- Python 全局环境含 pip/uv/poetry; 项目内推荐 direnv + flake.nix
-- Java: 仅装 jdk21 (gradle/kotlin 都已支持);需要 jdk17 的旧项目自行 nix-shell
-
-### Btrfs 快照 (替代 Timeshift)
-
-由 `modules/snapshots.nix` 中的 `services.btrbk` 自动管理。
-
-**关键约束**: btrbk 的 `volume` 必须指向 btrfs root subvol (id=5) 的挂载点 ——
-因为它字面去 `<volume>/<subvolume>` 找子卷,`/` 已经是 `@` 自己的内容,
-里面没有 `@`/`@home` 这些名字。所以 `hardware-configuration.nix` 额外挂了
-`fileSystems."/btrfs" = subvolid=5;`,btrbk 配置里 `volume."/btrfs"` +
-`snapshot_dir = "@snapshots"` (= `/btrfs/@snapshots`,与 `/snapshots` 同 subvol)。
-
-**保留策略**:
-- `@home`: 24 小时 + 7 日 + 4 周
-- `@`:     12 小时 + 3 日 (系统层主要靠 generations,快照只是辅助)
-- `@nix`:  不快照
-
-**手动操作** (注意: NixOS `services.btrbk.instances.local` 把配置写到
-`/etc/btrbk/local.conf`,**不是**默认的 `/etc/btrbk.conf`,所以 CLI 必须带 `-c`):
-
-```fish
-# 立即跑一次 (走 systemd unit,等价 timer 触发)
-sudo systemctl start btrbk-local.service
-
-# 列快照
-sudo btrbk -c /etc/btrbk/local.conf list snapshots
-
-# dry-run 看下次会创建/清理什么
-sudo btrbk -c /etc/btrbk/local.conf -n run
-
-# 看 timer 下次触发
-systemctl list-timers btrbk-local.timer
-
-# 看实际占用 (考虑 CoW 共享)
-sudo btdu /
-
-# 看压缩比
-sudo compsize /home
-
-# rebuild 前手动快一发
-sudo btrfs subvolume snapshot -r /btrfs/@home /snapshots/@home-manual-(date +%Y%m%d-%H%M%S)
-```
-
-**恢复文件**: 先用上面的 `list snapshots` 确认快照名称。btrbk 自动快照直接位于
-`/snapshots/@home.<时间戳>` (例如 `@home.20261011T1200`),其中 `present/` 对应用户目录;
-选定文件后用 `cp -- /snapshots/@home.<实际时间戳>/present/relative/path ~/` 恢复。
-
-**整盘还原**: 引导进 NixOS rescue → 重命名当前 `@home` → 把目标快照 `btrfs sub snapshot` 成新 `@home` → reboot。NixOS 系统本身坏了不用动快照,**直接在 GRUB 选 older generation** 即可。
-
-**异机备份** (可选): 在 `services.btrbk.instances.local.settings` 里加
-```nix
-target."ssh://backup.lan/mnt/btrfs/backup" = {};
-```
-btrbk 会用 incremental send 推送增量。
-
-### 双启动 NTFS 挂载
-NTFS 分区 (nvme0n1p2/p4) **不在自动挂载列表**,按需手动添加到
-`hosts/present-pc/hardware-configuration.nix` 或用 udisks2 临时挂载。
-
-### 暂未迁移的包/功能 (可按需手动加)
-- 游戏: steam / lutris / wine / ryujinx
-- 媒体: jellyfin-media-player / netease-cloud-music
-- 仿真: torzu / yuzu
-- Toolbox: 工作机明确不迁移；其他 IDE 保留已选配置
-- VSCode: 已加,见 `home/dev.nix`
-
-## 移除/合并的旧包
-- `illogical-impulse-*` 全套: 与 hyprland 绑定,niri 下重写
-- `hyprland` / `hyprlock` / `hyprtoolkit` / `swaylock-effects`: 不再使用
-- `oh-my-zsh` / `zsh-theme-powerlevel10k`: 改用 fish + starship 单一 shell
-- `paru` / `yay`: NixOS 包管理替代
-- `grub-btrfs` / `timeshift`: 用 btrfs snapshot + nh/nixos generations 替代
-- `nvm`: 用 nixpkgs 中的 `nodejs_22` 或 direnv 项目级管理
+工作机专属的状态导入与安装预检脚本仅用于其既定流程，说明保留在 [WORKSTATION.md](WORKSTATION.md)。日常更新使用本 README 的构建、验证和切换入口。
