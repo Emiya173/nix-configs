@@ -26,6 +26,8 @@ let
       cp opt/apps/com.alibabainc.dingtalk/files/version $out/opt/dingtalk/version
       # Use the FHS environment's system libraries rather than old bundled glibc.
       rm -f $out/opt/dingtalk/release/libm.so.6 $out/opt/dingtalk/release/libstdc++* $out/opt/dingtalk/release/libgtk-x11-2.0.so.*
+      # Bundled HarfBuzz lacks symbols required by the FHS environment's Pango.
+      rm -f $out/opt/dingtalk/release/libharfbuzz.so*
     '';
   };
 in
@@ -43,6 +45,7 @@ buildFHSEnv {
       fontconfig
       freetype
       glib
+      harfbuzz
       gtk2
       gtk3
       libGL
