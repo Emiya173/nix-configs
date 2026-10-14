@@ -28,6 +28,16 @@
   # Sangfor DNS returns empty answers for EDNS requests; keep the Arch resolver
   # behavior on this VPN workstation.
   networking.resolvconf.dnsExtensionMechanism = false;
+  # Share a manually started ADB server and scrcpy forwards on the wired LAN.
+  networking.firewall.interfaces.enp1s0 = {
+    allowedTCPPorts = [ 5037 ];
+    allowedTCPPortRanges = [
+      {
+        from = 27183;
+        to = 27199;
+      }
+    ];
+  };
   # Runtime libraries for the existing ghcup bindists retained in @home.
   programs.nix-ld.libraries = with pkgs; [
     ncurses
