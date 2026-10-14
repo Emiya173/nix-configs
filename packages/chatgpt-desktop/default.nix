@@ -100,6 +100,18 @@ buildFHSEnv {
       rm -rf "$staging"
       trap - EXIT
     fi
+
+    # Browser host setup resolves its bundled runtime from this same root.
+    for runtime_entry in codex codex-code-mode-host cua_node; do
+      runtime_target="${unwrapped}/usr/lib/chatgpt/resources/$runtime_entry"
+      runtime_link="$plugins_resources/$runtime_entry"
+      if ! ln -s "$runtime_target" "$runtime_link" 2>/dev/null; then
+        if [ ! -L "$runtime_link" ] || [ "$(readlink "$runtime_link")" != "$runtime_target" ]; then
+          printf 'Refusing to replace bundled runtime entry: %s\n' "$runtime_link" >&2
+          exit 1
+        fi
+      fi
+    done
     export CODEX_ELECTRON_BUNDLED_PLUGINS_RESOURCES_PATH="$plugins_resources"
 
     # Repair generated directories left read-only by an earlier launch.
