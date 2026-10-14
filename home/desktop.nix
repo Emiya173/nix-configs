@@ -91,6 +91,11 @@ in
     ];
   };
 
+  programs.brave = {
+    enable = true;
+    commandLineArgs = config.programs.chromium.commandLineArgs;
+  };
+
   xdg.configFile =
     lib.genAttrs (map (v: "electron${v}-flags.conf") electronVersions) (_: {
       text = electronFlags;

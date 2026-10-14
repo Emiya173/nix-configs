@@ -19,7 +19,7 @@
 - **中文与外观**：Fcitx5 + Rime，雾凇词库、小鹤双拼、默认简体；中文 locale、CJK/Nerd 字体、GTK/Qt 主题和应用缩放配置。
 - **终端**：Kitty、Fish、Starship、Atuin 历史搜索、fzf、zoxide、bat、eza、Yazi、lazygit，以及 nix-index/comma 命令查找。
 - **开发**：VS Code、Android Studio、Nixvim、Git、direnv/nix-direnv；Rust、Node.js、Java、Python、C/C++、Go、Zig、Haskell、Typst 等工具。项目自己的 devShell 与 lock 由各项目维护。
-- **应用**：Chromium、WPS、QQ、飞书、百度网盘、ChatGPT/Codex 桌面入口与独立 Codex CLI；Dolphin、Ark、OBS、ffmpeg、mpv、imv/gthumb、Satty 等文件和媒体工具。
+- **应用**：Chromium、Brave、WPS、QQ、飞书、百度网盘、ChatGPT/Codex 桌面入口与独立 Codex CLI；Dolphin、Ark、OBS、ffmpeg、mpv、imv/gthumb、Satty 等文件和媒体工具。
 - **系统**：linux-zen、UEFI GRUB、zram 与磁盘 swap、PipeWire、NetworkManager、蓝牙、Tailscale、OpenSSH、Docker、nix-ld 和 AppImage 支持。
 
 系统无衬线界面统一使用华为官方 HarmonyOS Sans SC，覆盖简体中文、英文和数字；GTK、Qt、DMS 与飞书同步使用该字体及其原生字重。等宽字体统一为 FiraCode Nerd Font Mono，中文回退到 Noto Sans Mono CJK SC；Kitty、VS Code、JetBrains/Android Studio 和 Qt 固定字体由共享配置同步。原用户字体、编辑器与主题配置在首次修改前备份，应用的其他设置保留。
