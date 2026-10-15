@@ -25,14 +25,25 @@
 
   programs.lazygit = {
     enable = true;
-    # lazygit 不读 git 的 pager 配置,单独指到 delta
-    # (新版 schema: git.paging 对象已改为 git.pagers 数组,旧写法会触发
-    # 自动迁移并因 hm 只读 symlink 报 read-only file system)
-    settings.git.pagers = [
-      {
-        colorArg = "always";
-        pager = "delta --dark --paging=never";
-      }
-    ];
+    settings = {
+      # 使用当前 pagers schema，避免自动迁移尝试写入 Home Manager 只读文件。
+      git.pagers = [
+        {
+          colorArg = "always";
+          pager = "delta --dark --paging=never";
+        }
+      ];
+
+      # 保留迁移前的 Gerrit 推送快捷键和终端剪贴板配置。
+      customCommands = [
+        {
+          key = "G";
+          command = "git push {{.SelectedLocalBranch.UpstreamRemote}} HEAD:refs/for/{{.SelectedLocalBranch.UpstreamBranch}}";
+          context = "localBranches";
+          description = "Push to Gerrit for review";
+        }
+      ];
+      os.copyToClipboardCmd = ''printf "\033]52;c;$(printf '%s' {{text}} | base64 -w 0)\a" > /dev/tty'';
+    };
   };
 }
