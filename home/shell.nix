@@ -247,49 +247,49 @@
         }
         {
           type = "os";
-          key = "  OS";
+          key = "          OS";
           keyColor = "38;5;1";
           format = "{pretty-name} {arch}";
         }
         {
           type = "kernel";
-          key = "  Kernel";
+          key = "          Kernel";
           keyColor = "38;5;1";
           format = "{sysname} {release}";
         }
         {
           type = "de";
-          key = "  Desktop";
+          key = "          Desktop";
           keyColor = "38;5;1";
           format = "{pretty-name} {version}";
         }
         {
           type = "wm";
-          key = "  WM";
+          key = "          WM";
           keyColor = "38;5;1";
           format = "{pretty-name} ({protocol-name})";
         }
         {
           type = "terminal";
-          key = "  Terminal";
+          key = "          Terminal";
           keyColor = "38;5;1";
           format = "{pretty-name} {version}";
         }
         {
           type = "terminalfont";
-          key = " 󰛖 Font";
+          key = "         󰛖 Font";
           keyColor = "38;5;1";
           format = "{name}";
         }
         {
           type = "shell";
-          key = "  Shell";
+          key = "          Shell";
           keyColor = "38;5;1";
           format = "{pretty-name} {version}";
         }
         {
           type = "packages";
-          key = "  Packages";
+          key = "          Packages";
           keyColor = "38;5;1";
           format = "{nix-all} (nix){?flatpak-all}, {flatpak-all} (flatpak){?}";
         }
@@ -303,44 +303,44 @@
         }
         {
           type = "host";
-          key = "  Host";
+          key = "          Host";
           keyColor = "38;5;2";
           format = "{name}";
         }
         {
           type = "cpu";
-          key = "  CPU";
+          key = "          CPU";
           keyColor = "38;5;2";
           format = "{name} @ {freq-max}";
         }
         {
           type = "gpu";
-          key = " 󰢮 GPU";
+          key = "         󰢮 GPU";
           keyColor = "38;5;2";
           format = "{name} ({type}, {driver})";
         }
         {
           type = "display";
-          key = " 󰍹 Display";
+          key = "         󰍹 Display";
           keyColor = "38;5;2";
           format = "{width}x{height} @ {refresh-rate}Hz";
         }
         {
           type = "memory";
-          key = "  Memory";
+          key = "          Memory";
           keyColor = "38;5;2";
           format = "{used} / {total} ({percentage})";
         }
         {
           type = "swap";
-          key = "  Swap";
+          key = "          Swap";
           keyColor = "38;5;2";
           # 此模块统计 zram 和磁盘 swap 的总量。
           format = "{used} / {total} ({percentage})";
         }
         {
           type = "disk";
-          key = "  Disk";
+          key = "          Disk";
           keyColor = "38;5;2";
           format = "{size-used} / {size-total} ({size-percentage}) - {filesystem} [{mountpoint}]";
           folders = lib.concatStringsSep ":" (
@@ -357,19 +357,19 @@
         }
         {
           type = "datetime";
-          key = "  Date";
+          key = "          Date";
           keyColor = "38;5;3";
           format = "{day-in-month}.{month-pretty}.{year} {hour-pretty}:{minute-pretty}:{second-pretty}";
         }
         {
           type = "processes";
-          key = "  Processes";
+          key = "          Processes";
           keyColor = "38;5;3";
           format = "{result} running";
         }
         {
           type = "command";
-          key = "  Installed";
+          key = "          Installed";
           keyColor = "38;5;3";
           # 根目录创建时间仅作安装时间的近似值；不支持 birth time 时显示 N/A。
           text = ''
@@ -383,7 +383,7 @@
         }
         {
           type = "command";
-          key = "  OS Age";
+          key = "          OS Age";
           keyColor = "38;5;3";
           text = ''
             installed=$(stat -c %W / 2>/dev/null) || installed=0
@@ -397,13 +397,13 @@
         }
         {
           type = "uptime";
-          key = "  Uptime";
+          key = "          Uptime";
           keyColor = "38;5;3";
           format = "{days}d {hours}h {minutes}m";
         }
         {
           type = "battery";
-          key = "  Battery";
+          key = "          Battery";
           keyColor = "38;5;3";
           format = "{capacity} - {status}";
         }
