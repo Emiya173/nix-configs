@@ -22,12 +22,6 @@
           enable_transience
       end
 
-      # quickshell/DMS 终端配色 escape 序列 —— 必须 raw 注入,
-      # 不能走 cat alias (bat) 否则会被画成带框文本。-s 跳过空文件
-      if test -s ~/.local/state/quickshell/user/generated/terminal/sequences.txt
-          command cat ~/.local/state/quickshell/user/generated/terminal/sequences.txt
-      end
-
       fish_add_path "$HOME/.local/bin"
       fish_add_path "$HOME/.cargo/bin"
     '';
