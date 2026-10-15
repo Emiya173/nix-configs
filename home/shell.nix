@@ -3,6 +3,7 @@
   pkgs,
   lib,
   hostPaths,
+  nixosConfig,
   ...
 }:
 
@@ -224,107 +225,191 @@
     settings = {
       "$schema" = "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json";
       logo = {
+        type = "kitty";
         # 从 ~/.config/fastfetch/logo/ 中随机挑一张 (logo 目录由下面 xdg.configFile 注入)
         source = ''$(find "''${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/logo/" -name "*.png" | shuf -n 1)'';
-        height = 18;
+        # 只固定高度，让不同尺寸的图片按原始比例计算宽度。
+        height = 22;
       };
-      display.separator = " : ";
+      display = {
+        separator = " ";
+        key.width = 0;
+        percent.type = 9;
+        size = {
+          binaryPrefix = "iec";
+          ndigits = 1;
+        };
+      };
       modules = [
         {
           type = "custom";
-          format = "┌──────────────────────────────────────────┐";
+          format = "{#38;5;2}┌──────────────────────────── System ────────────────────────────┐{#}";
         }
         {
           type = "os";
-          key = "   OS";
-          format = "{pretty-name}";
-          keyColor = "red";
+          key = "  OS";
+          keyColor = "38;5;1";
+          format = "{pretty-name} {arch}";
         }
         {
           type = "kernel";
-          key = "   Kernel";
-          format = "{2}";
-          keyColor = "red";
+          key = "  Kernel";
+          keyColor = "38;5;1";
+          format = "{sysname} {release}";
         }
         {
-          type = "packages";
-          key = "  󰏗 Packages";
-          keyColor = "green";
-        }
-        {
-          type = "display";
-          key = "  󰍹 Display";
-          format = "{1}x{2} @ {3}Hz [{7}]";
-          keyColor = "green";
-        }
-        {
-          type = "terminal";
-          key = "   Terminal";
-          keyColor = "yellow";
+          type = "de";
+          key = "  Desktop";
+          keyColor = "38;5;1";
+          format = "{pretty-name} {version}";
         }
         {
           type = "wm";
-          key = "  󱗃 WM";
-          format = "{pretty-name} {version} ({protocol-name})";
-          keyColor = "yellow";
+          key = "  WM";
+          keyColor = "38;5;1";
+          format = "{pretty-name} ({protocol-name})";
+        }
+        {
+          type = "terminal";
+          key = "  Terminal";
+          keyColor = "38;5;1";
+          format = "{pretty-name} {version}";
+        }
+        {
+          type = "terminalfont";
+          key = " 󰛖 Font";
+          keyColor = "38;5;1";
+          format = "{name}";
+        }
+        {
+          type = "shell";
+          key = "  Shell";
+          keyColor = "38;5;1";
+          format = "{pretty-name} {version}";
+        }
+        {
+          type = "packages";
+          key = "  Packages";
+          keyColor = "38;5;1";
+          format = "{nix-all} (nix){?flatpak-all}, {flatpak-all} (flatpak){?}";
         }
         {
           type = "custom";
-          format = "└──────────────────────────────────────────┘";
-        }
-        "break"
-        {
-          type = "title";
-          key = "   User";
-          format = "{user-name-colored} {at-symbol-colored} {host-name-colored}";
+          format = "{#38;5;2}└────────────────────────────────────────────────────────────────┘{#}";
         }
         {
           type = "custom";
-          format = "┌──────────────────────────────────────────┐";
+          format = "{#38;5;3}┌─────────────────────────── Hardware ───────────────────────────┐{#}";
         }
         {
-          type = "board";
-          key = "  󰇺 Board";
-          format = "{vendor} {name}";
+          type = "host";
+          key = "  Host";
+          keyColor = "38;5;2";
+          format = "{name}";
         }
         {
           type = "cpu";
-          key = "  󰻠 CPU";
-          format = "{1} @ {7}";
-          keyColor = "blue";
+          key = "  CPU";
+          keyColor = "38;5;2";
+          format = "{name} @ {freq-max}";
         }
         {
           type = "gpu";
-          key = "  󰊴 GPU";
-          format = "{2}";
-          keyColor = "blue";
+          key = " 󰢮 GPU";
+          keyColor = "38;5;2";
+          format = "{name} ({type}, {driver})";
         }
         {
-          type = "vulkan";
-          key = "  󰒓 GPU Driver";
-          format = "{driver} · Vulkan {api-version}";
-          keyColor = "magenta";
+          type = "display";
+          key = " 󰍹 Display";
+          keyColor = "38;5;2";
+          format = "{width}x{height} @ {refresh-rate}Hz";
         }
         {
           type = "memory";
-          key = "  󰍛 Memory ";
-          keyColor = "magenta";
+          key = "  Memory";
+          keyColor = "38;5;2";
+          format = "{used} / {total} ({percentage})";
+        }
+        {
+          type = "swap";
+          key = "  Swap";
+          keyColor = "38;5;2";
+          # 此模块统计 zram 和磁盘 swap 的总量。
+          format = "{used} / {total} ({percentage})";
         }
         {
           type = "disk";
-          key = "  󱦟 Disk ";
-          folders = "/";
-          keyColor = "red";
-          format = "{size-used} / {size-total} ({size-percentage})";
-        }
-        {
-          type = "uptime";
-          key = "  󱫐 Uptime ";
-          keyColor = "red";
+          key = "  Disk";
+          keyColor = "38;5;2";
+          format = "{size-used} / {size-total} ({size-percentage}) - {filesystem} [{mountpoint}]";
+          folders = lib.concatStringsSep ":" (
+            [ "/" ] ++ lib.optional (builtins.hasAttr "/mnt" nixosConfig.fileSystems) "/mnt"
+          );
         }
         {
           type = "custom";
-          format = "└──────────────────────────────────────────┘";
+          format = "{#38;5;3}└────────────────────────────────────────────────────────────────┘{#}";
+        }
+        {
+          type = "custom";
+          format = "{#38;5;1}┌──────────────────────────── Status ────────────────────────────┐{#}";
+        }
+        {
+          type = "datetime";
+          key = "  Date";
+          keyColor = "38;5;3";
+          format = "{day-in-month}.{month-pretty}.{year} {hour-pretty}:{minute-pretty}:{second-pretty}";
+        }
+        {
+          type = "processes";
+          key = "  Processes";
+          keyColor = "38;5;3";
+          format = "{result} running";
+        }
+        {
+          type = "command";
+          key = "  Installed";
+          keyColor = "38;5;3";
+          # 根目录创建时间仅作安装时间的近似值；不支持 birth time 时显示 N/A。
+          text = ''
+            installed=$(stat -c %W / 2>/dev/null) || installed=0
+            if [ "$installed" -gt 0 ]; then
+              LC_ALL=C date -d "@$installed" '+%d.%m.%Y %H:%M'
+            else
+              printf 'N/A\n'
+            fi
+          '';
+        }
+        {
+          type = "command";
+          key = "  OS Age";
+          keyColor = "38;5;3";
+          text = ''
+            installed=$(stat -c %W / 2>/dev/null) || installed=0
+            now=$(date +%s)
+            if [ "$installed" -gt 0 ] && [ "$installed" -le "$now" ]; then
+              printf '%s days since install\n' "$(( (now - installed) / 86400 ))"
+            else
+              printf 'N/A\n'
+            fi
+          '';
+        }
+        {
+          type = "uptime";
+          key = "  Uptime";
+          keyColor = "38;5;3";
+          format = "{days}d {hours}h {minutes}m";
+        }
+        {
+          type = "battery";
+          key = "  Battery";
+          keyColor = "38;5;3";
+          format = "{capacity} - {status}";
+        }
+        {
+          type = "custom";
+          format = "{#38;5;1}└────────────────────────────────────────────────────────────────┘{#}";
         }
         {
           type = "colors";
