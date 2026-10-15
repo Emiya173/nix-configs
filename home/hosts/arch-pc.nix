@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  nixosConfig,
   ...
 }:
 let
@@ -25,7 +26,7 @@ in
     bcompare
     (pkgs.callPackage ../../packages/dingtalk { })
     wemeet
-    localsend
+    nixosConfig.programs.localsend.package
     libarchive
     rename
     android-tools

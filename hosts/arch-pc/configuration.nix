@@ -63,6 +63,8 @@
   users.groups.${userName}.gid = 1000;
   programs.localsend = {
     enable = true;
+    # Reused Arch settings use schema v3; 1.17 expects boolean quick-save values.
+    package = pkgs.unstable.localsend;
     openFirewall = true;
   };
   virtualisation = {
