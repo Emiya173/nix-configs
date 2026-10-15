@@ -40,9 +40,15 @@
         # priority=50 (cache.nixos.org 默认 40) -> 前面 miss 才查 cachix,
         # 大部分包不会触发 cachix 查询 -> 不卡 nix-daemon
         "https://nix-community.cachix.org?priority=50"
+        # Signed prebuilt CachyOS kernels, matched to the kernel flake's nixpkgs.
+        "https://attic.xuyh0120.win/lantian?priority=60"
+        # Upstream-documented mirror when the primary cache is unreachable.
+        "https://cache.xinux.uz?priority=70"
       ];
       trusted-public-keys = [
         "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+        "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
+        "cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0="
       ];
       # 国内访问 cachix 偶尔抽风 —— 5s 连不上就放弃,
       # nix-daemon 不会无限阻塞在 getaddrinfo (上次 daemon disconnect 的根因)

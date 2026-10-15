@@ -20,7 +20,7 @@
   # 退出游戏自动还原 (装好后 Steam/Lutris 里按游戏手动加,不全局强制)
   programs.gamemode.enable = true;
 
-  # sched_ext (zen 内核自带): scx_lavd 是 Valve 为游戏负载做的调度器,
+  # sched_ext (CachyOS 内核支持): scx_lavd 是 Valve 为游戏负载做的调度器,
   # 交互延迟/帧时间比 CFS/EEVDF 稳。不满意 `systemctl stop scx` 即回默认调度
   services.scx = {
     enable = true;

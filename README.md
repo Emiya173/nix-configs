@@ -20,7 +20,9 @@
 - **终端**：Kitty、Fish、Starship、Atuin 历史搜索、fzf、zoxide、bat、eza、Yazi、lazygit，以及 nix-index/comma 命令查找。
 - **开发**：VS Code、Android Studio、Nixvim、Git、direnv/nix-direnv；Rust、Node.js、Java、Python、C/C++、Go、Zig、Haskell、Typst 等工具。项目自己的 devShell 与 lock 由各项目维护。
 - **应用**：Chromium、Brave、WPS、QQ、飞书、百度网盘、ChatGPT/Codex 桌面入口与独立 Codex CLI；Dolphin、Ark、OBS、ffmpeg、mpv、imv/gthumb、Satty 等文件和媒体工具。
-- **系统**：linux-zen、UEFI GRUB、zram 与磁盘 swap、PipeWire、NetworkManager、蓝牙、Tailscale、OpenSSH、Docker、nix-ld 和 AppImage 支持。
+- **系统**：CachyOS LTO 内核、UEFI GRUB、zram 与磁盘 swap、PipeWire、NetworkManager、蓝牙、Tailscale、OpenSSH、Docker、nix-ld 和 AppImage 支持。
+
+两台主机共用 `linuxPackages-cachyos-latest-lto-x86_64-v3`，使用 Clang ThinLTO 与适合 Intel i7-14700 / i5-13490F 的 x86-64-v3 指令集。内核来自 [nix-cachyos-kernel 的 release 分支](https://github.com/xddxdd/nix-cachyos-kernel/tree/release)，保留其自带 Nixpkgs 以匹配补丁和预编译缓存。`latest` 是包名；实际版本、源码、补丁和工具链由 `flake.lock` 固定，更新内核需显式执行 `nix flake update nix-cachyos-kernel`。私人主机继续启用 `scx_lavd`。
 
 系统无衬线界面统一使用华为官方 HarmonyOS Sans SC，覆盖简体中文、英文和数字；GTK、Qt、DMS 与飞书同步使用该字体及其原生字重。等宽字体统一为 FiraCode Nerd Font Mono，中文回退到 Noto Sans Mono CJK SC；Kitty、VS Code、JetBrains/Android Studio 和 Qt 固定字体由共享配置同步。原用户字体、编辑器与主题配置在首次修改前备份，应用的其他设置保留。
 
@@ -90,6 +92,17 @@ cd nix-configs
 nh os build .                 # 构建并查看差异
 nh os switch .                # 构建并激活系统与用户配置
 ```
+
+首次启用 CachyOS 内核时，系统尚未配置对应缓存，构建命令需临时带上上游缓存地址与签名公钥，避免本地编译内核：
+
+```bash
+nh os build . \
+  --option extra-substituters 'https://attic.xuyh0120.win/lantian?priority=60 https://cache.xinux.uz?priority=70' \
+  --option extra-trusted-public-keys 'lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc= cache.xinux.uz:BXCrtqejFjWzWEB9YuGB7X2MV4ttBur1N8BkwQRdH+0='
+nh os switch .
+```
+
+主缓存和上游文档列出的备用缓存分别使用公布的签名公钥校验；切换后，缓存设置由 [modules/nix.nix](modules/nix.nix) 持久管理。新内核需重启后运行；GRUB 中的旧系统代次仍可用于回退。
 
 也可以明确指定目标。构建另一台主机的系统不会激活它：
 

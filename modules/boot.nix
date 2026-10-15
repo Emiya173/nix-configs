@@ -2,12 +2,15 @@
   config,
   pkgs,
   lib,
+  inputs,
   ...
 }:
 
 {
   boot = {
-    kernelPackages = pkgs.linuxPackages_zen;
+    # Both Intel i7-14700 and i5-13490F support this shared, pure CPU target.
+    kernelPackages =
+      inputs.nix-cachyos-kernel.legacyPackages.${pkgs.stdenv.hostPlatform.system}.linuxPackages-cachyos-latest-lto-x86_64-v3;
 
     # Codex 0.156.1 rejects Btrfs /tmp because stat and mountinfo device IDs differ.
     tmp.useTmpfs = true;
