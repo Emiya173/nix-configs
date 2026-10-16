@@ -12,7 +12,7 @@
 - 工作机禁用 Waydroid/Sunshine，不安装 Wine/VirtualBox、Timeshift、旧 Python 环境和旧 MediaTek/I²C/虚拟摄像头定制。不带 Scratch、投屏/虚拟输出或 Mod+A 入口。
 - Fish 保留所选工具链 PATH 与 `adbs`、Perl `rn`、`tar=bsdtar`、`pip=uv pip`。三份 ADB 脚本包装明确的 Bash/ADB/date 依赖，并管理原 `~/script` 入口；当时的首次 Home Manager 激活将同名旧文件改名为 `.hm-backup`，以便生成受管理文件。当前兼容入口由 `hosts/arch-pc/user.nix` 的 Hjem 文件声明提供，旧 HM 链接移交规则见 README。
 - ADB server 的 TCP 5037 和 scrcpy 默认转发端口 TCP 27183–27199 在有线局域网接口 `enp1s0` 放行。需要共享 USB 设备时运行 `adb -a nodaemon server start`；其他机器用 `adb -H <工作机局域网地址> -P 5037 devices -l` 或 `shell` 访问本机 server。`adb connect` 用于连接设备端 adbd，不用于选择另一台电脑的 server。Windows PowerShell 投屏客户端先设置 `$env:ADB_SERVER_SOCKET = 'tcp:<工作机局域网地址>:5037'`，再运行 `scrcpy --tunnel-host=<工作机局域网地址>`；`--tunnel-host` 自动选择 ADB forward，视频/音频/控制连接使用上述转发端口，未固定 `--tunnel-port` 时会跟随实际选中的端口。
-- 工作机 Atuin 使用已锁定 unstable 的版本，以兼容复用 home 中较新的历史库迁移；Ctrl+R 继续使用 Atuin 搜索。ghcup 工具链通过 nix-ld 补齐 ncurses、GMP、libffi、zlib 运行库。
+- 工作机 Atuin 使用已锁定 unstable 的版本，以兼容复用 home 中较新的历史库迁移；Ctrl+R 继续使用 Atuin 搜索。GHC 使用 nixpkgs 提供的版本，无需为 GHCup 配置额外的 nix-ld 运行库。
 - JDK21 为默认命令，JDK11 以低优先级保留；项目可用 `~/.local/share/jdks/jdk11` 或 `jdk21` 明确选择 `JAVA_HOME`。
 - xlog 源码已随仓库保存，依赖 zlib/zstd/OpenSSL3，以 Nix 构建并运行原项目测试，提供 `xlog` 和 `~/.local/bin/xlog`。实际解码密钥仍在 `~/.config/xlog/private.key`，不进仓库或 store。
 - 增加 Beyond Compare、钉钉、腾讯会议、LocalSend、百度网盘与当前 Linux ChatGPT 桌面包；同一个桌面客户端包含 Codex 界面，并提供单独 Codex 桌面入口。CLI `codex` 继续独立提供。登录、界面、会议共享须在目标图形环境验收。
