@@ -7,6 +7,29 @@
   ...
 }:
 
+let
+  # 按设备类型汇总，避免设备顺序变化影响 Swap_Zram / Swap_Disk 的标签。
+  swapUsage = kind: ''
+    LC_ALL=C ${lib.getExe pkgs.gawk} -v kind=${lib.escapeShellArg kind} '
+      function size(kib, units, i) {
+        if (kib == 0) return "0 B"
+        split("KiB MiB GiB TiB PiB", units, " ")
+        for (i = 1; kib >= 1024 && i < 5; i++) kib /= 1024
+        return sprintf("%.1f %s", kib, units[i])
+      }
+      NR > 1 {
+        isZram = $1 ~ /^\/dev\/zram[0-9]+$/
+        if ((kind == "zram") == isZram) {
+          used += $4
+          total += $3
+        }
+      }
+      END {
+        printf "%s / %s (%.0f%%)\n", size(used), size(total), (total > 0 ? used / total * 100 : 0)
+      }
+    ' /proc/swaps
+  '';
+in
 {
   programs.fish = {
     enable = true;
@@ -326,11 +349,16 @@
           format = "{used} / {total} ({percentage})";
         }
         {
-          type = "swap";
-          key = "          Swap";
+          type = "command";
+          key = "          Swap_Zram";
           keyColor = "38;5;2";
-          # 此模块统计 zram 和磁盘 swap 的总量。
-          format = "{used} / {total} ({percentage})";
+          text = swapUsage "zram";
+        }
+        {
+          type = "command";
+          key = "          Swap_Disk";
+          keyColor = "38;5;2";
+          text = swapUsage "disk";
         }
         {
           type = "disk";
