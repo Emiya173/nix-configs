@@ -56,6 +56,8 @@ in
     after = [
       "docker.service"
       "network-online.target"
+      # VPN DNS readiness must not delay the boot target or power services.
+      "multi-user.target"
     ];
     wants = [ "network-online.target" ];
     startLimitIntervalSec = 0;

@@ -167,6 +167,8 @@ nixos-rollback --to 27 --apply  # 备份冲突文件并回退，随后重新登�
 
 迁移后的登录器显式优先使用包含 Qt QML 依赖的 Quickshell 包装器和独立的 Niri，避免系统 PATH 中的普通 `qs` 抢先被选中。flake 的 `greeter` 检查在独立的无屏幕 Wayland 环境启动实际登录器；`home-migration` 检查覆盖冲突备份、旧 `.hm-backup` 保留和 HM → Hjem → HM → Hjem 的文件交接。
 
+图形登录器使用 `Type=simple`，避免 `Type=idle` 在启动命令前等待控制台输出结束。电源配置服务在 D-Bus 可用后启动，登录器等待其就绪；它不再等待 `multi-user.target`，以免后台服务拖延时，Quickshell 的同步电源查询让登录器和桌面各卡住约 25 秒。工作机的 EasyConnect 在 `multi-user.target` 之后继续等待 VPN DNS 就绪，其检查与重试不会阻塞开机目标。
+
 ### 更新与格式化
 
 ```bash
@@ -251,7 +253,7 @@ Fish 中 `Ctrl+R` 由 Atuin 搜索历史；`y` 启动 Yazi 并在退出时切换
 工作网络集中在 [modules/workstation/](modules/workstation/)，其运行配置、账号和密钥独立保存在目标主机：
 
 - **DAE**：本地中继提供有效缓存，后台自动获取、校验订阅并 reload；网络失败按退避期限重试，保留现有缓存。上游 URL 位于 `/var/lib/dae-subscription-config/upstream-url`，通过 systemd credential 加载，修改后自动触发同步，无需手动依次启动 Python 与 DAE。
-- **EasyConnect**：systemd 管理现有 Compose 项目，并等待、初始化 VPN DNS；Compose 文件和登录状态属于主机本地数据。
+- **EasyConnect**：systemd 在 `multi-user.target` 之后管理现有 Compose 项目，并等待、初始化 VPN DNS；开机目标完成不代表 VPN 已就绪，可用 `systemctl status easyconnect` 查看。Compose 文件和登录状态属于主机本地数据。
 - **Hysteria**：使用 `/etc/hysteria/` 下的运行配置和密钥，分别维护客户端、反向 SSH 与 VNC 隧道。wayvnc 是随图形会话启动的用户服务。
 - **NetworkManager**：持久连接及其凭据保存在主机运行目录。工作机另有局域网 ADB/scrcpy 的接口防火墙规则。
 

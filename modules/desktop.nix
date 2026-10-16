@@ -97,6 +97,25 @@ in
   };
 
   services.greetd.settings.default_session.command = lib.mkForce "${greeterLauncher}";
+  systemd.services.greetd = {
+    # A graphical greeter does not need Type=idle's console-output delay,
+    # which otherwise applies to both ExecStartPre and ExecStart during boot.
+    serviceConfig.Type = lib.mkForce "simple";
+    wants = lib.optional config.services.power-profiles-daemon.enable "power-profiles-daemon.service";
+    after = lib.optional config.services.power-profiles-daemon.enable "power-profiles-daemon.service";
+  };
+
+  # Quickshell synchronously queries PowerProfiles while creating both the
+  # greeter and desktop UI. Waiting for multi-user.target can stall each UI
+  # for a D-Bus timeout when a VPN or another boot service is still starting.
+  # Patch only the packaged ordering; keep the daemon's upstream hardening.
+  services.power-profiles-daemon.package = pkgs.power-profiles-daemon.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      substituteInPlace "$out/lib/systemd/system/power-profiles-daemon.service" \
+        --replace-fail "After=multi-user.target display-manager.target" "After=dbus.service"
+    '';
+  });
+
   # Also expose the exact launcher to the build-time greeter smoke check.
   system.build.greeter-launcher = greeterLauncher;
 
