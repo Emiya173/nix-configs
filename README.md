@@ -301,6 +301,10 @@ nix path-info -rSh /run/current-system
 nix why-depends /run/current-system /nix/store/<目标路径>
 ```
 
+`nix-tree` 无参数时也会读取 `~/.local/state/nix/profiles/home-manager` 等用户 profile。迁移后保留的旧 HM profile 仍会显示 `home-manager-generation`，不代表当前系统仍启用 HM；检查当前系统请显式传入 `/run/current-system`。在新会话和回滚验证完成前保留这些旧 profile 与迁移备份。
+
+[packages/nix-tree/](packages/nix-tree/) 为 0.8.0 添加兼容补丁：Nix 2.33 及以上的 `path-info` 查询显式指定 `--json-format 1`，匹配现有解析器并消除弃用警告。
+
 依赖的 closure 大小包含共享依赖，不能逐项相加当作实际磁盘占用。Btrfs 快照保留的旧数据也独立影响文件系统剩余空间。
 
 Docker 两台主机都启用；私人主机启用镜像自动清理，工作机关闭 `autoPrune`。容器内容与卷属于运行数据，生命周期由对应项目维护。

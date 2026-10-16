@@ -107,7 +107,12 @@
     {
       packages.${system} = {
         qq = pkgs.unstable.qq;
-        inherit (pkgs) codex baidunetdisk fastfetch;
+        inherit (pkgs)
+          codex
+          baidunetdisk
+          fastfetch
+          nix-tree
+          ;
         dingtalk = pkgs.callPackage ./packages/dingtalk { };
         xlog = pkgs.callPackage ./packages/xlog { };
         dae-subscription = pkgs.callPackage ./packages/dae-subscription { };
