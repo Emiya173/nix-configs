@@ -2,8 +2,7 @@
 
 {
   environment.systemPackages = with pkgs; [
-    # 基础 (neovim 由 home-manager nixvim 接管,system 留 vim 给 root 应急)
-    vim
+    # Neovim 与 vim 别名由 Nixvim 的 NixOS 模块统一提供。
     git
     curl
     wget
@@ -27,11 +26,11 @@
     usbutils
     lsof
     psmisc
-    # btop/duf/dust 是用户侧工具,归 home-manager (home/packages.nix + programs.btop)
+    # btop/duf/dust 是用户侧工具,归 modules/user/
     inetutils
     traceroute
 
-    # 编译/开发基础 (system 级,语言版本由 home-manager 管)
+    # 编译/开发基础 (system 级,语言版本由 modules/user/dev.nix 管)
     gcc
     gnumake
     cmake
@@ -41,7 +40,7 @@
 
     # 内核相关 (firmware 走 hardware.enableRedistributableFirmware,cpupower 走 powerManagement.cpuFreqGovernor)
 
-    # fastfetch 归 home-manager (programs.fastfetch, home/shell.nix)
+    # fastfetch 由 modules/user/wrappers.nix 配置
 
     # 音视频转码: ffmpeg-full = 默认 ffmpeg 加上几乎所有可选库 (nvenc/vaapi/svt-av1/
     # libfdk_aac/x265/webp/...),省得遇到某些 codec 再切包。

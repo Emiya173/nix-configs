@@ -1,12 +1,12 @@
 {
-  config,
   pkgs,
-  lib,
   inputs,
   ...
 }:
 
 {
+  imports = [ inputs.nixvim.nixosModules.nixvim ];
+
   programs.nixvim = {
     enable = true;
     # flake.nix 里 inputs.nixvim.inputs.nixpkgs.follows = "nixpkgs",
@@ -15,6 +15,9 @@
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
+    wrapRc = true;
+    # Keep user runtime additions (e.g. after/) available, as in the HM module.
+    impureRtp = true;
 
     # ----- 基础 vim 选项 (对齐 LazyVim 默认值) -----
     globals.mapleader = " ";
@@ -195,7 +198,7 @@
           kotlin_language_server.enable = true;
           clangd.enable = true;
 
-          # Haskell (GHC 已在 dev.nix 全局装,不让 nixvim 再拖一份)
+          # Haskell (GHC 已在 dev.nix 安装到用户环境,不让 nixvim 再拖一份)
           hls = {
             enable = true;
             installGhc = false;

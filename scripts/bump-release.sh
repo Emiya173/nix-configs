@@ -2,8 +2,8 @@
 # 升 NixOS release 的单点入口: ./scripts/bump-release.sh 26.11
 #
 # flake input 的 url 必须是字面量 (flakes 静态解析 inputs,不能引用变量),
-# 所以 nixpkgs / home-manager / nixvim 三处的版本号没法在 Nix 层收敛,
-# 这里只更新这三个 input 的 release URL,不碰其他 input 和注释。
+# 所以 nixpkgs / nixvim 两处的版本号没法在 Nix 层收敛,
+# 这里只更新这两个 input 的 release URL,不碰其他 input 和注释。
 
 set -euo pipefail
 
@@ -22,19 +22,18 @@ if [[ ! $old =~ ^[0-9]{2}\.(05|11)$ ]]; then
 fi
 
 if [ "$old" = "$new" ]; then
-  echo "==> nixpkgs URL 已经是 $new,继续同步三个 release URL 和 flake.lock"
+  echo "==> nixpkgs URL 已经是 $new,继续同步两个 release URL 和 flake.lock"
 else
-  echo "==> release URL: ${old} -> ${new} (nixpkgs / home-manager / nixvim)"
+  echo "==> release URL: ${old} -> ${new} (nixpkgs / nixvim)"
 fi
 
 sed -i -E \
   -e "/^[[:space:]]*nixpkgs\\.url = / s|(\"github:NixOS/nixpkgs/nixos-)[0-9]{2}\\.[0-9]{2}(\";)|\\1${new}\\2|" \
-  -e "/^[[:space:]]*home-manager = \\{/,/^[[:space:]]*\\};/ s|(^[[:space:]]*url = \"github:nix-community/home-manager/release-)[0-9]{2}\\.[0-9]{2}(\";)|\\1${new}\\2|" \
   -e "/^[[:space:]]*nixvim = \\{/,/^[[:space:]]*\\};/ s|(^[[:space:]]*url = \"github:nix-community/nixvim/nixos-)[0-9]{2}\\.[0-9]{2}(\";)|\\1${new}\\2|" \
   flake.nix
 
 echo "==> 更新 flake.lock"
-if nix flake update nixpkgs home-manager nixvim; then
+if nix flake update nixpkgs nixvim; then
   echo "==> 检查更新后的配置"
 else
   update_status=$?

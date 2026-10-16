@@ -38,5 +38,9 @@ in
 
   harmonyos-sans = final.callPackage ../packages/harmonyos-sans { };
 
+  nix-tree = final.callPackage ../packages/nix-tree {
+    base = prev.nix-tree;
+  };
+
   unstable = unstablePkgs;
 }

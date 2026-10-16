@@ -3,7 +3,7 @@
 
   inputs = {
     # 主包源走 stable。升 release 用 ./scripts/bump-release.sh <新版本>,
-    # 会一把改掉这里 + home-manager release-* + nixvim nixos-* 并更新 lock
+    # 会一把改掉这里 + nixvim nixos-* 并更新 lock
     # (flake input url 必须是字面量,版本号没法在 Nix 层单点定义)
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
@@ -14,8 +14,13 @@
     # Keep its own pinned nixpkgs so kernel patches and binary cache stay aligned.
     nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
 
-    home-manager = {
-      url = "github:nix-community/home-manager/release-26.05";
+    nix-wrapper-modules = {
+      url = "github:nix-community/nix-wrapper-modules";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    hjem = {
+      url = "github:feel-co/hjem";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -44,10 +49,7 @@
     {
       self,
       nixpkgs,
-      home-manager,
       niri,
-      dms,
-      nixvim,
       ...
     }@inputs:
     let
@@ -81,31 +83,9 @@
           modules = [
             ./hosts/${hostName}/configuration.nix
             niri.nixosModules.niri
-            home-manager.nixosModules.home-manager
-            {
-              home-manager.useGlobalPkgs = true;
-              home-manager.useUserPackages = true;
-              home-manager.extraSpecialArgs = {
-                inherit
-                  inputs
-                  userName
-                  hostName
-                  displayConfig
-                  hostPaths
-                  desktopFeatures
-                  ;
-              };
-              home-manager.users.${userName} = import ./home/home.nix;
-              home-manager.backupFileExtension = "hm-backup";
-              # 注意:dms.homeModules.niri 自己 import 了 niri.homeModules.niri,
-              # 这里再加 niri.homeModules.niri 会让 programs.niri.finalConfig 双重声明
-              home-manager.sharedModules = [
-                dms.homeModules.dank-material-shell
-                dms.homeModules.niri
-                nixvim.homeModules.nixvim
-                inputs.nix-index-database.homeModules.default
-              ];
-            }
+            ./modules/user
+            inputs.nix-index-database.nixosModules.default
+            inputs.hjem.nixosModules.default
           ];
         };
 
@@ -127,7 +107,12 @@
     {
       packages.${system} = {
         qq = pkgs.unstable.qq;
-        inherit (pkgs) codex baidunetdisk fastfetch;
+        inherit (pkgs)
+          codex
+          baidunetdisk
+          fastfetch
+          nix-tree
+          ;
         dingtalk = pkgs.callPackage ./packages/dingtalk { };
         xlog = pkgs.callPackage ./packages/xlog { };
         dae-subscription = pkgs.callPackage ./packages/dae-subscription { };
@@ -141,6 +126,32 @@
         ];
       };
       checks.${system} = {
+        greeter =
+          pkgs.runCommand "check-greeter-startup"
+            {
+              nativeBuildInputs = with pkgs; [
+                weston
+                dbus
+                coreutils
+                gnugrep
+              ];
+              GREETER_LAUNCHER = self.nixosConfigurations.arch-pc.config.system.build.greeter-launcher;
+              PLAIN_QUICKSHELL = pkgs.quickshell;
+              DBUS_SESSION_CONF = "${pkgs.dbus}/share/dbus-1/session.conf";
+              MESA_DIR = pkgs.mesa;
+            }
+            ''
+              bash ${./tests/check-greeter.sh}
+              touch $out
+            '';
+        home-migration = pkgs.runCommand "check-home-migration" { } ''
+          export PYTHONDONTWRITEBYTECODE=1
+          export HOME_MIGRATION_MODULE=${./scripts/migrate-home-manager.py}
+          export HJEM_BIN=${self.nixosConfigurations.arch-pc.config.hjem.cli.package}/bin/hjem
+          ${pkgs.python3}/bin/python3 ${./tests/test_home_migration.py}
+          touch $out
+        '';
+
         formatting = pkgs.runCommand "check-nix-formatting" { } ''
           ${nixpkgs.lib.concatMapStringsSep "\n" (
             path: "${pkgs.nixfmt}/bin/nixfmt --check ${path}"
@@ -154,7 +165,8 @@
             }
             ''
               shellcheck ${./scripts/check.sh} ${./scripts/bump-release.sh} \
-                ${./scripts/stage-workstation-state.sh} ${./scripts/preflight-workstation.sh}
+                ${./scripts/stage-workstation-state.sh} ${./scripts/preflight-workstation.sh} \
+                ${./scripts/rollback-system.sh} ${./tests/check-greeter.sh}
               touch $out
             '';
         subscription = pkgs.runCommand "check-dae-subscription" { } ''

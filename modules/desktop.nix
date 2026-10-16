@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   lib,
   inputs,
@@ -46,11 +47,25 @@ let
           }
         ln -s quickshell $out/bin/qs
       '';
+  greeter = config.services.displayManager.dms-greeter;
+  greeterLauncher = pkgs.writeShellScript "dms-greeter-start" ''
+    # The upstream launcher appends these to PATH. A system-wide qs installed
+    # by the desktop module would then shadow the wrapper's Qt dependencies.
+    export PATH=${
+      lib.makeBinPath [
+        greeterQuickshell
+        pkgs.niri
+      ]
+    }:"$PATH"
+    exec ${lib.getExe pkgs.bash} ${greeter.package}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter \
+      --cache-dir /var/lib/dms-greeter --command niri \
+      -p ${greeter.package}/share/quickshell/dms \
+      -C ${pkgs.writeText "dmsgreeter-compositor-config" greeter.compositor.customConfig} "$@"
+  '';
 in
 {
   # niri-flake 随会话启动 KDE Polkit agent；保持单一认证代理。
   programs.niri.enable = true;
-  programs.niri.package = pkgs.niri;
 
   services.displayManager.dms-greeter = {
     enable = true;
@@ -59,7 +74,7 @@ in
     configFiles = [ "${greeterSession}/session.json" ];
     compositor = {
       name = "niri";
-      # 登录时只点亮主屏；用户会话启动后再应用 Home Manager 的完整布局。
+      # 登录时只点亮主屏；用户会话启动后再加载 modules/user/niri.nix 的完整布局。
       customConfig = ''
         hotkey-overlay { skip-at-startup; }
         gestures { hot-corners { off; }; }
@@ -80,6 +95,29 @@ in
       '';
     };
   };
+
+  services.greetd.settings.default_session.command = lib.mkForce "${greeterLauncher}";
+  systemd.services.greetd = {
+    # A graphical greeter does not need Type=idle's console-output delay,
+    # which otherwise applies to both ExecStartPre and ExecStart during boot.
+    serviceConfig.Type = lib.mkForce "simple";
+    wants = lib.optional config.services.power-profiles-daemon.enable "power-profiles-daemon.service";
+    after = lib.optional config.services.power-profiles-daemon.enable "power-profiles-daemon.service";
+  };
+
+  # Quickshell synchronously queries PowerProfiles while creating both the
+  # greeter and desktop UI. Waiting for multi-user.target can stall each UI
+  # for a D-Bus timeout when a VPN or another boot service is still starting.
+  # Patch only the packaged ordering; keep the daemon's upstream hardening.
+  services.power-profiles-daemon.package = pkgs.power-profiles-daemon.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      substituteInPlace "$out/lib/systemd/system/power-profiles-daemon.service" \
+        --replace-fail "After=multi-user.target display-manager.target" "After=dbus.service"
+    '';
+  });
+
+  # Also expose the exact launcher to the build-time greeter smoke check.
+  system.build.greeter-launcher = greeterLauncher;
 
   programs.dconf.enable = true;
 
@@ -130,7 +168,7 @@ in
     # Qt 主题链: DMS 写 qt6ct.conf + Kvantum/MaterialAdw,kvantum style 是系统级
     # qt6ct/qt5ct 不能放 system —— 它们的 platformtheme 插件得在 user 的 QT_PLUGIN_PATH
     # (/etc/profiles/per-user/...) 里 dolphin 才搜得到,system 路径不会被搜。
-    # 见 home/desktop.nix 里 home.packages。
+    # 见 modules/user/desktop.nix 中的用户包。
     kdePackages.qtstyleplugin-kvantum
     libsForQt5.qtstyleplugin-kvantum
     kdePackages.breeze-icons # 图标兜底 (Papirus / OneUI 没覆盖的 KDE 自家图标)
