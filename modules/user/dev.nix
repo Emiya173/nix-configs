@@ -1,7 +1,7 @@
-{ config, pkgs, ... }:
+{ pkgs, userName, ... }:
 
 {
-  home.packages = with pkgs; [
+  users.users.${userName}.packages = with pkgs; [
     # Rust
     rustup # 用 rustup 管理 toolchain,而非 nixpkgs 的 rust
     cargo-watch
@@ -59,6 +59,9 @@
     enable = true;
     nix-direnv.enable = true;
     enableFishIntegration = true;
+    enableBashIntegration = false;
+    enableZshIntegration = false;
+    enableXonshIntegration = false;
   };
 
 }

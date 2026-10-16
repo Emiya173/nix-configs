@@ -1,9 +1,9 @@
-{ config, pkgs, ... }:
+{ pkgs, userName, ... }:
 
 {
-  home.packages = with pkgs; [
+  users.users.${userName}.packages = with pkgs; [
     # CLI 基础工具
-    # bat/eza/btop/fastfetch 走 programs.* (home/shell.nix);
+    # bat/eza 走 modules/user/shell.nix，btop/fastfetch 由 wrappers.nix 提供;
     # tree/curl/wget/zip/unzip/p7zip 由 system 提供 (modules/packages.nix)
     fd
     ripgrep

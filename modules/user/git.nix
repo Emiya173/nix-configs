@@ -1,32 +1,39 @@
-{ config, pkgs, ... }:
+{
+  lib,
+  pkgs,
+  userName,
+  ...
+}:
 
 {
+  users.users.${userName}.packages = with pkgs; [
+    delta
+    gh
+  ];
+
   programs.git = {
     enable = true;
-    settings = {
-      user.name = "Emiya173";
-      user.email = "cno.101@qq.com";
+    config = {
       init.defaultBranch = "main";
       pull.rebase = false;
       core.editor = "nvim";
+
+      # Match Home Manager's delta integration, including interactive staging.
+      pager = lib.genAttrs [ "blame" "diff" "log" "show" ] (_: lib.getExe pkgs.delta);
+      interactive.diffFilter = "${lib.getExe pkgs.delta} --color-only";
+      credential = lib.genAttrs [ "https://github.com" "https://gist.github.com" ] (_: {
+        helper = [
+          ""
+          "${lib.getExe pkgs.gh} auth git-credential"
+        ];
+      });
     };
-  };
-
-  # 语法高亮 diff pager;enableGitIntegration 写进 git config 的 core.pager
-  # (原 programs.git.delta 已改名为顶层 programs.delta)
-  programs.delta = {
-    enable = true;
-    enableGitIntegration = true;
-  };
-
-  programs.gh = {
-    enable = true;
   };
 
   programs.lazygit = {
     enable = true;
     settings = {
-      # 使用当前 pagers schema，避免自动迁移尝试写入 Home Manager 只读文件。
+      # 使用当前 pagers schema，避免自动迁移尝试写入只读配置文件。
       git.pagers = [
         {
           colorArg = "always";

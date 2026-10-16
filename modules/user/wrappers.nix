@@ -2,12 +2,24 @@
   config,
   pkgs,
   lib,
-  hostPaths,
-  nixosConfig,
+  inputs,
+  userName,
   ...
 }:
 
 let
+  wrappers = inputs.nix-wrapper-modules.wrappers;
+  kittyDmsIncludes = pkgs.writeText "kitty-dms-includes.py" ''
+    import os
+    from pathlib import Path
+
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    for name in ("dank-tabs.conf", "dank-theme.conf"):
+        path = config_home / "kitty" / name
+        if path.is_file():
+            print(f"include {path.absolute()}")
+  '';
+
   # 按设备类型汇总，避免设备顺序变化影响 Swap_Zram / Swap_Disk 的标签。
   swapUsage = kind: ''
     LC_ALL=C ${lib.getExe pkgs.gawk} -v kind=${lib.escapeShellArg kind} '
@@ -29,222 +41,80 @@ let
       }
     ' /proc/swaps
   '';
-in
-{
-  programs.fish = {
-    enable = true;
 
-    interactiveShellInit = ''
-      set fish_greeting
+  kitty = wrappers.kitty.wrap {
+    inherit pkgs;
 
-      function starship_transient_prompt_func
-          starship module character
-      end
-      if test "$TERM" != linux
-          starship init fish | source
-          enable_transience
-      end
+    # Kitty dispatches its special entry points before parsing --config.
+    # Keep them usable, including the +open command in kitty-open.desktop.
+    runShell = [
+      ''
+        case "''${1-}" in
+          +open)
+            shift
+            exec ${lib.getExe pkgs.kitty} +open --config ${placeholder "out"}/kitty.conf "$@"
+            ;;
+          +)
+            if [ "''${2-}" = open ]; then
+              shift 2
+              exec ${lib.getExe pkgs.kitty} +open --config ${placeholder "out"}/kitty.conf "$@"
+            fi
+            exec ${lib.getExe pkgs.kitty} "$@"
+            ;;
+          +*|icat|list-fonts)
+            exec ${lib.getExe pkgs.kitty} "$@"
+            ;;
+        esac
+      ''
+    ];
 
-      fish_add_path "$HOME/.local/bin"
-      fish_add_path "$HOME/.cargo/bin"
+    font = {
+      name = builtins.head config.fonts.fontconfig.defaultFonts.monospace;
+      size = 11;
+    };
+
+    settings = {
+      # 禁用文件监视: kitty 每实例的 __watch_conf__ 约占 25MB,
+      # Home Manager 替换 store symlink 曾触发 watcher 累积泄漏。
+      # DMS 通过 SIGUSR1 重载主题,手动重载 ctrl+shift+f5 仍可用。
+      auto_reload_config = -1;
+      cursor_shape = "beam";
+      cursor_trail = 1;
+      window_margin_width = "21.75";
+      confirm_os_window_close = 0;
+      shell = "fish";
+      scrollback_lines = 10000;
+      enable_audio_bell = "no";
+      copy_on_select = "no";
+      tab_bar_edge = "top";
+      tab_bar_style = "powerline";
+    };
+
+    keybindings = {
+      "ctrl+c" = "copy_or_interrupt";
+      "page_up" = "scroll_page_up";
+      "page_down" = "scroll_page_down";
+      "ctrl+plus" = "change_font_size all +1";
+      "ctrl+equal" = "change_font_size all +1";
+      "ctrl+minus" = "change_font_size all -1";
+      "ctrl+0" = "change_font_size all 0";
+    };
+
+    # Kitty's globinclude rejects absolute patterns after expanding ~ or $HOME.
+    # Resolve optional, mutable DMS files on every startup and theme reload.
+    extraConfig = ''
+      geninclude ${kittyDmsIncludes}
     '';
-
-    shellAliases = {
-      clear = "printf '\\033[2J\\033[3J\\033[1;1H'";
-      c = "printf '\\033[2J\\033[3J\\033[1;1H'";
-      ls = "eza --icons";
-      l = "eza -lh --icons=auto";
-      ll = "eza -lha --icons=auto --sort=name --group-directories-first";
-      ld = "eza -lhD --icons=auto";
-      lt = "eza --icons=auto --tree";
-      vim = "nvim";
-      lg = "lazygit";
-      icat = "kitten icat";
-      ff = "fastfetch --logo-type kitty";
-      cat = "bat --paging=never";
-    };
-
-    # `y` 函数由 programs.yazi.enableFishIntegration + shellWrapperName 生成
-    # (home/yazi.nix), 这里不要重复定义,否则 cd-on-quit 会被 cat alias 吃掉
-
-    # ---- nix 工作流 abbr (空格展开,看得见再执行) ----
-    shellAbbrs = {
-      # nh / 系统切换 (flake 路径走 NH_FLAKE,见 modules/nix.nix programs.nh) ----
-      nos = "nh os switch"; # 切换 (= apt upgrade + dotfile sync)
-      nob = "nh os build"; # 只 build 验证,不切换
-      nor = "nh os rollback"; # 回上一代 (nh 独立子命令,switch 没有 --rollback flag)
-      ninfo = "nh os info"; # 看 generations 列表
-      # GC 已有 programs.nh.clean 定时器 (--keep 5 --keep-since 14d),这里是手动触发
-      ngc = "sudo nh clean all --keep 5 --keep-since 14d";
-
-      # flake --------------------------------------------------
-      nfu = "nix flake update --flake ${lib.escapeShellArg hostPaths.repository}"; # 升 input (尾巴可接 input 名,如 nfu nixpkgs)
-      nfc = "nix flake check ${lib.escapeShellArg hostPaths.repository}"; # 检查 flake 并构建 checks
-      nfs = "nix flake show ${lib.escapeShellArg hostPaths.repository}"; # 看 outputs 树
-
-      # 搜索 / 临时拉包 --------------------------------------------------
-      nse = "nh search"; # nh search <pkg> (走本地索引,快)
-      nsh = "nix shell nixpkgs#"; # nix shell nixpkgs#<pkg> (临时 shell)
-      nrun = "nix run   nixpkgs#"; # nix run   nixpkgs#<pkg> -- args
-      ndev = "nix develop"; # 进当前目录 flake 的 devShell
-
-      # 调试 --------------------------------------------------
-      nwhy = "nix why-depends"; # 谁拖进了某个包
-      ntree = "nix-tree"; # 交互式依赖树
-      nrepl = "nix repl --expr 'import <nixpkgs> {}'"; # 进 repl 试 nix 表达式
-
-      # niri / DMS --------------------------------------------------
-      nmsg = "niri msg"; # niri msg outputs/windows/action ...
-      dipc = "dms ipc"; # dms ipc spotlight/lock/audio ...
-    };
   };
 
-  # 使用上游预构建的 nixos-unstable 文件索引；无需本地运行 nix-index。
-  # 索引跟随 nix-index-database 的锁定版本，不包含本机 overlays。
-  programs.nix-index = {
-    enable = true;
-    enableFishIntegration = true;
-  };
-  programs.nix-index-database.comma.enable = true;
-
-  programs.starship = {
-    enable = true;
-    # 上面的手动初始化统一保留 Linux TTY 排除和 transient prompt，避免 HM 再初始化一次。
-    enableFishIntegration = false;
-    settings = {
-      add_newline = false;
-      format = ''
-        $cmd_duration $directory$git_branch
-          $character'';
-
-      fill = {
-        symbol = "-";
-        style = "fg:245";
-      };
-
-      character = {
-        success_symbol = "[ ](bold fg:243)";
-        error_symbol = "[ ](bold fg:244)";
-      };
-
-      package.disabled = true;
-
-      git_branch = {
-        style = "bg: 252";
-        symbol = "󰘬";
-        truncation_length = 12;
-        truncation_symbol = "";
-        format = " 󰜥 [](bold fg:252)[$symbol $branch(:$remote_branch)](fg:235 bg:252)[ ](bold fg:252)";
-      };
-
-      git_commit = {
-        commit_hash_length = 4;
-        tag_symbol = " ";
-      };
-
-      git_state.format = ''[\($state( $progress_current of $progress_total)\)]($style) '';
-
-      git_status = {
-        conflicted = " 🏳 ";
-        ahead = " 🏎💨 ";
-        behind = " 😰 ";
-        diverged = " 😵 ";
-        untracked = " 🤷 ‍";
-        stashed = " 📦 ";
-        modified = " 📝 ";
-        staged = ''[++\($count\)](green)'';
-        renamed = " ✍️ ";
-        deleted = " 🗑 ";
-      };
-
-      hostname = {
-        ssh_only = false;
-        format = "[•$hostname](bg:252 bold fg:235)[](bold fg:252)";
-        trim_at = ".companyname.com";
-        disabled = false;
-      };
-
-      line_break.disabled = false;
-
-      memory_usage = {
-        disabled = true;
-        threshold = -1;
-        symbol = " ";
-        style = "bold dimmed green";
-      };
-
-      time = {
-        disabled = true;
-        format = ''🕙[\[ $time \]]($style) '';
-        time_format = "%T";
-      };
-
-      username = {
-        style_user = "bold bg:252 fg:235";
-        style_root = "red bold";
-        format = "[](bold fg:252)[$user]($style)";
-        disabled = false;
-        show_always = true;
-      };
-
-      directory = {
-        home_symbol = " ";
-        read_only = "  ";
-        style = "bg:255 fg:240";
-        truncation_length = 2;
-        truncation_symbol = ".../";
-        format = "[](bold fg:255)[󰉋 → $path]($style)[](bold fg:255)";
-        substitutions = {
-          "Desktop" = "  ";
-          "Documents" = "  ";
-          "Downloads" = "  ";
-          "Music" = " 󰎈 ";
-          "Pictures" = "  ";
-          "Videos" = "  ";
-          "GitHub" = " 󰊤 ";
-        };
-      };
-
-      cmd_duration = {
-        min_time = 0;
-        format = "[](bold fg:252)[󰪢 $duration](bold bg:252 fg:235)[](bold fg:252)";
-      };
-    };
-  };
-
-  programs.atuin = {
-    enable = true;
-    enableFishIntegration = true;
-    settings = {
-      auto_sync = false;
-      update_check = false;
-      style = "compact";
-    };
-  };
-
-  programs.zoxide = {
-    enable = true;
-    enableFishIntegration = true;
-  };
-
-  programs.fzf = {
-    enable = true;
-    enableFishIntegration = true;
-  };
-
-  programs.bat.enable = true;
-  programs.eza.enable = true;
-  programs.lazygit.enable = true;
-  # yazi 由 home/yazi.nix 接管
-
-  programs.fastfetch = {
-    enable = true;
+  fastfetch = wrappers.fastfetch.wrap {
+    inherit pkgs;
     settings = {
       "$schema" = "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json";
       logo = {
         type = "kitty";
-        # 从 ~/.config/fastfetch/logo/ 中随机挑一张 (logo 目录由下面 xdg.configFile 注入)
-        source = ''$(find "''${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/logo/" -name "*.png" | shuf -n 1)'';
+        # Assets are immutable; no per-user logo symlink is needed.
+        source = ''$(${pkgs.findutils}/bin/find ${../../assets/fastfetch-logo} -name "*.png" | ${pkgs.coreutils}/bin/shuf -n 1)'';
         # 只固定高度，让不同尺寸的图片按原始比例计算宽度。
         height = 22;
       };
@@ -366,7 +236,7 @@ in
           keyColor = "38;5;2";
           format = "{size-used} / {size-total} ({size-percentage}) - {filesystem} [{mountpoint}]";
           folders = lib.concatStringsSep ":" (
-            [ "/" ] ++ lib.optional (builtins.hasAttr "/mnt" nixosConfig.fileSystems) "/mnt"
+            [ "/" ] ++ lib.optional (builtins.hasAttr "/mnt" config.fileSystems) "/mnt"
           );
         }
         {
@@ -443,12 +313,8 @@ in
     };
   };
 
-  # fastfetch logo 目录: programs.fastfetch 只管 config.jsonc,logo 单独 link
-  xdg.configFile."fastfetch/logo".source = ../assets/fastfetch-logo;
-
-  # btop
-  programs.btop = {
-    enable = true;
+  btop = wrappers.btop.wrap {
+    inherit pkgs;
     settings = {
       color_theme = "Default";
       theme_background = true;
@@ -464,5 +330,21 @@ in
       proc_colors = true;
       proc_gradient = true;
     };
+  };
+in
+{
+  options.workstation.kittyPackage = lib.mkOption {
+    type = lib.types.package;
+    readOnly = true;
+    description = "Kitty with the workstation configuration and mutable DMS theme includes.";
+  };
+
+  config = {
+    workstation.kittyPackage = kitty;
+    users.users.${userName}.packages = [
+      config.workstation.kittyPackage
+      fastfetch
+      btop
+    ];
   };
 }
