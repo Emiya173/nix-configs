@@ -120,7 +120,13 @@ buildFHSEnv {
       chmod -R u+w "$executor_plugin"
     fi
 
-    flags=(--disable-setuid-sandbox --ozone-platform-hint=auto --enable-wayland-ime --wayland-text-input-version=3)
+    # X11-parented GTK portal dialogs retain shadow margins under Xwayland.
+    # Select native Wayland explicitly when the session provides it.
+    ozone_platform=x11
+    if [ -n "''${WAYLAND_DISPLAY:-}" ]; then
+      ozone_platform=wayland
+    fi
+    flags=(--disable-setuid-sandbox "--ozone-platform=$ozone_platform" --enable-wayland-ime --wayland-text-input-version=3)
     flags_file="''${XDG_CONFIG_HOME:-$HOME/.config}/chatgpt-flags.conf"
     if [ -r "$flags_file" ]; then
       while IFS= read -r flag || [ -n "$flag" ]; do
