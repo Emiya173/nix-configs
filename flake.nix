@@ -113,6 +113,7 @@
           dwproton-bin
           fastfetch
           nix-tree
+          umu-launcher
           ;
         dingtalk = pkgs.callPackage ./packages/dingtalk { };
         xlog = pkgs.callPackage ./packages/xlog { };

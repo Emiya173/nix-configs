@@ -50,5 +50,9 @@ in
   os-prober = prev.os-prober.override { ntfs3g = null; };
   udisks = prev.udisks.override { ntfs3g = null; };
 
+  umu-launcher-unwrapped = final.callPackage ../packages/umu-launcher-unwrapped {
+    base = prev.umu-launcher-unwrapped;
+  };
+
   unstable = unstablePkgs;
 }
