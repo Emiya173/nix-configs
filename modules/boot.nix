@@ -44,7 +44,7 @@
 
     supportedFilesystems = [
       "btrfs"
-      "ntfs"
+      "ntfs3"
     ];
 
     kernelParams = [ "quiet" ];

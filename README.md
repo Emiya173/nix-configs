@@ -34,6 +34,8 @@ HarmonyOS Sans 使用未修改的华为官方字体，许可随字体包保存�
 
 私人主机的 Lutris 额外提供固定版本 `dwproton-11.0-14`，通过 UMU 启动。激活配置并重启 Lutris 后，在游戏的“配置 → 运行器选项 → Wine 版本”中选择该版本；已有游戏的运行器选择保持不变。发布包由 [packages/dwproton-bin/](packages/dwproton-bin/) 固定版本和哈希，Hjem 仅管理 `~/.local/share/lutris/runners/wine/dwproton-11.0-14` 链接，其余 Lutris 数据保持可写。
 
+私人主机的共享 NTFS 游戏盘 `/mnt` 使用 CachyOS 内核的 `ntfs3` 驱动和 `noatime`，挂载配置见 [hosts/present-pc/hardware-configuration.nix](hosts/present-pc/hardware-configuration.nix)。更换驱动需要关闭占用程序后卸载并重新挂载，或应用配置后重启；使用 `findmnt /mnt` 确认文件系统类型为 `ntfs3`。已移除 `ntfs3g` 包，以及 UDisks 和 os-prober 中可选的 NTFS-3G 工具依赖。
+
 ## 配置结构
 
 ```text

@@ -46,5 +46,9 @@ in
     base = prev.nix-tree;
   };
 
+  # NTFS3 mounts need no NTFS-3G tools; both packages only add them to PATH.
+  os-prober = prev.os-prober.override { ntfs3g = null; };
+  udisks = prev.udisks.override { ntfs3g = null; };
+
   unstable = unstablePkgs;
 }

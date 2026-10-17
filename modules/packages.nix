@@ -45,9 +45,6 @@
     # 音视频转码: ffmpeg-full = 默认 ffmpeg 加上几乎所有可选库 (nvenc/vaapi/svt-av1/
     # libfdk_aac/x265/webp/...),省得遇到某些 codec 再切包。
     ffmpeg-full
-
-    # NTFS
-    ntfs3g
   ];
 
   programs.git.enable = true;

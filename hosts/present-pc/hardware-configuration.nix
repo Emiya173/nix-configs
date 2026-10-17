@@ -78,16 +78,16 @@ in
     options = btrfsOpts ++ [ "subvolid=5" ];
   };
 
-  # 共享游戏盘固定 UUID 和驱动，避免双系统切换后挂载行为变化。
+  # 共享游戏盘使用内核 NTFS3，避免 ntfs-3g 的用户态 FUSE 开销。
   fileSystems."/mnt" = {
     device = "/dev/disk/by-uuid/A2C22FE2C22FBA05";
-    fsType = "ntfs-3g";
+    fsType = "ntfs3";
     noCheck = true;
     options = [
       "uid=1000"
       "gid=100"
       "umask=022"
-      "norecover"
+      "noatime"
       "nofail"
       "x-systemd.device-timeout=10s"
     ];
