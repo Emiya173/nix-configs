@@ -110,6 +110,7 @@
         inherit (pkgs)
           codex
           baidunetdisk
+          dwproton-bin
           fastfetch
           nix-tree
           ;

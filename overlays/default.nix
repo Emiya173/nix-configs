@@ -32,6 +32,10 @@ in
 
   codex = final.callPackage ../packages/codex { };
 
+  dwproton-bin = final.callPackage ../packages/dwproton-bin {
+    base = prev.dwproton-bin;
+  };
+
   fastfetch = final.callPackage ../packages/fastfetch {
     base = prev.fastfetch;
   };

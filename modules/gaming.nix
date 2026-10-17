@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, userName, ... }:
 
 {
   # === Steam ===
@@ -28,8 +28,14 @@
   };
 
   # === Lutris (Wine 前端,跑 epic/gog/盗版以及 native Linux 游戏的启动器) ===
+  # Lutris scans this directory for Proton; UMU supplies its launch/runtime path.
+  hjem.users.${userName}.xdg.data.files."lutris/runners/wine/${pkgs.dwproton-bin.version}".source =
+    "${pkgs.dwproton-bin.steamcompattool}";
+
   environment.systemPackages = with pkgs; [
-    lutris
+    (lutris.override {
+      extraPkgs = pkgs: [ pkgs.umu-launcher ];
+    })
     wineWow64Packages.stable # 64-bit wine 直接处理 32-bit Win API (wine 9+ 的新方向)
     winetricks # 装 dll/字体/dotnet 等到 wine prefix
     # 帧率悬浮显示 (Vulkan/OpenGL overlay)。装好后 Lutris 里:

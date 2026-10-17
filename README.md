@@ -32,6 +32,8 @@ HarmonyOS Sans 使用未修改的华为官方字体，许可随字体包保存�
 
 工作机另外提供 Beyond Compare、钉钉、腾讯会议、LocalSend、JDK 11、Maven、ADB 脚本和 xlog 解码工具。私人主机另外提供游戏、串流及 Blender 等应用。完整包清单见 [modules/packages.nix](modules/packages.nix)、[modules/user/packages.nix](modules/user/packages.nix)、[modules/user/desktop.nix](modules/user/desktop.nix)、[modules/user/dev.nix](modules/user/dev.nix) 和 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix)。
 
+私人主机的 Lutris 额外提供固定版本 `dwproton-11.0-14`，通过 UMU 启动。激活配置并重启 Lutris 后，在游戏的“配置 → 运行器选项 → Wine 版本”中选择该版本；已有游戏的运行器选择保持不变。发布包由 [packages/dwproton-bin/](packages/dwproton-bin/) 固定版本和哈希，Hjem 仅管理 `~/.local/share/lutris/runners/wine/dwproton-11.0-14` 链接，其余 Lutris 数据保持可写。
+
 ## 配置结构
 
 ```text
@@ -210,6 +212,7 @@ flake 导出的维护包均可通过 `nix build --no-link .#<包名>` 单独构�
 | `qq` | unstable QQ，注入原生 Wayland 和输入法参数 |
 | `codex` | 官方 Codex CLI 发布包，单独固定版本和 SHA-256 |
 | `baidunetdisk` | 百度网盘打包及启动参数支持 |
+| `dwproton-bin` | Lutris 使用的 DW-Proton 11.0-14 发布包 |
 | `fastfetch` | 基于上游包增加本地 Nix profile 缓存补丁 |
 | `dingtalk` | 钉钉桌面包 |
 | `chatgpt-desktop` | ChatGPT/Codex 桌面客户端的 NixOS FHS 运行环境 |
