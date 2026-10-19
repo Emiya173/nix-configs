@@ -31,5 +31,21 @@
 
   networking.hostName = hostName;
 
+  # Keep Proton prefixes and saves on Btrfs while retaining Steam's library path.
+  # Populate the source from the existing compatdata before the first activation.
+  fileSystems."/mnt/SteamLibrary/steamapps/compatdata" = {
+    device = "/home/${userName}/.local/share/steam-compatdata/ntfs-library";
+    fsType = "none";
+    options = [
+      "bind"
+      "nofail"
+    ];
+    depends = [
+      "/home"
+      "/mnt"
+    ];
+    noCheck = true;
+  };
+
   system.stateVersion = "25.11";
 }
