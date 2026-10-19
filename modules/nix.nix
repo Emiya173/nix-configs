@@ -35,7 +35,7 @@
         "@wheel"
       ];
       substituters = [
-        "https://mirrors.ustc.edu.cn/nix-channels/store"
+        "https://chinanet.mirrors.ustc.edu.cn/nix-channels/store/"
         "https://cache.nixos.org"
         # priority=50 (cache.nixos.org 默认 40) -> 前面 miss 才查 cachix,
         # 大部分包不会触发 cachix 查询 -> 不卡 nix-daemon
