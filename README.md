@@ -32,7 +32,7 @@ HarmonyOS Sans 使用未修改的华为官方字体，许可随字体包保存�
 
 工作机另外提供 Beyond Compare、钉钉、腾讯会议、LocalSend、JDK 11、Maven、ADB 脚本和 xlog 解码工具。私人主机另外提供游戏、串流及 Blender 等应用。完整包清单见 [modules/packages.nix](modules/packages.nix)、[modules/user/packages.nix](modules/user/packages.nix)、[modules/user/desktop.nix](modules/user/desktop.nix)、[modules/user/dev.nix](modules/user/dev.nix) 和 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix)。
 
-私人主机的 Lutris 额外提供固定版本 `dwproton-11.0-14`，通过 UMU 启动。激活配置并重启 Lutris 后，在游戏的“配置 → 运行器选项 → Wine 版本”中选择该版本；已有游戏的运行器选择保持不变。发布包由 [packages/dwproton-bin/](packages/dwproton-bin/) 固定版本和哈希，Hjem 仅管理 `~/.local/share/lutris/runners/wine/dwproton-11.0-14` 链接，其余 Lutris 数据保持可写。
+私人主机的 Lutris 额外提供固定版本 `dwproton-11.0-14`，通过 UMU 启动。激活配置并重启 Lutris 后，在游戏的“配置 → 运行器选项 → Wine 版本”中选择该版本；已有游戏的运行器选择保持不变。发布包由 [nur/pkgs/dwproton-bin/](nur/pkgs/dwproton-bin/) 固定版本和哈希，Hjem 仅管理 `~/.local/share/lutris/runners/wine/dwproton-11.0-14` 链接，其余 Lutris 数据保持可写。
 
 UMU 的 Steam Runtime 更新逻辑回移了[上游 CDN 和版本比较修复](https://github.com/Open-Wine-Components/umu-launcher/pull/652)，使用版本索引和固定版本下载地址，仅在远端版本更新时下载，避免缓存不一致导致重复下载或降级。已有 runtime 保留在 `~/.local/share/umu/`；如需暂停自动更新，可在 Lutris 的游戏环境变量中设置 `UMU_RUNTIME_UPDATE=0`，首次安装仍会下载所需 runtime。
 
@@ -58,7 +58,8 @@ UMU 的 Steam Runtime 更新逻辑回移了[上游 CDN 和版本比较修复](ht
 │   │   └── home.nix            # Hjem 文件、XDG 目录与旧 HM 链接移交
 │   └── workstation/            # 工作机网络及 DAE 服务
 ├── overlays/                   # 包集覆盖和 unstable 入口
-├── packages/                   # 自定义打包、补丁和工作脚本
+├── nur/                        # 独立 Git submodule：可复用软件包、补丁与测试
+├── packages/                   # 系统专用订阅中继和工作脚本
 ├── assets/                     # 静态资源与冻结的旧 HM 文件允许清单
 ├── scripts/                    # 验证、维护和链接移交脚本
 └── tests/                      # 订阅恢复、隐私与链接移交测试
@@ -87,7 +88,7 @@ DMS 的设置、壁纸状态、Kitty 的 `dank-theme.conf` / `dank-tabs.conf`、
 | 主机专属应用、Fish alias/PATH 和用户服务 | `hosts/<hostname>/user.nix` |
 | niri 快捷键、窗口规则、输入设备和 DMS 集成 | [modules/user/niri.nix](modules/user/niri.nix) |
 | GTK/Qt、光标、默认应用与 Rime 用户配置 | [modules/user/desktop.nix](modules/user/desktop.nix) |
-| 自定义包、补丁与包集选择 | [packages/](packages/)、[overlays/default.nix](overlays/default.nix) |
+| 自定义包、补丁与包集选择 | [nur/](nur/)、[overlays/default.nix](overlays/default.nix) |
 
 `paths.nix` 中的路径是运行时字符串，外部源码目录不会因此复制进 Nix store。改变仓库位置后也应更新这里的 `repository`，供 `NH_FLAKE` 和 Fish 维护命令使用。
 
@@ -98,10 +99,12 @@ niri 的快捷键、显示器、光标和窗口规则在 [modules/user/niri.nix]
 在已安装 Nix、启用 `nix-command` 和 `flakes` 的环境中获取仓库：
 
 ```bash
-git clone https://github.com/Emiya173/nix-configs.git
+git clone --recurse-submodules https://github.com/Emiya173/nix-configs.git
 cd nix-configs
 ./scripts/check.sh
 ```
+
+已有 checkout 执行 `git submodule update --init --recursive` 初始化 `nur/`。主 Flake 设置 `inputs.self.submodules = true`，Git 形式的构建也会包含固定的子模块版本。系统直接导入 [nur/overlay.nix](nur/overlay.nix)，软件依赖使用本仓库的稳定包集。
 
 以下命令均在仓库目录执行。现有主机的 hostname 与 flake 输出同名，`nh` 可选择本机配置：
 
@@ -192,6 +195,8 @@ nix fmt -- flake.nix           # 格式化指定 Nix 文件
 
 提交前检查 `flake.nix` 和 `flake.lock` 的变化。发行版升级使用 `./scripts/bump-release.sh <YY.05 或 YY.11>`，例如 `./scripts/bump-release.sh 26.11`；它同步 nixpkgs、Nixvim 的 release URL 和 lock，然后执行求值检查。应先确认目标分支存在，并继续完成 checks 与目标系统构建。
 
+可复用软件包和补丁在 `nur/` 独立提交和推送；随后在主仓库提交更新后的 `nur` gitlink。主仓库的 `nix flake update` 不会更新这个子模块。单独验证见 [nur/README.md](nur/README.md)；未经明确授权，不添加其他 NUR 的直接依赖。
+
 `system.stateVersion` 记录系统状态兼容基线，不随发行版升级自动修改。私人主机保持 `25.11`，工作机保持 `26.05`；移除 Home Manager 不改变这些值。
 
 ## 验证与自定义包
@@ -202,7 +207,7 @@ nix fmt -- flake.nix           # 格式化指定 Nix 文件
 | --- | --- |
 | `./scripts/check.sh` 或 `./scripts/check.sh eval` | 求值所有 flake 输出与两台主机的完整系统配置，不构建应用或系统 |
 | `./scripts/check.sh checks` | 构建 flake checks：Nix 格式、维护脚本 ShellCheck、订阅恢复与隐私测试、旧 HM 链接移交测试 |
-| `./scripts/check.sh packages` | 构建全部 8 个维护包 |
+| `./scripts/check.sh packages` | 构建全部维护包 |
 | `./scripts/check.sh packages codex dae-subscription` | 只构建指定维护包 |
 | `./scripts/check.sh system arch-pc` | 构建工作机完整系统，不激活 |
 | `./scripts/check.sh all arch-pc` | 依次求值、构建 checks、全部维护包与工作机系统 |
@@ -221,10 +226,13 @@ flake 导出的维护包均可通过 `nix build --no-link .#<包名>` 单独构�
 | `fastfetch` | 基于上游包增加本地 Nix profile 缓存补丁 |
 | `dingtalk` | 钉钉桌面包 |
 | `chatgpt-desktop` | ChatGPT/Codex 桌面客户端的 NixOS FHS 运行环境 |
-| `xlog` | 随仓库保存的 Haskell 源码、构建与原项目测试 |
+| `deepseek-harness-desktop` | 独立 NUR 子模块维护的 DeepSeek Harness 桌面版，使用本仓库稳定包集 |
+| `xlog` | 从独立 [xlog-hs 仓库](https://github.com/Emiya173/xlog-hs) 固定提交和哈希获取 Haskell 源码，构建时运行核心与 CLI 测试 |
 | `dae-subscription` | 本地订阅中继、同步、缓存和 DAE 应用逻辑 |
 
 更新固定发布包时同步版本与源码校验值，再执行求值和目标包构建。DAE、Hysteria 等直接跟随已锁定的 unstable 包集；具体选择见 overlay 和相应服务模块。
+
+两台主机都安装 DeepSeek Harness 桌面版（当前为 `0.2.1-rc.1`），启动器名称为 **DeepSeek Harness**，命令为 `deepseek-harness`。打包定义和 Linux 补丁由 [nur/pkgs/deepseek-harness-desktop/](nur/pkgs/deepseek-harness-desktop/) 独立维护，参考提交及许可证记录在 [nur/README.md](nur/README.md)。单独构建使用 `./scripts/check.sh packages deepseek-harness-desktop`。
 
 ## 桌面与终端操作
 
@@ -313,7 +321,7 @@ nix why-depends /run/current-system /nix/store/<目标路径>
 
 `nix-tree` 无参数时也会读取 `~/.local/state/nix/profiles/home-manager` 等用户 profile。迁移后保留的旧 HM profile 仍会显示 `home-manager-generation`，不代表当前系统仍启用 HM；检查当前系统请显式传入 `/run/current-system`。在新会话和回滚验证完成前保留这些旧 profile 与迁移备份。
 
-[packages/nix-tree/](packages/nix-tree/) 为 0.8.0 添加兼容补丁：Nix 2.33 及以上的 `path-info` 查询显式指定 `--json-format 1`，匹配现有解析器并消除弃用警告。
+[nur/pkgs/nix-tree/](nur/pkgs/nix-tree/) 为 0.8.0 添加兼容补丁：Nix 2.33 及以上的 `path-info` 查询显式指定 `--json-format 1`，匹配现有解析器并消除弃用警告。
 
 依赖的 closure 大小包含共享依赖，不能逐项相加当作实际磁盘占用。Btrfs 快照保留的旧数据也独立影响文件系统剩余空间。
 

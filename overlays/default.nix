@@ -22,37 +22,16 @@ let
     ];
   };
 in
-{
-  baidunetdisk = final.callPackage ../packages/baidunetdisk { };
-
+(import ../nur/overlay.nix final prev)
+// {
   # Keep Blender and the system HIP runtime on the same stable package set.
   blender = prev.blender.override {
     rocmSupport = true;
   };
 
-  codex = final.callPackage ../packages/codex { };
-
-  dwproton-bin = final.callPackage ../packages/dwproton-bin {
-    base = prev.dwproton-bin;
-  };
-
-  fastfetch = final.callPackage ../packages/fastfetch {
-    base = prev.fastfetch;
-  };
-
-  harmonyos-sans = final.callPackage ../packages/harmonyos-sans { };
-
-  nix-tree = final.callPackage ../packages/nix-tree {
-    base = prev.nix-tree;
-  };
-
   # NTFS3 mounts need no NTFS-3G tools; both packages only add them to PATH.
   os-prober = prev.os-prober.override { ntfs3g = null; };
   udisks = prev.udisks.override { ntfs3g = null; };
-
-  umu-launcher-unwrapped = final.callPackage ../packages/umu-launcher-unwrapped {
-    base = prev.umu-launcher-unwrapped;
-  };
 
   unstable = unstablePkgs;
 }

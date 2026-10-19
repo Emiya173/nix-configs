@@ -6,7 +6,6 @@
   ...
 }:
 let
-  xlog = pkgs.callPackage ../../packages/xlog { };
   adbScript =
     name:
     pkgs.writeShellApplication {
@@ -24,7 +23,7 @@ in
   users.users.${userName}.packages = with pkgs; [
     wayvnc
     bcompare
-    (pkgs.callPackage ../../packages/dingtalk { })
+    dingtalk
     wemeet
     config.programs.localsend.package
     libarchive
@@ -89,7 +88,7 @@ in
   hjem.users.${userName} = {
     # Keep the legacy path used by Yazi and scripts, while building the executable
     # from source. The private key remains in the user's mutable config directory.
-    files.".local/bin/xlog".source = "${xlog}/bin/xlog";
+    files.".local/bin/xlog".source = "${pkgs.xlog}/bin/xlog";
     files.".local/share/jdks/jdk11".source = "${pkgs.jdk11}";
     files.".local/share/jdks/jdk21".source = "${pkgs.jdk21}";
     files."script/close.sh".source = "${adbScript "close.sh"}/bin/close.sh";

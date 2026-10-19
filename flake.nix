@@ -2,6 +2,8 @@
   description = "Personal multi-host NixOS configuration";
 
   inputs = {
+    self.submodules = true;
+
     # 主包源走 stable。升 release 用 ./scripts/bump-release.sh <新版本>,
     # 会一把改掉这里 + nixvim nixos-* 并更新 lock
     # (flake input url 必须是字面量,版本号没法在 Nix 层单点定义)
@@ -110,15 +112,16 @@
         inherit (pkgs)
           codex
           baidunetdisk
+          chatgpt-desktop
+          deepseek-harness-desktop
+          dingtalk
           dwproton-bin
           fastfetch
           nix-tree
           umu-launcher
+          xlog
           ;
-        dingtalk = pkgs.callPackage ./packages/dingtalk { };
-        xlog = pkgs.callPackage ./packages/xlog { };
         dae-subscription = pkgs.callPackage ./packages/dae-subscription { };
-        chatgpt-desktop = pkgs.callPackage ./packages/chatgpt-desktop { };
       };
       formatter.${system} = pkgs.nixfmt;
       devShells.${system}.default = pkgs.mkShell {

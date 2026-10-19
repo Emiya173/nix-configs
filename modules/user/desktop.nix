@@ -226,8 +226,9 @@ in
       # 文档编辑
       typora
 
-      # ChatGPT / Codex 桌面应用
-      (pkgs.callPackage ../../packages/chatgpt-desktop { })
+      # AI 桌面应用
+      chatgpt-desktop
+      deepseek-harness-desktop
 
       # 通讯
       telegram-desktop

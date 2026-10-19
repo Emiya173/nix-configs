@@ -5,8 +5,11 @@
 This repository defines multiple NixOS hosts as a flake. Keep machine assembly
 in `hosts/<hostname>/` and reusable NixOS configuration in `modules/`. Shared
 user environment modules live in `modules/user/`, with `default.nix` as their
-entry point. Custom derivations live in `packages/` and are exposed through
-`overlays/`. Static boot, login, and
+entry point. Reusable derivations, package patches, and their tests live in the
+independently maintained `nur/` Git submodule and are exposed through
+`nur/overlay.nix`. `packages/` only holds system-specific helpers. Do not add
+direct dependencies on other NUR repositories without explicit user approval.
+Static boot, login, and
 Fastfetch resources belong in `assets/`. Maintenance and validation helpers are
 in `scripts/`.
 
@@ -40,6 +43,11 @@ reintroduce Home Manager or add another application-module abstraction layer.
 Git-backed flake commands only include tracked files, so stage newly referenced
 files before switching; a commit is not required. `scripts/check.sh` uses a
 `path:` flake and can evaluate new files before staging.
+Initialize `nur/` with `git submodule update --init --recursive`. Commit and
+push package changes in that independent repository before updating the parent
+gitlink. The main flake enables `inputs.self.submodules` and imports the local
+overlay with the host's stable package set; it must not fetch another NUR's
+package outputs. Run `nur/scripts/check.sh` for the independent checks.
 
 ## Coding Style & Naming Conventions
 

@@ -21,7 +21,7 @@ case "$mode" in
   packages)
     for package in "$@"; do
       case "$package" in
-        qq|codex|baidunetdisk|dwproton-bin|fastfetch|nix-tree|umu-launcher|xlog|dingtalk|chatgpt-desktop|dae-subscription) ;;
+        qq|codex|baidunetdisk|deepseek-harness-desktop|dwproton-bin|fastfetch|nix-tree|umu-launcher|xlog|dingtalk|chatgpt-desktop|dae-subscription) ;;
         *)
           echo "Unknown maintained package: $package" >&2
           usage
@@ -53,8 +53,8 @@ case "$mode" in
 esac
 
 check_eval() {
-  echo "==> Evaluate locked flake outputs"
-  nix "${NIX_FLAGS[@]}" flake check "$FLAKE" --no-build --no-update-lock-file
+  # DSH converts its pnpm lockfile during evaluation. Realize that dependency
+  # before flake check evaluates outputs with a read-only store.
   local target
   for target in present-pc arch-pc; do
     echo "==> Evaluate complete host: $target"
@@ -62,6 +62,8 @@ check_eval() {
       "$FLAKE#nixosConfigurations.$target.config.system.build.toplevel.drvPath" --raw
     echo
   done
+  echo "==> Evaluate locked flake outputs"
+  nix "${NIX_FLAGS[@]}" flake check "$FLAKE" --no-build --no-update-lock-file
 }
 
 check_builds() {
@@ -73,7 +75,7 @@ check_packages() {
   local -a packages=("$@") targets=()
   local package
   if (( ${#packages[@]} == 0 )); then
-    packages=(qq codex baidunetdisk dwproton-bin fastfetch nix-tree umu-launcher xlog dingtalk chatgpt-desktop dae-subscription)
+    packages=(qq codex baidunetdisk deepseek-harness-desktop dwproton-bin fastfetch nix-tree umu-launcher xlog dingtalk chatgpt-desktop dae-subscription)
   fi
   for package in "${packages[@]}"; do
     targets+=("$FLAKE#$package")
