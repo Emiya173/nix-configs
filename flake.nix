@@ -64,7 +64,6 @@
           displayConfig = import ./hosts/${hostName}/displays.nix;
           hostPaths = import ./hosts/${hostName}/paths.nix { inherit userName; };
           desktopFeatures = {
-            scratch = hostName == "present-pc";
             casting = hostName == "present-pc";
             voidmaker = hostName == "present-pc";
             entertainment = hostName == "present-pc";
@@ -182,7 +181,7 @@
         '';
       };
       nixosConfigurations = {
-        # 现有 NixOS 机器：双 DP 显示器 + scratch workspace。
+        # 私人主机：双 DP 显示器。
         present-pc = mkHost "present-pc";
         arch-pc = mkHost "arch-pc";
       };

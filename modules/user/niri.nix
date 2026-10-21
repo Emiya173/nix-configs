@@ -125,50 +125,6 @@ let
   # 键位脚本走 writeShellApplication: build 期 shellcheck,runtime 依赖显式声明
   # 客户端版本与会话配置一致,不依赖用户 PATH 的优先级。
 
-  # Mod+S scratch toggle: 在 scratch 时回上一个 workspace,否则跳进 scratch,
-  # 空 scratch 自动开 kitty (--class=scratchpad 匹配下面 window-rule 铺满宽度)
-  scratchToggle = pkgs.writeShellApplication {
-    name = "niri-scratch-toggle";
-    runtimeInputs = [
-      pkgs.jq
-      pkgs.coreutils
-      niriPackage
-      config.workstation.kittyPackage
-    ];
-    text = ''
-      state="''${XDG_RUNTIME_DIR:-/tmp}/niri-scratch-prev"
-      current=$(niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .name // empty')
-      if [ "$current" = "scratch" ]; then
-        # 优先回进入 scratch 前记下的来源 workspace (按 id 解析成当下的 output+idx)。
-        # 不能只靠 niri 自带 previous 历史: scratch 被 move-workspace-to-monitor
-        # 搬过之后历史会指向 scratch 自身 -> focus-workspace-previous 变 no-op
-        prev_id=$(cat "$state" 2>/dev/null || true)
-        target=$(niri msg --json workspaces | jq -r --arg id "$prev_id" \
-          '.[] | select((.id|tostring)==$id) | "\(.output) \(.idx)"')
-        if [ -n "$target" ]; then
-          niri msg action focus-monitor "''${target% *}"
-          niri msg action focus-workspace "''${target#* }"
-        else
-          niri msg action focus-workspace-previous
-        fi
-      else
-        niri msg --json workspaces | jq -r '.[] | select(.is_focused) | .id' > "$state"
-        # focus-workspace 会跳到 scratch 当前所在 output (可能在副屏);
-        # 用 move-workspace-to-monitor DP-1 强制把它搬到主屏 (focus 跟随)
-        niri msg action focus-workspace scratch
-        scratch_out=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .output')
-        if [ "$scratch_out" != ${lib.escapeShellArg primaryOutput} ]; then
-          niri msg action move-workspace-to-monitor ${lib.escapeShellArg primaryOutput}
-        fi
-        scratch_id=$(niri msg --json workspaces | jq -r '.[] | select(.name=="scratch") | .id')
-        count=$(niri msg --json windows | jq --argjson id "$scratch_id" '[.[] | select(.workspace_id==$id)] | length')
-        if [ "$count" = "0" ]; then
-          kitty --class scratchpad &
-        fi
-      fi
-    '';
-  };
-
   # 快捷键只切换显隐；首次启动交给 target，完整退出由托盘负责。
   voidmakerToggle = pkgs.writeShellApplication {
     name = "voidmaker-toggle";
@@ -447,15 +403,6 @@ in
         always-center-single-column = false;
       };
 
-      # ----------------- workspaces -----------------
-      # named workspace (类比 hyprland special workspace / scratchpad)
-      # 钉到主屏 DP-1 (副屏太窄,scratch 内容铺满不好用)
-      workspaces = lib.optionalAttrs desktopFeatures.scratch {
-        scratch = {
-          open-on-output = primaryOutput;
-        };
-      };
-
       # ----------------- 杂项 -----------------
       prefer-no-csd = true;
       hotkey-overlay.skip-at-startup = true;
@@ -526,8 +473,7 @@ in
             let
               ids = map (match: match.app-id or "") (rule.matches or [ ]);
             in
-            (desktopFeatures.scratch || !(builtins.elem "^scratchpad$" ids))
-            && (desktopFeatures.voidmaker || !(builtins.elem "^voidmaker$" ids))
+            desktopFeatures.voidmaker || !(builtins.elem "^voidmaker$" ids)
           )
           [
             # 默认圆角
@@ -561,15 +507,6 @@ in
               open-floating = true;
               focus-ring.enable = false;
               border.enable = false;
-            }
-            # scratchpad 窗口 (Mod+S 自动开的 kitty --class=scratchpad)
-            # 默认 column 宽 100% -> 铺满主屏 (单 window 自动占满 column 高度);
-            # 不是 fullscreen,所以仍带边框/bar/可被 Mod+, 收别的窗口进列
-            {
-              matches = [ { app-id = "^scratchpad$"; } ];
-              default-column-width = {
-                proportion = 1.0;
-              };
             }
             # voidmaker 浮动,固定在右下角; 透明窗口,去掉边框/焦点环/阴影/圆角裁切
             # (记事本窗口除外,它走下面单独的规则)
@@ -638,13 +575,6 @@ in
           (
             name: _:
             (
-              desktopFeatures.scratch
-              || !(builtins.elem name [
-                "Mod+S"
-                "Mod+Ctrl+S"
-              ])
-            )
-            && (
               desktopFeatures.casting
               || !(builtins.elem name [
                 "Mod+Alt+P"
@@ -723,12 +653,6 @@ in
 
             "Mod+Alt+Page_Up".action = move-workspace-up;
             "Mod+Alt+Page_Down".action = move-workspace-down;
-
-            # === Scratchpad (named workspace "scratch", 类比 hyprland special workspace) ===
-            # Mod+S      : toggle (脚本见文件顶部 scratchToggle)
-            # Mod+Ctrl+S : 把当前 column 扔进 scratch (默认跟随焦点过去)
-            "Mod+S".action = spawn (lib.getExe scratchToggle);
-            "Mod+Ctrl+S".action.move-column-to-workspace = [ "scratch" ];
 
             # 滚轮 = 列左右切焦点 (niri 横向布局,滚轮下 = 下一列 = 右)
             # 列内窗口上下切走 Mod+J/K; workspace 切换走 Mod+U/I/Page_Up/Down
