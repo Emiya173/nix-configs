@@ -142,6 +142,17 @@ in
             enabled = true;
             size = 1536 * 1024;
           };
+          statuscolumn = {
+            enabled = true;
+            left = [
+              "mark"
+              "sign"
+            ];
+            right = [
+              "fold"
+              "git"
+            ];
+          };
           terminal = {
             enabled = true;
             win = {
