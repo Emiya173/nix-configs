@@ -1,6 +1,6 @@
 # Arch 工作机迁移准备
 
-本文保留 2026-10-12/13 的 Arch → NixOS 迁移计划和后续安装记录；其中 Home Manager、首次激活及当时验证范围的描述属于历史事实。2026-10-16 的去 HM 配置迁移、当前目录结构与首次切换流程见 [README.md](README.md#从-home-manager-首次切换)。工作机用户配置现位于 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix)，共享用户配置位于 [modules/user/](modules/user/)。
+本文保留 2026-10-12/13 的 Arch → NixOS 迁移计划和后续安装记录；其中 Home Manager、首次激活及当时验证范围的描述属于历史事实。当前配置概述与构建入口见 [README.md](README.md)。工作机用户配置现位于 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix)，共享用户配置位于 [modules/user/](modules/user/)。
 
 目标为 `arch-pc`，私人主机为 `present-pc`。桌面、Rime 输入法、DMS greeter 和锁屏来自审计固定的私人基准 `950423b`，保留多主机结构；工作机另外声明网络、应用与本地工具。执行验证不会激活 NixOS。
 
@@ -9,8 +9,8 @@
 ## 当前实现
 
 - 实体屏 `HDMI-A-1`，2560×1440@74.968、scale1；Intel UHD770、Intel microcode 与 VAAPI。工作机不导入 AMD 或 gaming 模块。
-- 工作机禁用 Waydroid/Sunshine，不安装 Wine/VirtualBox、Timeshift、旧 Python 环境和旧 MediaTek/I²C/虚拟摄像头定制。不带 Scratch、投屏/虚拟输出或 Mod+A 入口。
-- Fish 保留所选工具链 PATH 与 `adbs`、Perl `rn`、`tar=bsdtar`、`pip=uv pip`。三份 ADB 脚本包装明确的 Bash/ADB/date 依赖，并管理原 `~/script` 入口；当时的首次 Home Manager 激活将同名旧文件改名为 `.hm-backup`，以便生成受管理文件。当前兼容入口由 `hosts/arch-pc/user.nix` 的 Hjem 文件声明提供，旧 HM 链接移交规则见 README。
+- 工作机禁用 Waydroid/Sunshine，不安装 Wine/VirtualBox、Timeshift、旧 Python 环境和旧 MediaTek/I²C/虚拟摄像头定制。不带投屏/虚拟输出或 Mod+A 入口。
+- Fish 保留所选工具链 PATH 与 `adbs`、Perl `rn`、`tar=bsdtar`、`pip=uv pip`。三份 ADB 脚本包装明确的 Bash/ADB/date 依赖，并管理原 `~/script` 入口；当时的首次 Home Manager 激活将同名旧文件改名为 `.hm-backup`，以便生成受管理文件。当前兼容入口由 `hosts/arch-pc/user.nix` 的 Hjem 文件声明提供，旧 HM 链接移交实现见 [modules/user/home.nix](modules/user/home.nix)。
 - ADB server 的 TCP 5037 和 scrcpy 默认转发端口 TCP 27183–27199 在有线局域网接口 `enp1s0` 放行。需要共享 USB 设备时运行 `adb -a nodaemon server start`；其他机器用 `adb -H <工作机局域网地址> -P 5037 devices -l` 或 `shell` 访问本机 server。`adb connect` 用于连接设备端 adbd，不用于选择另一台电脑的 server。Windows PowerShell 投屏客户端先设置 `$env:ADB_SERVER_SOCKET = 'tcp:<工作机局域网地址>:5037'`，再运行 `scrcpy --tunnel-host=<工作机局域网地址>`；`--tunnel-host` 自动选择 ADB forward，视频/音频/控制连接使用上述转发端口，未固定 `--tunnel-port` 时会跟随实际选中的端口。
 - 工作机 Atuin 使用已锁定 unstable 的版本，以兼容复用 home 中较新的历史库迁移；Ctrl+R 继续使用 Atuin 搜索。GHC 使用 nixpkgs 提供的版本，无需为 GHCup 配置额外的 nix-ld 运行库。
 - JDK21 为默认命令，JDK11 以低优先级保留；项目可用 `~/.local/share/jdks/jdk11` 或 `jdk21` 明确选择 `JAVA_HOME`。
