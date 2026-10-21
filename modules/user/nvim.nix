@@ -56,6 +56,20 @@
       confirm = true;
     };
 
+    # 使用 Neovim 内置的 log 语法，补全通用日志和轮转文件的识别。
+    filetype = {
+      extension.log = "log";
+      filename = {
+        syslog = "log";
+        messages = "log";
+      };
+      pattern = {
+        ".*%.log%.%d+" = "log";
+        ".*%.log%-%d[%d%-]*" = "log";
+        ".*_log" = "log";
+      };
+    };
+
     # ----- 主题 -----
     colorschemes.tokyonight = {
       enable = true;
@@ -112,8 +126,26 @@
       treesitter-context.enable = true;
 
       # Git 增量提示 + lazygit
-      gitsigns.enable = true;
+      gitsigns = {
+        enable = true;
+        settings = {
+          current_line_blame = false;
+          current_line_blame_opts = {
+            delay = 0;
+            virt_text_pos = "eol";
+          };
+        };
+      };
       lazygit.enable = true;
+
+      # 按需在默认浏览器中实时预览 Markdown。
+      markdown-preview = {
+        enable = true;
+        settings = {
+          auto_start = 0;
+          open_to_the_world = 0;
+        };
+      };
 
       # which-key 提示
       which-key = {
@@ -338,6 +370,30 @@
         key = "<leader>gg";
         action = "<cmd>LazyGit<cr>";
         options.desc = "LazyGit";
+      }
+      {
+        mode = "n";
+        key = "<leader>gb";
+        action = "<cmd>Gitsigns toggle_current_line_blame<cr>";
+        options.desc = "Toggle inline Git blame";
+      }
+      {
+        mode = "n";
+        key = "<leader>gB";
+        action = "<cmd>Gitsigns blame<cr>";
+        options.desc = "Git blame file";
+      }
+      {
+        mode = "n";
+        key = "<leader>gi";
+        action = "<cmd>Gitsigns blame_line full=true<cr>";
+        options.desc = "Git blame line";
+      }
+      {
+        mode = "n";
+        key = "<leader>mp";
+        action = "<cmd>MarkdownPreviewToggle<cr>";
+        options.desc = "Markdown preview";
       }
       {
         mode = "n";
