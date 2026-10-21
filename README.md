@@ -264,6 +264,31 @@ Fish 中 `Ctrl+R` 由 Atuin 搜索历史；`y` 启动 Yazi 并在退出时切换
 
 工作机还提供 `adbs=adb shell`、`rn=Perl rename`、`tar=bsdtar`、`pip=uv pip`，以及 `~/script`、ADB 和 ghcup 的兼容路径；JDK 11/21 可通过 `~/.local/share/jdks/` 明确选择。
 
+### Nixvim
+
+`Leader` 为空格；按空格后，which-key 显示英文分组名称和图标。配置位于 [modules/user/nvim.nix](modules/user/nvim.nix)。
+
+| 快捷键 | 操作 |
+| --- | --- |
+| `s` / `S` | Flash 标签跳转 / 语法结构选择 |
+| `gsa` / `gsd` / `gsr` | 添加 / 删除 / 替换包围符号 |
+| `Leader ss` / `Leader sS` | 当前文件 / 工作区符号 |
+| `Leader sw` / `Leader sk` / `Leader st` | 搜索当前单词 / 快捷键 / TODO |
+| `Leader sr` | grug-far 跨文件搜索替换；可视模式下预填所选文本 |
+| `[t` / `]t` | 上一个 / 下一个 TODO |
+| `[h` / `]h` | 上一个 / 下一个 Git 改动块 |
+| `Leader ghp` / `Leader ghs` / `Leader ghr` | 预览 / 暂存 / 重置改动块；暂存和重置支持可视选区 |
+| `Leader gb` / `Leader gi` / `Leader gB` | 开关行尾 blame / 当前行提交详情 / 整文件 blame |
+| `Leader qs` / `Leader qS` / `Leader ql` / `Leader qd` | 恢复项目会话 / 选择会话 / 恢复上次会话 / 停止保存会话 |
+| `Leader qq` | 关闭当前窗口，替代原来的 `Leader q` |
+| `Leader xX` / `Leader xq` / `Leader xl` | 当前文件诊断 / Quickfix / Location List |
+| `Leader uf` / `Leader uF` | 开关全局 / 当前缓冲区的保存时格式化 |
+| `Leader uh` / `Leader ud` / `Leader uw` | 开关当前缓冲区类型提示 / 全局诊断 / 当前窗口软换行 |
+| `Leader ft` / `Ctrl+/` | 开关浮动终端；终端内也可用 `Ctrl+/` 隐藏，双击 `Esc` 返回普通模式 |
+| `Leader mp` | 开关 Markdown 浏览器预览 |
+
+行尾 blame 默认关闭，开启后不额外延迟。Snacks 为超过 1.5 MiB 的文件启用大文件模式：保留基础语法高亮，停用自动补全、保存时格式化和语言服务器等较重的功能。
+
 ## 工作机网络服务与私密状态
 
 工作网络集中在 [modules/workstation/](modules/workstation/)，其运行配置、账号和密钥独立保存在目标主机：

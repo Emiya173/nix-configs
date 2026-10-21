@@ -4,6 +4,18 @@
   ...
 }:
 
+let
+  # 精确文件名和自定义模式先于 Snacks 的通用规则匹配，也需要检查大小。
+  logFiletype.__raw = ''
+    function(path, buf)
+      if vim.bo[buf].filetype ~= "bigfile"
+        and vim.fn.getfsize(path) > Snacks.config.bigfile.size then
+        return "bigfile"
+      end
+      return "log"
+    end
+  '';
+in
 {
   imports = [ inputs.nixvim.nixosModules.nixvim ];
 
@@ -58,15 +70,15 @@
 
     # 使用 Neovim 内置的 log 语法，补全通用日志和轮转文件的识别。
     filetype = {
-      extension.log = "log";
+      extension.log = logFiletype;
       filename = {
-        syslog = "log";
-        messages = "log";
+        syslog = logFiletype;
+        messages = logFiletype;
       };
       pattern = {
-        ".*%.log%.%d+" = "log";
-        ".*%.log%-%d[%d%-]*" = "log";
-        ".*_log" = "log";
+        ".*%.log%.%d+" = logFiletype;
+        ".*%.log%-%d[%d%-]*" = logFiletype;
+        ".*_log" = logFiletype;
       };
     };
 
@@ -102,6 +114,41 @@
           "<leader>fh" = "help_tags";
           "<leader>fr" = "oldfiles";
           "<leader>/" = "current_buffer_fuzzy_find";
+          "<leader>ss" = {
+            action = "lsp_document_symbols";
+            options.desc = "Document symbols";
+          };
+          "<leader>sS" = {
+            action = "lsp_dynamic_workspace_symbols";
+            options.desc = "Workspace symbols";
+          };
+          "<leader>sw" = {
+            action = "grep_string";
+            options.desc = "Search word";
+          };
+          "<leader>sk" = {
+            action = "keymaps";
+            options.desc = "Search keymaps";
+          };
+        };
+      };
+
+      grug-far.enable = true;
+
+      snacks = {
+        enable = true;
+        settings = {
+          bigfile = {
+            enabled = true;
+            size = 1536 * 1024;
+          };
+          terminal = {
+            enabled = true;
+            win = {
+              position = "float";
+              border = "rounded";
+            };
+          };
         };
       };
 
@@ -134,6 +181,34 @@
             delay = 0;
             virt_text_pos = "eol";
           };
+          on_attach.__raw = ''
+            function(bufnr)
+              if vim.bo[bufnr].filetype == "bigfile" then
+                return false
+              end
+              local gs = require("gitsigns")
+              local function map(mode, key, action, desc)
+                vim.keymap.set(mode, key, action, { buffer = bufnr, silent = true, desc = desc })
+              end
+              map("n", "]h", function()
+                if vim.wo.diff then
+                  vim.cmd.normal({ "]c", bang = true })
+                else
+                  gs.nav_hunk("next")
+                end
+              end, "Next hunk")
+              map("n", "[h", function()
+                if vim.wo.diff then
+                  vim.cmd.normal({ "[c", bang = true })
+                else
+                  gs.nav_hunk("prev")
+                end
+              end, "Previous hunk")
+              map("n", "<leader>ghp", gs.preview_hunk, "Preview hunk")
+              map({ "n", "x" }, "<leader>ghs", ":Gitsigns stage_hunk<cr>", "Stage hunk")
+              map({ "n", "x" }, "<leader>ghr", ":Gitsigns reset_hunk<cr>", "Reset hunk")
+            end
+          '';
         };
       };
       lazygit.enable = true;
@@ -150,7 +225,67 @@
       # which-key 提示
       which-key = {
         enable = true;
-        settings.preset = "modern";
+        settings = {
+          preset = "modern";
+          # 分组名称无法从各快捷键的 desc 自动推导。
+          spec = [
+            {
+              __unkeyed-1 = "<leader>b";
+              group = "Buffers";
+              icon = "󰈔";
+            }
+            {
+              __unkeyed-1 = "<leader>c";
+              group = "Code";
+              icon = "";
+            }
+            {
+              __unkeyed-1 = "<leader>f";
+              group = "Files / Search";
+              icon = "";
+            }
+            {
+              __unkeyed-1 = "<leader>g";
+              group = "Git";
+              icon = "󰊢";
+            }
+            {
+              __unkeyed-1 = "<leader>gh";
+              group = "Hunks";
+              icon = "󰊢";
+            }
+            {
+              __unkeyed-1 = "<leader>m";
+              group = "Markdown";
+              icon = "";
+            }
+            {
+              __unkeyed-1 = "<leader>q";
+              group = "Quit / Session";
+              icon = "";
+            }
+            {
+              __unkeyed-1 = "<leader>s";
+              group = "Search";
+              icon = "";
+            }
+            {
+              __unkeyed-1 = "<leader>u";
+              group = "UI / Toggles";
+              icon = "";
+            }
+            {
+              __unkeyed-1 = "<leader>x";
+              group = "Diagnostics";
+              icon = "󱖫";
+            }
+            {
+              __unkeyed-1 = "gs";
+              group = "Surround";
+              icon = "󰅪";
+            }
+          ];
+        };
       };
 
       # 注释 / 包围 / 配对 / 文本对象 (LazyVim 用 mini.*)
@@ -158,7 +293,14 @@
         enable = true;
         modules = {
           ai = { };
-          surround = { };
+          surround.mappings = {
+            add = "gsa";
+            delete = "gsd";
+            find = "gsf";
+            find_left = "gsF";
+            highlight = "gsh";
+            replace = "gsr";
+          };
           pairs = { };
           comment = { };
           icons = { };
@@ -265,6 +407,14 @@
         enable = true;
         autoEnableSources = true;
         settings = {
+          enabled.__raw = ''
+            function()
+              return vim.b.completion ~= false
+                and vim.bo.buftype ~= "prompt"
+                and vim.fn.reg_recording() == ""
+                and vim.fn.reg_executing() == ""
+            end
+          '';
           sources = [
             { name = "nvim_lsp"; }
             { name = "luasnip"; }
@@ -289,10 +439,15 @@
       conform-nvim = {
         enable = true;
         settings = {
-          format_on_save = {
-            timeout_ms = 500;
-            lsp_format = "fallback";
-          };
+          format_on_save.__raw = ''
+            function(bufnr)
+              if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat
+                or vim.bo[bufnr].filetype == "bigfile" then
+                return
+              end
+              return { timeout_ms = 500, lsp_format = "fallback" }
+            end
+          '';
           formatters_by_ft = {
             nix = [ "nixfmt" ];
             lua = [ "stylua" ];
@@ -345,6 +500,22 @@
       };
     };
 
+    extraConfigLuaPost = ''
+      Snacks.toggle({
+        name = "Autoformat (global)",
+        get = function() return not vim.g.disable_autoformat end,
+        set = function(state) vim.g.disable_autoformat = not state end,
+      }):map("<leader>uf")
+      Snacks.toggle({
+        name = "Autoformat (buffer)",
+        get = function() return not vim.b.disable_autoformat end,
+        set = function(state) vim.b.disable_autoformat = not state end,
+      }):map("<leader>uF")
+      Snacks.toggle.inlay_hints():map("<leader>uh")
+      Snacks.toggle.diagnostics():map("<leader>ud")
+      Snacks.toggle.option("wrap", { name = "Wrap" }):map("<leader>uw")
+    '';
+
     # 来自 LazyVim 风格的核心键位 (which-key 会自动捡)
     keymaps = [
       {
@@ -355,15 +526,92 @@
       }
       {
         mode = "n";
-        key = "<leader>q";
+        key = "<leader>qq";
         action = "<cmd>q<cr>";
         options.desc = "Quit";
+      }
+      {
+        mode = "n";
+        key = "<leader>qs";
+        action.__raw = "function() require('persistence').load() end";
+        options.desc = "Restore session";
+      }
+      {
+        mode = "n";
+        key = "<leader>qS";
+        action.__raw = "function() require('persistence').select() end";
+        options.desc = "Select session";
+      }
+      {
+        mode = "n";
+        key = "<leader>ql";
+        action.__raw = "function() require('persistence').load({ last = true }) end";
+        options.desc = "Restore last session";
+      }
+      {
+        mode = "n";
+        key = "<leader>qd";
+        action.__raw = "function() require('persistence').stop() end";
+        options.desc = "Stop saving session";
       }
       {
         mode = "n";
         key = "<leader>e";
         action = "<cmd>Neotree toggle<cr>";
         options.desc = "Explorer";
+      }
+      {
+        mode = [
+          "n"
+          "x"
+          "o"
+        ];
+        key = "s";
+        action.__raw = "function() require('flash').jump() end";
+        options.desc = "Flash jump";
+      }
+      {
+        mode = [
+          "n"
+          "x"
+          "o"
+        ];
+        key = "S";
+        action.__raw = "function() require('flash').treesitter() end";
+        options.desc = "Flash Treesitter";
+      }
+      {
+        mode = [
+          "n"
+          "x"
+        ];
+        key = "<leader>sr";
+        action = ":GrugFar<cr>";
+        options.desc = "Search and replace";
+      }
+      {
+        mode = "n";
+        key = "<leader>ft";
+        action.__raw = "function() Snacks.terminal.toggle() end";
+        options.desc = "Toggle terminal";
+      }
+      {
+        mode = [
+          "n"
+          "t"
+        ];
+        key = "<C-/>";
+        action.__raw = "function() Snacks.terminal.toggle() end";
+        options.desc = "Toggle terminal";
+      }
+      {
+        mode = [
+          "n"
+          "t"
+        ];
+        key = "<C-_>";
+        action.__raw = "function() Snacks.terminal.toggle() end";
+        options.desc = "Toggle terminal";
       }
       {
         mode = "n";
@@ -400,6 +648,42 @@
         key = "<leader>xx";
         action = "<cmd>Trouble diagnostics toggle<cr>";
         options.desc = "Diagnostics";
+      }
+      {
+        mode = "n";
+        key = "<leader>xX";
+        action = "<cmd>Trouble diagnostics toggle filter.buf=0<cr>";
+        options.desc = "Buffer diagnostics";
+      }
+      {
+        mode = "n";
+        key = "<leader>xq";
+        action = "<cmd>Trouble qflist toggle<cr>";
+        options.desc = "Quickfix list";
+      }
+      {
+        mode = "n";
+        key = "<leader>xl";
+        action = "<cmd>Trouble loclist toggle<cr>";
+        options.desc = "Location list";
+      }
+      {
+        mode = "n";
+        key = "[t";
+        action.__raw = "function() require('todo-comments').jump_prev() end";
+        options.desc = "Previous TODO";
+      }
+      {
+        mode = "n";
+        key = "]t";
+        action.__raw = "function() require('todo-comments').jump_next() end";
+        options.desc = "Next TODO";
+      }
+      {
+        mode = "n";
+        key = "<leader>st";
+        action = "<cmd>TodoTelescope<cr>";
+        options.desc = "Search TODOs";
       }
       {
         mode = "n";
@@ -464,6 +748,7 @@
 
     # 把外部依赖的 CLI (formatter/linter) 一起进 PATH
     extraPackages = with pkgs; [
+      ripgrep
       nixfmt # 即原 nixfmt-rfc-style,顶层 alias 已统一
       stylua
       shfmt
