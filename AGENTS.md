@@ -34,8 +34,8 @@ reintroduce Home Manager or add another application-module abstraction layer.
 - `nh os build .` builds the system closure without activating it.
 - `nh os switch .` builds and activates the configuration; review the diff
   before confirming privileged changes.
-- `nix build .#nixosConfigurations.present-pc.pkgs.codex` builds Codex from the
-  host package set.
+- `nix build ".#nixosConfigurations.$(hostname).pkgs.codex"` builds Codex from
+  the current host package set when explicitly requested.
 - `nixfmt <file.nix>` formats Nix sources using RFC-style formatting.
 - `./scripts/bump-release.sh 26.11` updates the coordinated stable release
   inputs and lock file.
@@ -47,7 +47,8 @@ Initialize `nur/` with `git submodule update --init --recursive`. Commit and
 push package changes in that independent repository before updating the parent
 gitlink. The main flake enables `inputs.self.submodules` and imports the local
 overlay with the host's stable package set; it must not fetch another NUR's
-package outputs. Run `nur/scripts/check.sh` for the independent checks.
+package outputs. Independent NUR validation follows the evaluation-only default
+below; run its build checks only when explicitly requested.
 
 ## Coding Style & Naming Conventions
 
@@ -67,12 +68,17 @@ run through flake checks. The frozen per-host allowlists under
 `assets/home-manager-files/` describe the previous HM deployment; do not
 regenerate them from the new Hjem configuration. A new host without HM history
 still needs a version 1 manifest with an empty `targets` list, since
-`modules/user/home.nix` selects the manifest by hostname. Every change must pass
-`./scripts/check.sh`; package changes should also pass their targeted
-`nix build`. For changes affecting services, graphics, boot, or the desktop,
-build the affected host with `./scripts/check.sh system <hostname>` before
-switching. For shared desktop or user-environment changes, build both hosts.
-Do not commit generated `result` links.
+`modules/user/home.nix` selects the manifest by hostname.
+
+Finish all requested edits before running validation; avoid repeated checks
+during implementation. Every change must pass `./scripts/check.sh`, which is
+evaluation only. Do not run build validation unless the user explicitly requests
+it. This includes `nix build`, `nh os build`, `nix flake check` without
+`--no-build`, and the `checks`, `packages`, `system`, or `all` modes of
+`scripts/check.sh`. When build validation is explicitly requested, determine the
+current host with `hostname` and build only that host. Shared desktop or user
+environment changes do not authorize building both hosts. Do not commit
+generated `result` links.
 
 `tests/check-greeter.sh` exercises the real launcher in a private headless
 Wayland display. Keep its explicit Quickshell/Niri selection independent of
