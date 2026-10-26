@@ -5,6 +5,16 @@
 }:
 
 let
+  lspKeymap = key: action: desc: {
+    mode = "n";
+    inherit key;
+    action.__raw = "vim.lsp.buf.${action}";
+    options = {
+      inherit desc;
+      silent = true;
+    };
+  };
+
   # 精确文件名和自定义模式先于 Snacks 的通用规则匹配，也需要检查大小。
   logFiletype.__raw = ''
     function(path, buf)
@@ -238,6 +248,16 @@ in
         enable = true;
         settings = {
           preset = "modern";
+          triggers = [
+            {
+              __unkeyed-1 = "<auto>";
+              mode = "nxso";
+            }
+            {
+              __unkeyed-1 = "g";
+              mode = "n";
+            }
+          ];
           # 分组名称无法从各快捷键的 desc 自动推导。
           spec = [
             {
@@ -266,6 +286,11 @@ in
               icon = "󰊢";
             }
             {
+              __unkeyed-1 = "<leader>l";
+              group = "LSP";
+              icon = "";
+            }
+            {
               __unkeyed-1 = "<leader>m";
               group = "Markdown";
               icon = "";
@@ -289,6 +314,10 @@ in
               __unkeyed-1 = "<leader>x";
               group = "Diagnostics";
               icon = "󱖫";
+            }
+            {
+              __unkeyed-1 = "g";
+              group = "Goto";
             }
             {
               __unkeyed-1 = "gs";
@@ -395,16 +424,6 @@ in
           marksman.enable = true;
         };
         keymaps = {
-          lspBuf = {
-            "gd" = "definition";
-            "gr" = "references";
-            "gI" = "implementation";
-            "gy" = "type_definition";
-            "K" = "hover";
-            "<leader>cr" = "rename";
-            "<leader>ca" = "code_action";
-            "<leader>cf" = "format";
-          };
           diagnostic = {
             "[d" = "goto_prev";
             "]d" = "goto_next";
@@ -511,6 +530,14 @@ in
       };
     };
 
+    extraConfigLuaPre = ''
+      -- LSP 菜单统一放到 <leader>l，移除会让 gr 等待后续按键的默认映射。
+      for _, key in ipairs({ "gra", "gri", "grn", "grr", "grt", "grx" }) do
+        pcall(vim.keymap.del, "n", key)
+      end
+      pcall(vim.keymap.del, "x", "gra")
+    '';
+
     extraConfigLuaPost = ''
       Snacks.toggle({
         name = "Autoformat (global)",
@@ -529,6 +556,39 @@ in
 
     # 来自 LazyVim 风格的核心键位 (which-key 会自动捡)
     keymaps = [
+      # 启动时即覆盖原生 gd / gi，避免 LSP 附着前退回局部声明 / 上次插入位置。
+      (lspKeymap "gd" "definition" "Goto definition")
+      (lspKeymap "gi" "implementation" "Goto implementation")
+      (lspKeymap "gr" "references" "References")
+      (lspKeymap "gy" "type_definition" "Goto type definition")
+      (lspKeymap "K" "hover" "Hover documentation")
+      (lspKeymap "<leader>ld" "definition" "Goto definition")
+      (lspKeymap "<leader>lD" "declaration" "Goto declaration")
+      (lspKeymap "<leader>li" "implementation" "Goto implementation")
+      (lspKeymap "<leader>lr" "references" "References")
+      (lspKeymap "<leader>lt" "type_definition" "Goto type definition")
+      (lspKeymap "<leader>lh" "hover" "Hover documentation")
+      (lspKeymap "<leader>ln" "rename" "Rename symbol")
+      (lspKeymap "<leader>lf" "format" "Format buffer")
+      (lspKeymap "<leader>ls" "signature_help" "Signature help")
+      (lspKeymap "<leader>cr" "rename" "Rename symbol")
+      (lspKeymap "<leader>ca" "code_action" "Code action")
+      (lspKeymap "<leader>cf" "format" "Format buffer")
+      {
+        mode = [
+          "n"
+          "x"
+        ];
+        key = "<leader>la";
+        action.__raw = "vim.lsp.buf.code_action";
+        options.desc = "Code action";
+      }
+      {
+        mode = "n";
+        key = "<leader>lx";
+        action.__raw = "vim.lsp.codelens.run";
+        options.desc = "Run code lens";
+      }
       {
         mode = "n";
         key = "<leader>w";
@@ -713,6 +773,49 @@ in
         key = "<S-l>";
         action = "<cmd>BufferLineCycleNext<cr>";
         options.desc = "Next buffer";
+      }
+      # 分屏沿用 splitbelow / splitright，保留 <leader>w 的保存行为。
+      {
+        mode = "n";
+        key = "<leader>-";
+        action = "<cmd>split<cr>";
+        options.desc = "Split window below";
+      }
+      {
+        mode = "n";
+        key = "<leader>|";
+        action = "<cmd>vsplit<cr>";
+        options.desc = "Split window right";
+      }
+      {
+        mode = "n";
+        key = "<leader>=";
+        action = "<C-w>=";
+        options.desc = "Equalize window sizes";
+      }
+      {
+        mode = "n";
+        key = "<C-Up>";
+        action = "<cmd>resize +2<cr>";
+        options.desc = "Increase window height";
+      }
+      {
+        mode = "n";
+        key = "<C-Down>";
+        action = "<cmd>resize -2<cr>";
+        options.desc = "Decrease window height";
+      }
+      {
+        mode = "n";
+        key = "<C-Left>";
+        action = "<cmd>vertical resize -2<cr>";
+        options.desc = "Decrease window width";
+      }
+      {
+        mode = "n";
+        key = "<C-Right>";
+        action = "<cmd>vertical resize +2<cr>";
+        options.desc = "Increase window width";
       }
       {
         mode = "n";

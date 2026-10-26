@@ -19,9 +19,11 @@
 - **中文与外观**：Fcitx5 + Rime、雾凇词库与小鹤双拼；HarmonyOS Sans SC 界面字体、FiraCode Nerd Font Mono 等宽字体及 Noto CJK 中文回退。
 - **终端**：Kitty、Fish、Starship、Atuin、fzf、zoxide、bat、eza、Yazi、lazygit，以及 nix-index/comma 命令查找。
 - **开发**：VS Code、Android Studio、Git、direnv/nix-direnv，以及 Rust、Node.js、Java、Python、C/C++、Go、Zig、Haskell、Typst 等工具；项目自己的 devShell 与 lock 由各项目维护。
-- **编辑器**：Nixvim 提供语言服务、补全与格式化、日志高亮、Markdown 浏览器预览、Git 改动与 blame、跨文件搜索替换、会话恢复、标记显示、大文件模式和浮动终端；which-key 提供英文分组与图标提示。
+- **编辑器**：Nixvim 提供语言服务、补全与格式化、日志高亮、Markdown 浏览器预览、Git 改动与 blame、跨文件搜索替换、会话恢复、标记显示、大文件模式和浮动终端；普通模式下，`Space -` 向下分屏、`Space |` 向右分屏、`Space =` 均分窗口，`Ctrl+h/j/k/l` 切换窗口、`Ctrl+方向键` 调整大小，`Ctrl+w c` 关闭当前窗口；which-key 提供英文分组与图标提示。
 - **应用**：Chromium、Brave、WPS、QQ、飞书、百度网盘、ChatGPT/Codex 桌面入口与独立 Codex CLI；Dolphin、Ark、OBS、ffmpeg、mpv、图像查看与截图工具。
 - **系统**：CachyOS LTO 内核、UEFI GRUB、zram 与磁盘 swap、PipeWire、NetworkManager、蓝牙、Tailscale、OpenSSH、Docker、nix-ld 和 AppImage 支持。
+
+Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引用、`gy` 跳转类型定义；`Space l` 是 LSP 菜单，包含跳转、重命名、代码操作和格式化等功能。快捷键及 which-key 提示在启动时注册，实际跳转需要当前文件连接支持对应功能的语言服务。Neovim 默认的 `gr` 子菜单已移除，避免与 `gr` 查找引用冲突。
 
 两台主机共用 [nix-cachyos-kernel release 分支](https://github.com/xddxdd/nix-cachyos-kernel/tree/release)的 x86-64-v3 内核，私人主机另外启用 `scx_lavd`。版本、源码与工具链随 flake 输入锁定；缓存配置见 [modules/nix.nix](modules/nix.nix)。
 
