@@ -66,7 +66,8 @@ Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引�
 | niri 窗口、输入与 DMS 集成 | [modules/user/niri.nix](modules/user/niri.nix) |
 | 终端、shell 与文件管理器 | [wrappers.nix](modules/user/wrappers.nix)、[shell.nix](modules/user/shell.nix)、[yazi.nix](modules/user/yazi.nix) |
 | Nixvim 插件、行为与快捷键 | [modules/user/nvim.nix](modules/user/nvim.nix) |
-| 外观、默认应用、Rime 与字体 | [desktop.nix](modules/user/desktop.nix)、[fonts.nix](modules/user/fonts.nix) |
+| Fcitx5、Rime 方案与词库 | [input-method.nix](modules/input-method.nix)、[用户输入法配置](modules/user/input-method.nix) |
+| 外观、默认应用与字体 | [desktop.nix](modules/user/desktop.nix)、[fonts.nix](modules/user/fonts.nix) |
 | 用户文件与 XDG 目录 | [modules/user/home.nix](modules/user/home.nix) |
 | 自定义包与包集选择 | [nur/](nur/)、[overlays/default.nix](overlays/default.nix) |
 
@@ -84,6 +85,8 @@ nh os switch .                # 在目标主机激活配置
 ```
 
 已有 checkout 使用 `git submodule update --init --recursive` 初始化 `nur/`。现有主机的 hostname 与 flake 输出同名，`nh` 可选择本机配置。Git 形式的 flake 只包含已跟踪文件；[scripts/check.sh](scripts/check.sh) 使用 `path:` 输入，可以检查尚未暂存的新增文件。
+
+Fcitx5 默认选择 Rime，使用小鹤双拼、简体和锁定版本的雾凇词库，并通过 `rime-moegirl` 补充萌娘百科词条。萌娘词条最低词频设为 10,000，避免上游缺少词频时排在候选末尾；更高的上游词频保持不变。萌娘词库包、用户目录中的词库链接与导入关系一并声明，使 switch 前启动的 Fcitx5 也能找到新增词库，并保留原有的 `rime_ice` 学习词库名称。Hjem 管理用户 profile、Rime 补丁和词库入口；激活前自动将冲突旧文件保存到 `~/.local/state/fcitx5/config-handover-*/`，激活后通知当前 Fcitx5 会话重新部署。`rime_ice.userdb`、词频、同步数据和编译缓存保持可写，不纳入 Nix store。
 
 | 命令 | 用途 |
 | --- | --- |
