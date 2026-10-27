@@ -156,6 +156,13 @@
           touch $out
         '';
 
+        fcitx5-migration = pkgs.runCommand "check-fcitx5-migration" { } ''
+          export PYTHONDONTWRITEBYTECODE=1
+          export FCITX5_MIGRATION_MODULE=${./scripts/migrate-fcitx5.py}
+          ${pkgs.python3}/bin/python3 ${./tests/test_fcitx5_migration.py}
+          touch $out
+        '';
+
         formatting = pkgs.runCommand "check-nix-formatting" { } ''
           ${nixpkgs.lib.concatMapStringsSep "\n" (
             path: "${pkgs.nixfmt}/bin/nixfmt --check ${path}"

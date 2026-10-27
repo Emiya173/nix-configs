@@ -6,6 +6,22 @@
     type = "fcitx5";
     fcitx5 = {
       waylandFrontend = true;
+      settings.inputMethod = {
+        "Groups/0" = {
+          Name = "默认";
+          "Default Layout" = "us";
+          DefaultIM = "rime";
+        };
+        "Groups/0/Items/0" = {
+          Name = "keyboard-us";
+          Layout = "";
+        };
+        "Groups/0/Items/1" = {
+          Name = "rime";
+          Layout = "";
+        };
+        GroupOrder."0" = "默认";
+      };
       # fcitx5-chinese-addons / configtool 顶层都已迁到 qt6Packages 命名空间
       addons = with pkgs; [
         # rime-ice (雾凇拼音) 词库经 rimeDataPkgs 声明式注入,不再手动 clone。

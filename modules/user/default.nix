@@ -10,6 +10,7 @@
     ./wrappers.nix
     ./niri.nix
     ./desktop.nix
+    ./input-method.nix
     ./fonts.nix
     ./home.nix
   ];
