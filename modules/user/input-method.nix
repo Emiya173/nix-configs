@@ -7,11 +7,29 @@
 }:
 let
   user = config.hjem.users.${userName};
+  moegirlMinWeight = 10000;
+  # 上游萌娘词条没有词频列，默认零权重会沉底；补足最低词频并保留更高权重。
+  moegirlDictionary = pkgs.runCommand "moegirl.dict.yaml" { } ''
+    ${pkgs.gawk}/bin/awk -v min_weight=${toString moegirlMinWeight} '
+      BEGIN { FS = OFS = "\t" }
+      /^\.\.\.$/ { entries = 1; print; next }
+      entries && NF >= 2 && $0 !~ /^#/ {
+        if (NF < 3 || $3 + 0 < min_weight) $3 = min_weight
+      }
+      { print }
+    ' ${pkgs.rime-moegirl}/share/rime-data/moegirl.dict.yaml > "$out"
+  '';
+  # 在上游词表头追加导入，保留雾凇自带词条和 rime_ice 用户词库名称。
+  rimeDictionary = pkgs.runCommand "rime_ice.dict.yaml" { } ''
+    ${pkgs.gnused}/bin/sed '/^\.\.\.$/i\  - moegirl' \
+      ${pkgs.rime-ice}/share/rime-data/rime_ice.dict.yaml > "$out"
+  '';
   managedFiles = [
     user.xdg.config.files."fcitx5/profile"
     user.xdg.data.files."fcitx5/rime/default.custom.yaml"
     user.xdg.data.files."fcitx5/rime/double_pinyin_flypy.custom.yaml"
     user.xdg.data.files."fcitx5/rime/rime_ice.dict.yaml"
+    user.xdg.data.files."fcitx5/rime/moegirl.dict.yaml"
   ];
   handoverManifest = pkgs.writeText "fcitx5-managed-files.json" (
     builtins.toJSON (map (file: { inherit (file) source target; }) managedFiles)
@@ -37,7 +55,9 @@ in
           "switches/@2/reset": 0
       '';
       # 用户目录中的同名旧词库会遮蔽共享数据，因此也由 Hjem 固定到锁定版本。
-      "fcitx5/rime/rime_ice.dict.yaml".source = "${pkgs.rime-ice}/share/rime-data/rime_ice.dict.yaml";
+      "fcitx5/rime/rime_ice.dict.yaml".source = rimeDictionary;
+      # switch 不替换正在运行的 Fcitx5；旧进程的共享目录没有新增的萌娘词库。
+      "fcitx5/rime/moegirl.dict.yaml".source = moegirlDictionary;
     };
   };
 

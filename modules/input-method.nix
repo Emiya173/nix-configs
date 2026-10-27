@@ -30,6 +30,7 @@
         (fcitx5-rime.override {
           rimeDataPkgs = [
             rime-ice
+            rime-moegirl
             rime-data
           ];
         })
