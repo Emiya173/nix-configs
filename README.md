@@ -55,9 +55,11 @@ Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引�
 
 配置优先使用原生 NixOS 模块；Kitty、Fastfetch、btop 和 niri 使用 nix-wrapper-modules；Hjem 管理剩余固定位置的文件链接。DMS 设置、GTK CSS、Qt 配色和 Kitty 动态主题保持可写。个人 Git identity 位于用户配置中，共享行为由 [modules/user/git.nix](modules/user/git.nix) 管理。
 
-稳定包集在 flake 中配置一次，由两台主机、Nixvim、检查和开发环境共享。[overlays/default.nix](overlays/default.nix) 中的 `pkgs.unstable` 只提供 Atuin、DAE、Hysteria 和 LocalSend，使用 Multiverse 的 `fast.version` 直接引用缓存输出，避免求值整套 unstable，也不用解析完整的修订历史。`unstableVersions` 固定这些包的版本，`unstableRevision` 固定 QQ 配方的源码提交；更新 `multiverse` 输入只更新索引，同版本的缓存构建可能随之变化。升级应用时，修改对应版本或源码提交，并运行 `./scripts/check.sh`。
+稳定包集在 flake 中配置一次，由两台主机、Nixvim、检查和开发环境共享。[overlays/default.nix](overlays/default.nix) 中的 `pkgs.unstable` 只提供 Atuin、DAE、Hysteria 和 LocalSend，使用 Multiverse 的 `fast.version` 直接引用缓存输出，避免求值整套 unstable，也不用解析完整的修订历史。`unstableVersions` 固定这些包的版本；更新 `multiverse` 输入只更新索引，同版本的缓存构建可能随之变化。升级应用时，修改对应版本并运行 `./scripts/check.sh`。
 
-fast 包依赖上游二进制缓存，没有可供覆盖或从源码重建的 `drvPath`；索引缺失时直接报错，不会静默退回慢速求值。需要 `.override` 或完整派生时，应显式选择 Multiverse 的普通接口。首次使用需要下载固定哈希的索引，求值时也可能补齐缓存输出。QQ 保持同一提交的版本和 Wayland 参数，通过 `pkgs.qq` 使用上游配方与稳定依赖，不加载 unstable 包集；CachyOS 继续保留其独立工具链和缓存。
+fast 包依赖上游二进制缓存，没有可供覆盖或从源码重建的 `drvPath`；索引缺失时直接报错，不会静默退回慢速求值。需要 `.override` 或完整派生时，应显式选择 Multiverse 的普通接口。首次使用需要下载固定哈希的索引，求值时也可能补齐缓存输出。QQ 的配方、源码哈希和更新脚本由 [nur/pkgs/qq](nur/pkgs/qq/) 维护，使用稳定依赖，系统 overlay 保留 Wayland 参数，不再为 QQ 下载 unstable 源码树；CachyOS 继续保留其独立工具链和缓存。
+
+DMS greeter 复用桌面 DMS 包。DSH 直接读取 NUR 中预生成的 `build-lock.json`，更新脚本负责同步，避免求值期间构建锁文件转换器；生成结果的一致性检查保留在 NUR 的 flake checks 中。
 
 ### 修改入口
 

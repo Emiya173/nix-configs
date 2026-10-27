@@ -5,9 +5,7 @@ final: prev:
 let
   inherit (prev.stdenv.hostPlatform) system;
   multiverse = inputs.multiverse.multiverse.${system};
-  # Only fetch QQ's recipe from this tree; do not import its package set.
-  unstableRevision = "02c087f3fe673c9e317f206a627cb6b910336dbe";
-  unstableSource = multiverse.flakeAt unstableRevision;
+  nurPackages = import ../nur/overlay.nix final prev;
   # Exact versions avoid parsing the revision history required by fast.at.
   unstableVersions = {
     atuin = "18.23.0";
@@ -16,11 +14,9 @@ let
     localsend = "1.18.0";
   };
 in
-(import ../nur/overlay.nix final prev)
+nurPackages
 // {
-  # QQ is unfree and needs custom flags, so use its upstream recipe with the
-  # existing stable dependencies rather than evaluating another package set.
-  qq = final.callPackage "${unstableSource}/pkgs/by-name/qq/qq/package.nix" {
+  qq = nurPackages.qq.override {
     # GUI launchers may not inherit NIXOS_OZONE_WL from the niri session.
     commandLineArgs = prev.lib.escapeShellArgs [
       "--ozone-platform=wayland"

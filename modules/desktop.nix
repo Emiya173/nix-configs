@@ -2,7 +2,6 @@
   config,
   pkgs,
   lib,
-  inputs,
   displayConfig,
   ...
 }:
@@ -69,7 +68,7 @@ in
 
   services.displayManager.dms-greeter = {
     enable = true;
-    package = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    package = config.programs.dank-material-shell.package;
     quickshell.package = greeterQuickshell;
     configFiles = [ "${greeterSession}/session.json" ];
     compositor = {

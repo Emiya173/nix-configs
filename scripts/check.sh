@@ -53,15 +53,16 @@ case "$mode" in
 esac
 
 check_eval() {
-  # DSH converts its pnpm lockfile during evaluation. Realize that dependency
-  # before flake check evaluates outputs with a read-only store.
+  local -a eval_flags=("${NIX_FLAGS[@]}" --option allow-import-from-derivation false)
+  # Multiverse outputs may need substitution before flake check opens a
+  # read-only store. DSH's dependency lock is already a source JSON file.
   # One evaluator lets both hosts share the configured package set.
   echo "==> Evaluate complete hosts"
-  nix "${NIX_FLAGS[@]}" eval --no-update-lock-file --json \
+  nix "${eval_flags[@]}" eval --no-update-lock-file --json \
     "$FLAKE#nixosConfigurations" \
     --apply 'hosts: builtins.mapAttrs (_: host: host.config.system.build.toplevel.drvPath) hosts'
   echo "==> Evaluate locked flake outputs"
-  nix "${NIX_FLAGS[@]}" flake check "$FLAKE" --no-build --no-update-lock-file
+  nix "${eval_flags[@]}" flake check "$FLAKE" --no-build --no-update-lock-file
 }
 
 check_builds() {
