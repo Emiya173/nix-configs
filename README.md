@@ -2,7 +2,7 @@
 
 使用 Flake、NixOS 模块、nix-wrapper-modules 和 Hjem 管理私人电脑与工作机，统一 **niri + DankMaterialShell（DMS）** 桌面、中文输入、终端和开发工具，并按主机选择硬件、网络服务与应用。
 
-当前支持 `x86_64-linux`。基础包集为 `nixos-26.05`，部分应用显式使用 `nixpkgs-unstable`；输入的具体提交由 [flake.lock](flake.lock) 锁定。
+当前支持 `x86_64-linux`。基础包集为 `nixos-26.05`，部分应用通过 [nixpkgs-multiverse](https://github.com/fzakaria/nixpkgs-multiverse) 使用 unstable 二进制；输入的具体提交由 [flake.lock](flake.lock) 锁定。
 
 ## 主机与功能
 
@@ -43,7 +43,7 @@ Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引�
 ├── modules/
 │   ├── user/                   # 共享用户环境，入口为 default.nix
 │   └── workstation/            # 工作机网络及 DAE 服务
-├── overlays/                   # 包集覆盖和 unstable 入口
+├── overlays/                   # 包集覆盖和 Multiverse 精选包入口
 ├── nur/                        # 独立 Git submodule：软件包、补丁与测试
 ├── packages/                   # 系统专用订阅中继和工作脚本
 ├── assets/                     # 静态资源
@@ -54,6 +54,10 @@ Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引�
 [flake.nix](flake.nix) 中的 `mkHost` 加载主机系统入口和共享用户环境，通过 `specialArgs` 传入主机路径、显示器与功能选择。主机专属用户设置从其系统入口显式导入。
 
 配置优先使用原生 NixOS 模块；Kitty、Fastfetch、btop 和 niri 使用 nix-wrapper-modules；Hjem 管理剩余固定位置的文件链接。DMS 设置、GTK CSS、Qt 配色和 Kitty 动态主题保持可写。个人 Git identity 位于用户配置中，共享行为由 [modules/user/git.nix](modules/user/git.nix) 管理。
+
+稳定包集在 flake 中配置一次，由两台主机、Nixvim、检查和开发环境共享。[overlays/default.nix](overlays/default.nix) 中的 `pkgs.unstable` 只提供 Atuin、DAE、Hysteria 和 LocalSend，使用 Multiverse 的 `fast.version` 直接引用缓存输出，避免求值整套 unstable，也不用解析完整的修订历史。`unstableVersions` 固定这些包的版本，`unstableRevision` 固定 QQ 配方的源码提交；更新 `multiverse` 输入只更新索引，同版本的缓存构建可能随之变化。升级应用时，修改对应版本或源码提交，并运行 `./scripts/check.sh`。
+
+fast 包依赖上游二进制缓存，没有可供覆盖或从源码重建的 `drvPath`；索引缺失时直接报错，不会静默退回慢速求值。需要 `.override` 或完整派生时，应显式选择 Multiverse 的普通接口。首次使用需要下载固定哈希的索引，求值时也可能补齐缓存输出。QQ 保持同一提交的版本和 Wayland 参数，通过 `pkgs.qq` 使用上游配方与稳定依赖，不加载 unstable 包集；CachyOS 继续保留其独立工具链和缓存。
 
 ### 修改入口
 
@@ -90,7 +94,7 @@ Fcitx5 默认选择 Rime，使用小鹤双拼、简体和锁定版本的雾凇�
 
 | 命令 | 用途 |
 | --- | --- |
-| `./scripts/check.sh` | 求值 flake 输出与两台主机的完整配置，不构建系统 |
+| `./scripts/check.sh` | 在同一求值进程中检查两台主机的完整配置，再检查 flake 输出，不构建系统 |
 | `./scripts/check.sh checks` | 构建格式、脚本及自动化测试检查 |
 | `./scripts/check.sh packages [包名…]` | 构建全部或指定维护包 |
 | `./scripts/check.sh system <hostname>` | 构建指定主机的完整系统，不激活 |

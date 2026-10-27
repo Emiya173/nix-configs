@@ -9,9 +9,8 @@
     # (flake input url 必须是字面量,版本号没法在 Nix 层单点定义)
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
-    # unstable 精选通道: DAE/Hysteria/QQ 等按需显式使用;
-    # 同时以 pkgs.unstable.* 暴露整棵,临时要新包时写 unstable.foo 即可
-    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Selected unstable binaries come from the pinned store-path index.
+    multiverse.url = "github:fzakaria/nixpkgs-multiverse";
 
     # Keep its own pinned nixpkgs so kernel patches and binary cache stay aligned.
     nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
@@ -72,6 +71,7 @@
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = {
+            sharedPkgs = pkgs;
             inherit
               inputs
               userName
@@ -107,7 +107,7 @@
     in
     {
       packages.${system} = {
-        qq = pkgs.unstable.qq;
+        inherit (pkgs) qq;
         inherit (pkgs)
           codex
           baidunetdisk

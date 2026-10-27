@@ -55,13 +55,11 @@ esac
 check_eval() {
   # DSH converts its pnpm lockfile during evaluation. Realize that dependency
   # before flake check evaluates outputs with a read-only store.
-  local target
-  for target in present-pc arch-pc; do
-    echo "==> Evaluate complete host: $target"
-    nix "${NIX_FLAGS[@]}" eval --no-update-lock-file \
-      "$FLAKE#nixosConfigurations.$target.config.system.build.toplevel.drvPath" --raw
-    echo
-  done
+  # One evaluator lets both hosts share the configured package set.
+  echo "==> Evaluate complete hosts"
+  nix "${NIX_FLAGS[@]}" eval --no-update-lock-file --json \
+    "$FLAKE#nixosConfigurations" \
+    --apply 'hosts: builtins.mapAttrs (_: host: host.config.system.build.toplevel.drvPath) hosts'
   echo "==> Evaluate locked flake outputs"
   nix "${NIX_FLAGS[@]}" flake check "$FLAKE" --no-build --no-update-lock-file
 }

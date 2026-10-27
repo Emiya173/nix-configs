@@ -56,8 +56,6 @@
     # gc 由上面 programs.nh.clean 定时器负责 (nh 按 generation 数+时间双条件保留)
   };
 
-  nixpkgs.config.allowUnfree = true;
-
   # 基于 channel 的实现,flake 系统上数据库是空的,只会误报"找不到命令"
   programs.command-not-found.enable = false;
 

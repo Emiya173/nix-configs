@@ -244,7 +244,7 @@ in
         ];
       })
       wpsoffice-cn
-      unstable.qq
+      qq
 
       # feishu 自带 chromium (Lark): 启动链 (bytedance-feishu -> feishu ->
       # .feishu-wrapped) 不读任何 flags 文件 (feishu-flags.conf 是 Arch launcher

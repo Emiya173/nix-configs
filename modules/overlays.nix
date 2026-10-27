@@ -1,7 +1,6 @@
-{ inputs, ... }:
+{ sharedPkgs, ... }:
 
 {
-  nixpkgs.overlays = [
-    (import ../overlays/default.nix { inherit inputs; })
-  ];
+  # Reuse the flake's configured package set across hosts and checks.
+  nixpkgs.pkgs = sharedPkgs;
 }
