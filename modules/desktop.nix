@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  inputs,
   displayConfig,
   ...
 }:
@@ -17,7 +18,7 @@ let
       wallpaperPath = "${greeterWallpaper}";
     }
   );
-  # 原生 greeter 模块直接启动 Quickshell，需补齐 DMS CLI 包装器提供的 Qt 路径。
+  # 独立 greeter 直接启动 Quickshell，需显式提供其 QML 和图像插件依赖。
   greeterQtPackages = with pkgs.kdePackages; [
     kirigami.unwrapped
     sonnet
@@ -48,17 +49,17 @@ let
       '';
   greeter = config.services.displayManager.dms-greeter;
   greeterLauncher = pkgs.writeShellScript "dms-greeter-start" ''
-    # The upstream launcher appends these to PATH. A system-wide qs installed
-    # by the desktop module would then shadow the wrapper's Qt dependencies.
+    # Keep the greeter's Qt wrapper ahead of the desktop's system-wide qs.
     export PATH=${
       lib.makeBinPath [
         greeterQuickshell
         pkgs.niri
+        pkgs.glib
+        greeter.package
       ]
     }:"$PATH"
-    exec ${lib.getExe pkgs.bash} ${greeter.package}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter \
+    exec ${lib.getExe greeter.package} \
       --cache-dir /var/lib/dms-greeter --command niri \
-      -p ${greeter.package}/share/quickshell/dms \
       -C ${pkgs.writeText "dmsgreeter-compositor-config" greeter.compositor.customConfig} "$@"
   '';
 in
@@ -68,7 +69,8 @@ in
 
   services.displayManager.dms-greeter = {
     enable = true;
-    package = config.programs.dank-material-shell.package;
+    # DMS 2 split the greeter into its own package; keep the shared stable pkgs.
+    package = inputs.dms-greeter.lib.mkDmsGreeter pkgs;
     quickshell.package = greeterQuickshell;
     configFiles = [ "${greeterSession}/session.json" ];
     compositor = {

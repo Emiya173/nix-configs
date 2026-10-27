@@ -8,6 +8,11 @@
 }:
 
 {
+  # Pipe separators also fall back on network errors, including EOF/timeouts.
+  environment.sessionVariables.GOPROXY = "https://goproxy.cn|https://proxy.golang.org|direct";
+  # Fixed-output Go dependency fetches inherit the daemon's environment.
+  systemd.services.nix-daemon.environment.GOPROXY = config.environment.sessionVariables.GOPROXY;
+
   # nh: NH_FLAKE 全局生效 (nos/nob 不用再带路径),clean 定时器替代 nix.gc
   programs.nh = {
     enable = true;

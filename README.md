@@ -59,7 +59,7 @@ Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引�
 
 fast 包依赖上游二进制缓存，没有可供覆盖或从源码重建的 `drvPath`；索引缺失时直接报错，不会静默退回慢速求值。需要 `.override` 或完整派生时，应显式选择 Multiverse 的普通接口。首次使用需要下载固定哈希的索引，求值时也可能补齐缓存输出。QQ 的配方、源码哈希和更新脚本由 [nur/pkgs/qq](nur/pkgs/qq/) 维护，使用稳定依赖，系统 overlay 保留 Wayland 参数，不再为 QQ 下载 unstable 源码树；CachyOS 继续保留其独立工具链和缓存。
 
-DMS greeter 复用桌面 DMS 包。DSH 直接读取 NUR 中预生成的 `build-lock.json`，更新脚本负责同步，避免求值期间构建锁文件转换器；生成结果的一致性检查保留在 NUR 的 flake checks 中。
+DMS 2 的登录器已拆分为独立的官方 `dux-greeter` 输入，通过共享稳定包集构建，沿用原生 NixOS greeter 模块的用户、缓存目录和壁纸配置。DSH 直接读取 NUR 中预生成的 `build-lock.json`，更新脚本负责同步，避免求值期间构建锁文件转换器；生成结果的一致性检查保留在 NUR 的 flake checks 中。
 
 ### 修改入口
 
