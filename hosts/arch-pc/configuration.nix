@@ -31,7 +31,10 @@
   networking.resolvconf.dnsExtensionMechanism = false;
   # Share a manually started ADB server and scrcpy forwards on the wired LAN.
   networking.firewall.interfaces.enp1s0 = {
-    allowedTCPPorts = [ 5037 ];
+    allowedTCPPorts = [
+      5037
+      19320
+    ];
     allowedTCPPortRanges = [
       {
         from = 27183;
