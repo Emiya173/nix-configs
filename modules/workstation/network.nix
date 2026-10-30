@@ -79,8 +79,25 @@ in
     wants = [ "network-online.target" ];
     after = [ "network-online.target" ];
     startLimitIntervalSec = 0;
+    preStart = ''
+      set -euo pipefail
+      # DHCP may move this interface to another subnet. Ignore VPN defaults
+      # and any old VPS-specific route when choosing the physical gateway.
+      if ! gateway="$(
+        ${pkgs.iproute2}/bin/ip -j -4 route show default dev enp1s0 |
+          ${pkgs.jq}/bin/jq -er '
+            map(select(.gateway != null))
+            | min_by(.metric // 0)
+            | .gateway // empty
+          '
+      )"; then
+        echo 'No IPv4 default gateway available on enp1s0' >&2
+        exit 1
+      fi
+      ${pkgs.iproute2}/bin/ip -4 route replace 45.194.21.135/32 \
+        via "$gateway" dev enp1s0 mtu 1500
+    '';
     serviceConfig = {
-      ExecStartPre = "${pkgs.iproute2}/bin/ip route replace 45.194.21.135 via 192.168.11.254 dev enp1s0 mtu 1500";
       ExecStart = "${lib.getExe pkgs.unstable.hysteria} client -c /etc/hysteria/client.yaml";
       Restart = "on-failure";
       RestartSec = 5;

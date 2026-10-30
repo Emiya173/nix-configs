@@ -18,6 +18,7 @@
 - 增加 Beyond Compare、钉钉、腾讯会议、LocalSend、百度网盘与当前 Linux ChatGPT 桌面包；同一个桌面客户端包含 Codex 界面，并提供单独 Codex 桌面入口。CLI `codex` 继续独立提供。登录、界面、会议共享须在目标图形环境验收。
 - 保留 OBS、ffmpeg-full、mpv、imv/gthumb/Satty/hyprpicker。DMS 已内建剪贴板粘贴，所选脚本/快捷键无 ydotool 调用，不迁移旧 ydotool 服务、用户组或专属配置；keyd 继续提供轻点 Super 启动器。移除 claude-code overlay 入口。Toolbox 应用、专属配置和 scripts PATH 不迁移，复用 home 时屏蔽旧菜单和自启动入口。
 - 保留 NetworkManager 持久连接、DAE、EasyConnect、Hysteria/反向 SSH。WireGuard/wstunnel 退役，不迁移。Hysteria 反向 SSH 15023 保留，VNC 15903 由独立的 hysteria-vnc-tunnel.service 提供。该次迁移的 wayvnc 用户服务由 Home Manager 提供，随图形会话启动，沿用 0.0.0.0:5900；不增加防火墙放行，远程可通过 SSH 隧道访问。
+- Hysteria 每次启动前从 `enp1s0` 的 IPv4 默认路由读取网关，多条路由时选择 metric 最低的一条，为 VPS `45.194.21.135/32` 设置 MTU 1500 的专用路由。网关尚未就绪时明确失败，由既有的 5 秒重启机制重试，不再固定局域网网段。
 - 工作机关闭 resolvconf 的 EDNS0 扩展：当前 EasyConnect DNS 对携带 OPT 的请求返回空答案，沿用迁移前 Arch 的普通 DNS 行为。
 - DAE 使用已锁定 `nixpkgs-unstable` 中的包，不单独固定版本。工作配置通过运行时 credential 读取，不将含节点凭据的配置嵌入 Nix。
 - EasyConnect 使用原 Compose 工作目录与系统 Docker socket，等待 VPN DNS 监听后初始化转发；DNS 以逐报文方式从 5353 转发至 Sangfor 5373 端口，子进程空闲 5 秒退出；从镜像重新创建容器，不要求搬迁旧匿名卷。旧 `ubuntu:doc_linux_60121` 镜像与 `aibox_build` 容器不迁移。Docker autoPrune 保持关闭。
