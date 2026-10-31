@@ -78,9 +78,40 @@ in
     after = [ "graphical-session.target" ];
     partOf = [ "graphical-session.target" ];
     wantedBy = [ "graphical-session.target" ];
-    unitConfig.ConditionUser = userName;
+    unitConfig = {
+      ConditionUser = userName;
+      StartLimitIntervalSec = 0;
+    };
+    script = ''
+      echo 'Waiting for an enabled Niri output before starting WayVNC'
+      until ${lib.getExe pkgs.niri} msg --json outputs |
+        ${lib.getExe pkgs.jq} -e 'any(.[]; .current_mode != null)' >/dev/null; do
+        ${lib.getExe' pkgs.coreutils "sleep"} 5
+      done
+      exec ${lib.getExe pkgs.wayvnc} --config=${pkgs.writeText "wayvnc.conf" "address=0.0.0.0\nport=5900\n"}
+    '';
     serviceConfig = {
-      ExecStart = "${lib.getExe pkgs.wayvnc} --config=${pkgs.writeText "wayvnc.conf" "address=0.0.0.0\nport=5900\n"}";
+      # Losing the last output can make WayVNC exit successfully.
+      Restart = "always";
+      RestartSec = 3;
+    };
+  };
+  # The login compositor does not start graphical-session.target. Its startup
+  # hook imports its own sockets and starts this unit in the greeter's manager.
+  systemd.user.services.wayvnc-greeter = {
+    description = "wayvnc for the login screen";
+    documentation = [ "man:wayvnc(1)" ];
+    unitConfig.ConditionUser = config.services.greetd.settings.default_session.user;
+    script = ''
+      while ${lib.getExe pkgs.niri} msg version >/dev/null 2>&1; do
+        if ${lib.getExe pkgs.niri} msg --json outputs |
+          ${lib.getExe pkgs.jq} -e 'any(.[]; .current_mode != null)' >/dev/null; then
+          ${lib.getExe pkgs.wayvnc} --config=${pkgs.writeText "wayvnc-greeter.conf" "address=127.0.0.1\nport=5900\n"} || true
+        fi
+        ${lib.getExe' pkgs.coreutils "sleep"} 1
+      done
+    '';
+    serviceConfig = {
       Restart = "on-failure";
       RestartSec = 3;
     };

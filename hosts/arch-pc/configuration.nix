@@ -43,6 +43,25 @@
     ];
   };
   boot.loader.grub.useOSProber = lib.mkForce false;
+  # Forcing detection alone leaves i915 with only its 1024x768 fallback modes.
+  # The matching monitor EDID retains 1440p144 even while it is unplugged.
+  hardware.display = {
+    edid.packages = [
+      (pkgs.runCommand "workstation-edid" { } ''
+        install -Dm444 ${../../assets/edid/dell-se2726d.bin} "$out/lib/firmware/edid/dell-se2726d.bin"
+      '')
+    ];
+    outputs."HDMI-A-1" = {
+      edid = "dell-se2726d.bin";
+      mode = "e";
+    };
+  };
+  services.displayManager.dms-greeter.compositor.customConfig = lib.mkAfter ''
+    spawn-at-startup "${pkgs.writeShellScript "start-wayvnc-greeter" ''
+      ${pkgs.systemd}/bin/systemctl --user import-environment WAYLAND_DISPLAY NIRI_SOCKET
+      exec ${pkgs.systemd}/bin/systemctl --user restart --no-block wayvnc-greeter.service
+    ''}"
+  '';
   users.users.${userName} = {
     uid = 1000;
     group = userName;

@@ -105,6 +105,11 @@ nix --extra-experimental-features 'nix-command flakes' build --no-link path:.#ni
 
 - Codex CLI 0.160.0 的交互入口调用复用 home 中的 GNU app-server 缓存，因缺少 `libonig.so.5` 无法启动。执行 `codex app-server daemon update --from-cli --yes`，使用 Nix 安装的 musl 包替换并固定后台程序，再执行 `codex app-server daemon start`。交互请求和 shell 执行均已验证成功，认证和会话数据无需重置。以后升级 Nix 中的 Codex 包后，可再次执行 `codex app-server daemon update --from-cli --yes` 同步固定的后台程序。
 - 原 `wayvnc.service` 调用已不存在的 `/usr/bin/wayvnc`，以 `203/EXEC` 失败。当时由 Home Manager 的 `services.wayvnc` 提供 Nix store 路径、图形会话自动启动和失败重启；旧用户单元保存为 `wayvnc.service.hm-backup`。该配置现已迁至 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix) 的 NixOS `systemd.user.services.wayvnc`。
+- 工作机已更换为 DELL SE2726D，通过 `hardware.display.outputs."HDMI-A-1".mode = "e"` 强制保留 HDMI 输出，并加载[对应 EDID](assets/edid/README.md)。`displays.nix` 使用 2560×1440@143.967（标称 144Hz）；仅指定 `video=HDMI-A-1:1920x1080@60e` 时，实机 i915 仍只列出最高 1024×768。EDID 由 NixOS 原生模块打包到固件及 initrd，重启后生效。
+- WayVNC 启动前等待 Niri 至少存在一个已启用的显示输出，每 5 秒检查一次；最后一个输出消失后，即使 WayVNC 正常退出也重新进入等待，输出恢复后自动启动，且不受 systemd 启动频率限制。等待期间不监听 5900。
+- 桌面输出刷新率与 VNC 捕获帧率独立：桌面为 144Hz，桌面及登录界面的 WayVNC 不显式传入帧率参数，沿用其默认值（当前版本为最高 30fps）。客户端可用 `wlvncc -i -e tight -q 6 -c 6 10.10.0.1 15900` 降低串流画质，较弱网络可将 `-q` 降至 3；`-q` 不改变串流帧率或显示器模式。
+- 2026-10-31 已配合物理关屏测试：用显示器电源键关屏后，本机新建 RFB 客户端连接，连续三次采集均收到独立测试窗口的更新，回车输入也收到应用回执；输出保持 2560×1440@143.967Hz，WayVNC 未重启，VNC 转发服务保持运行。本次验证使用本机客户端，未重新验证外部网络链路。
+- 未登录时，由 greetd 的 Niri 启动钩子向 greeter 用户管理器导入 `WAYLAND_DISPLAY` / `NIRI_SOCKET` 并启动 `wayvnc-greeter.service`，仅监听 `127.0.0.1:5900`，经既有 SSH 隧道远程输入密码。greeter 会话退出后该服务结束，登录后的 `wayvnc.service` 接管同一端口；客户端可能需重连一次。不会启用自动登录。仅执行 `systemctl --user status wayvnc` 查到的是桌面用户服务，不包含登录界面的 greeter 用户服务。
 - 完整访问链路为 `10.10.0.1:15900 → VPS 127.0.0.1:15903 → 工作机 127.0.0.1:5900`。迁移遗漏了 VNC 反向转发，现由 `modules/workstation/network.nix` 中独立的 `hysteria-vnc-tunnel.service` 补齐，经 Hysteria 10022 连接 VPS，沿用现有专用密钥。SSH 管理隧道的有效单元保持一致，VPS 和路由器配置无需改动。
 
 远端 `./scripts/check.sh`、`./scripts/check.sh checks` 均通过；缓存站暂时不可达后，`nh os build . --offline` 成功。用户已执行 `nh os switch . --offline`，正式 VNC 隧道为 `active (running)`、`NRestarts=0`。本机实际执行 `wlvncc 10.10.0.1 15900` 成功连接，RFB 客户端收到 2560×1440 画面，用户再次确认远程访问成功。验证用临时隧道已停止。
