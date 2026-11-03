@@ -29,6 +29,7 @@ in
     libarchive
     rename
     android-tools
+    spflashtool6
     (lib.lowPrio jdk11)
     maven
     git-repo

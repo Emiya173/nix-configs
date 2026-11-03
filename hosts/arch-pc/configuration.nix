@@ -74,9 +74,12 @@
       "input"
       "docker"
       "render"
+      "dialout"
     ];
   };
   users.groups.${userName}.gid = 1000;
+  # Keep ModemManager away from MediaTek flashing ports; dialout grants access.
+  services.udev.packages = [ pkgs.spflashtool6 ];
   programs.localsend = {
     enable = true;
     # Reused Arch settings use schema v3; 1.17 expects boolean quick-save values.
