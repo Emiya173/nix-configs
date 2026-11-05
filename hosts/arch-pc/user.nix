@@ -6,6 +6,16 @@
   ...
 }:
 let
+  sessionStartup = pkgs.writeShellApplication {
+    name = "arch-pc-session-startup";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.jq
+      pkgs.niri
+      pkgs.util-linux
+    ];
+    text = builtins.readFile ./session-startup.sh;
+  };
   adbScript =
     name:
     pkgs.writeShellApplication {
@@ -20,6 +30,25 @@ let
     };
 in
 {
+  programs.niri.settings = {
+    spawn-at-startup = [ { command = [ (lib.getExe sessionStartup) ]; } ];
+    window-rules = [
+      {
+        matches = [
+          {
+            # Feishu currently reports an empty app ID.
+            app-id = "^(chromium-browser|brave-browser|kitty|chatgpt|org\\.telegram\\.desktop)?$";
+            at-startup = true;
+          }
+          {
+            title = "^飞书$";
+            at-startup = true;
+          }
+        ];
+        open-focused = false;
+      }
+    ];
+  };
   users.users.${userName}.packages = with pkgs; [
     wayvnc
     bcompare

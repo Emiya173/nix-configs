@@ -29,6 +29,8 @@ Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引�
 
 工作机另有 Beyond Compare、钉钉、腾讯会议、LocalSend、JDK 11、Maven、ADB 脚本和 xlog 解码工具；私人主机另有游戏、串流及 Blender 等应用。完整包清单见 [modules/packages.nix](modules/packages.nix)、[modules/user/packages.nix](modules/user/packages.nix)、[modules/user/desktop.nix](modules/user/desktop.nix)、[modules/user/dev.nix](modules/user/dev.nix) 和 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix)。
 
+`arch-pc` 登录 niri 后按固定顺序恢复应用：workspace 1 为飞书、Chromium，workspace 2 为 Kitty、Brave，workspace 3 为 ChatGPT、Telegram。启动时通过窗口 ID 在后台分配工作区和调整宽度，不主动切换工作区；这些应用在 niri 启动阶段打开时不自动聚焦。工作区按 niri 默认规则动态创建和回收，不预留固定空工作区；某组应用全部启动失败时，后面的组使用下一个可用工作区。各窗口占半列宽，Brave 占整列宽；Kitty 从 `~/dev/tool/vehicleApiMock` 打开（目录不存在时回到主目录），两个浏览器恢复上次会话。启动脚本仅在登录时整理布局，后续手动打开的窗口仍使用正常放置规则。配置与脚本位于 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix) 和 [hosts/arch-pc/session-startup.sh](hosts/arch-pc/session-startup.sh)。
+
 ## 配置结构
 
 ```text
