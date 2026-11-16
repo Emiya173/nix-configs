@@ -9,7 +9,7 @@
 | 主机 | 用途与硬件 | 主机专属配置 |
 | --- | --- | --- |
 | [`present-pc`](hosts/present-pc/configuration.nix) | 私人电脑，AMD 显卡，双 DP 显示器 | AMD/ROCm、Steam/Lutris/Wine、Waydroid、Sunshine、投屏与虚拟输出、VoidMaker 入口 |
-| [`arch-pc`](hosts/arch-pc/configuration.nix) | 工作机，Intel UHD 770，单 HDMI 显示器 | 工作应用、Android/ADB 工具、xlog、DAE 自动订阅、EasyConnect、Hysteria 与反向隧道、wayvnc |
+| [`arch-pc`](hosts/arch-pc/configuration.nix) | 工作机，Intel UHD 770，单 HDMI 显示器 | 工作应用、Android/ADB 工具、xlog、DAE、EasyConnect、Hysteria 与反向隧道、wayvnc |
 
 两台主机共享桌面与基本操作习惯，工作机关闭娱乐功能、投屏和 VoidMaker 入口。功能选择集中在 [flake.nix](flake.nix) 的 `desktopFeatures`；硬件与系统服务由各自主机的模块导入和覆盖决定。
 
@@ -109,13 +109,13 @@ Fcitx5 默认选择 Rime，使用小鹤双拼、简体和锁定版本的雾凇�
 
 ## 自定义软件包
 
-可复用软件包、补丁和测试在 [nur/](nur/) 独立维护，通过本地 overlay 使用本仓库的稳定包集。主要包括 Codex CLI、QQ、百度网盘、钉钉、ChatGPT/DeepSeek Harness 桌面版、DW-Proton、UMU、Fastfetch、nix-tree 补丁和 xlog。系统专用的 DAE 订阅中继等工具位于 [packages/](packages/)。
+可复用软件包、补丁和测试在 [nur/](nur/) 独立维护，通过本地 overlay 使用本仓库的稳定包集。主要包括 Codex CLI、QQ、百度网盘、钉钉、ChatGPT/DeepSeek Harness 桌面版、DW-Proton、UMU、Fastfetch、nix-tree 补丁和 xlog。
 
 维护包通过 flake 的 `packages` 输出提供，可单独构建。NUR 的修改先在子模块提交和推送，再更新主仓库 gitlink；主仓库的 `nix flake update` 不会更新子模块。包说明与独立验证入口见 [nur/README.md](nur/README.md)。
 
 ## 工作机服务与运行状态
 
-工作网络集中在 [modules/workstation/](modules/workstation/)，包括 DAE 订阅同步与缓存恢复、EasyConnect、Hysteria、反向 SSH/VNC 隧道及 wayvnc。服务、状态路径和部署说明见 [WORKSTATION.md](WORKSTATION.md)。
+工作网络集中在 [modules/workstation/](modules/workstation/)，包括 DAE、EasyConnect、Hysteria、反向 SSH/VNC 隧道及 wayvnc。服务、状态路径和部署说明见 [WORKSTATION.md](WORKSTATION.md)。
 
 仓库声明软件与配置结构；登录密码 hash、SSH/GPG/ADB 私钥、订阅 URL、VPN 凭据、xlog 解码密钥及应用登录状态独立保存在目标主机，不写入 Git 或 Nix store。用户文件、DMS 可变设置、Rime 学习数据、SDK 和外部工具链也需要独立准备或保留。
 

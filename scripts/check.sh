@@ -21,7 +21,7 @@ case "$mode" in
   packages)
     for package in "$@"; do
       case "$package" in
-        qq|codex|baidunetdisk|deepseek-harness-desktop|dwproton-bin|fastfetch|nix-tree|umu-launcher|xlog|dingtalk|chatgpt-desktop|dae-subscription) ;;
+        qq|codex|baidunetdisk|deepseek-harness-desktop|dwproton-bin|fastfetch|nix-tree|umu-launcher|xlog|dingtalk|chatgpt-desktop) ;;
         *)
           echo "Unknown maintained package: $package" >&2
           usage
@@ -74,7 +74,7 @@ check_packages() {
   local -a packages=("$@") targets=()
   local package
   if (( ${#packages[@]} == 0 )); then
-    packages=(qq codex baidunetdisk deepseek-harness-desktop dwproton-bin fastfetch nix-tree umu-launcher xlog dingtalk chatgpt-desktop dae-subscription)
+    packages=(qq codex baidunetdisk deepseek-harness-desktop dwproton-bin fastfetch nix-tree umu-launcher xlog dingtalk chatgpt-desktop)
   fi
   for package in "${packages[@]}"; do
     targets+=("$FLAKE#$package")

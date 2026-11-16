@@ -23,26 +23,9 @@
 - DAE 使用已锁定 `nixpkgs-unstable` 中的包，不单独固定版本。工作配置通过运行时 credential 读取，不将含节点凭据的配置嵌入 Nix。
 - EasyConnect 使用原 Compose 工作目录与系统 Docker socket，等待 VPN DNS 监听后初始化转发；DNS 以逐报文方式从 5353 转发至 Sangfor 5373 端口，子进程空闲 5 秒退出；从镜像重新创建容器，不要求搬迁旧匿名卷。旧 `ubuntu:doc_linux_60121` 镜像与 `aibox_build` 容器不迁移。Docker autoPrune 保持关闭。
 
-## DAE 自动订阅
+## DAE 配置
 
-DAE 配置中的订阅入口保持 `http://127.0.0.1:8080/sub`。
-
-订阅校验支持明文或 Base64 节点列表，包括本机上游提供的 AnyTLS；AnyTLS 省略端口时按协议使用443，不要求更换或单独固定 DAE 版本。
-
-| 单元 | 行为 |
-| --- | --- |
-| dae-subscription.service | 仅监听 loopback，持续提供磁盘上的有效缓存，无需先联网；不持有上游 URL |
-| dae-subscription-sync.service | 每次启动加载私密 URL credential，获取、解码并校验候选节点；成功后自动 reload DAE |
-| dae-subscription-sync.timer | 每60秒检查恢复/待应用状态；正常获取间隔1小时，失败时按磁盘中的退避期限重试上游 |
-| dae-subscription-config.path | 源文件变化触发同步，原子替换也覆盖；并发变更最终由后续检查收敛 |
-
-DAE 首次启动不等待上游订阅：有有效或可恢复缓存时沿用缓存；没有缓存时，从私密配置中的 `ruruka` 静态节点生成兜底缓存，使默认代理可立即启动。订阅继续在后台重试，恢复后自动 reload 切回订阅节点。更新失败保留现有内容。候选与已应用状态分开保存，reload 失败还原发布缓存并保留候选重试。进程重启后重新核对应用状态。订阅同步程序不输出完整 URL、节点或原始异常。DAE 自身的日志策略仍来自私密配置。
-
-HTTP 429 首次退避15分钟，之后30分钟、1小时；其他网络错误首次退避60秒并倍增，最长1小时。两者都遵循更长的 `Retry-After`（秒数或 HTTP 日期）。重试期限保存在 `fetch-state.json`，服务重启或 rebuild 不会重新请求；更换上游地址绕过旧地址的退避。已有有效缓存或兜底时，临时网络错误、HTTP 408/425/429/5xx 不阻断系统激活；没有有效缓存、认证等其他 HTTP 错误、无效订阅、凭据/状态文件错误和 DAE reload 失败仍返回失败。
-
-上游地址只保存在 `/var/lib/dae-subscription-config/upstream-url`，root:root 0600，目录0700。安装准备时输入一次；之后更换这个私密文件即可，无需 rebuild 或手工按顺序启动服务。不要通过命令行参数、shell history 或 Git 保存完整订阅 URL。
-
-缓存位于 `/var/lib/dae-subscription/`，0700/0600。上游请求不继承代理环境，避免首次启动依赖 DAE 的循环。`curl -fsS http://127.0.0.1:8080/health` 中的 `fallback` 标识是否使用静态兜底；`sync.degraded`、`sync.error`、`sync.http_status`、`sync.next_retry_at`（Unix 时间戳）显示上次获取失败及下次重试期限，成功获取后清除失败状态。健康只说明已有通过语法检查的节点，不证明所有节点远端可达；`degraded: false` 本身也不证明已成功获取订阅，应同时查看 `fallback` 和 `fetched_at`。
+私密配置保存在 `/etc/dae/config.dae`。服务从私有 credential 读取配置，不再运行本地订阅中继或自动同步旧订阅。修改节点或订阅后重启 `dae.service` 应用；原来指向 `http://127.0.0.1:8080/sub` 的订阅项需要替换或移除。
 
 ## Btrfs 与安装前提
 
@@ -61,7 +44,7 @@ Btrfs UUID 为 `98fc4f2c-cd94-4e94-810e-7757fd903ee3`。安装环境必须再次
 
 内存交换沿用私人基准：zram 优先（zstd、逻辑容量为内存的50%、priority5，按需分配实际内存），现有约24GiB磁盘 swap 仅作额外容量兜底。
 
-在当前 Arch 中，将 @nixos 挂载为 /mnt 后运行 `sudo bash scripts/stage-workstation-state.sh /mnt`，直接导入 DAE/Hysteria、11份 NM profile、SSH host identity 与当前登录密码 hash。脚本读取当前 Arch 的 /etc 和用户数据库，应在进入安装 ISO 前执行。脚本拒绝运行根和非 @nixos 挂载，不创建子卷或启停服务；需要 root，尚未执行。没有现成订阅源文件时通过终端隐藏输入获取。
+在当前 Arch 中，将 @nixos 挂载为 /mnt 后运行 `sudo bash scripts/stage-workstation-state.sh /mnt`，直接导入 DAE/Hysteria、11份 NM profile、SSH host identity 与当前登录密码 hash。脚本读取当前 Arch 的 /etc 和用户数据库，应在进入安装 ISO 前执行。脚本拒绝运行根和非 @nixos 挂载，不创建子卷或启停服务；需要 root，尚未执行。
 
 实际需要的数据处理：
 
@@ -69,7 +52,6 @@ Btrfs UUID 为 `98fc4f2c-cd94-4e94-810e-7757fd903ee3`。安装环境必须再次
 | --- | --- |
 | 项目、用户 SSH/GPG/ADB keys、xlog 密钥、应用账号状态、SDK 与本仓库 | 直接复用 @home，UID/GID1000；无需额外复制 |
 | DAE/Hysteria/NM 原件、登录密码 hash、SSH 主机身份 | 上述脚本直接导入新根的运行时路径，不进入 Git/Nix store |
-| DAE 上游地址 | 隐藏输入一次；后续通过私密文件变更 |
 | EasyConnect | 复用 home 中 Compose 配置，重新获取镜像并创建容器、初始化 DNS |
 | Android 工具 | 复用 ~/Android/Sdk；ADB 由 Nix 提供并生成 /opt/android-sdk/platform-tools 兼容入口，不搬迁旧 /opt 二进制 |
 | 旧构建镜像、aibox_build、旧 Docker 数据、Arch 启动材料和历史配置 | 不迁移，不作为安装前置 |
@@ -90,7 +72,6 @@ Btrfs UUID 为 `98fc4f2c-cd94-4e94-810e-7757fd903ee3`。安装环境必须再次
 ./scripts/check.sh
 ./scripts/check.sh checks
 ./scripts/check.sh system arch-pc
-nix --extra-experimental-features 'nix-command flakes' build --no-link path:.#checks.x86_64-linux.subscription
 nix --extra-experimental-features 'nix-command flakes' build --no-link path:.#xlog path:.#dingtalk path:.#chatgpt-desktop
 nix --extra-experimental-features 'nix-command flakes' build --no-link path:.#nixosConfigurations.arch-pc.config.system.build.toplevel
 ```

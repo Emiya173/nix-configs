@@ -125,7 +125,6 @@
           umu-launcher
           xlog
           ;
-        dae-subscription = pkgs.callPackage ./packages/dae-subscription { };
       };
       formatter.${system} = pkgs.nixfmt;
       devShells.${system}.default = pkgs.mkShell {
@@ -185,12 +184,6 @@
                 ${./scripts/rollback-system.sh} ${./tests/check-greeter.sh}
               touch $out
             '';
-        subscription = pkgs.runCommand "check-dae-subscription" { } ''
-          export PYTHONDONTWRITEBYTECODE=1
-          export SUBSCRIPTION_MODULE=${./packages/dae-subscription/subscription.py}
-          ${pkgs.python3}/bin/python3 ${./tests/test_subscription.py}
-          touch $out
-        '';
       };
       nixosConfigurations = {
         # 私人主机：双 DP 显示器。

@@ -7,7 +7,7 @@ failed=0
 check_file() {
   if [[ ! -s "$target$1" ]]; then printf 'MISSING %s\n' "$1"; failed=1; fi
 }
-for path in /etc/dae/config.dae /etc/hysteria/client.yaml /etc/hysteria/vps-reverse.key /etc/hysteria/known_hosts /var/lib/nixos-secrets/present-password-hash /var/lib/dae-subscription-config/upstream-url /home/present/container/easyconnect/docker-compose.yaml /home/present/.ssh/authorized_keys; do
+for path in /etc/dae/config.dae /etc/hysteria/client.yaml /etc/hysteria/vps-reverse.key /etc/hysteria/known_hosts /var/lib/nixos-secrets/present-password-hash /home/present/container/easyconnect/docker-compose.yaml /home/present/.ssh/authorized_keys; do
   check_file "$path"
 done
 for pair in '/:@nixos' '/home:@home' '/nix:@nix' '/snapshots:@snapshots'; do
@@ -18,7 +18,7 @@ done
 if ! find "$target/etc/NetworkManager/system-connections" -maxdepth 1 -type f -name '*.nmconnection' -print -quit 2>/dev/null | grep -q .; then
   echo 'MISSING persistent NetworkManager profiles'; failed=1
 fi
-for path in /etc/hysteria/vps-reverse.key /var/lib/nixos-secrets/present-password-hash /var/lib/dae-subscription-config/upstream-url; do
+for path in /etc/hysteria/vps-reverse.key /var/lib/nixos-secrets/present-password-hash; do
   if [[ -f "$target$path" && $(stat -c %a "$target$path") != 600 ]]; then printf 'MODE %s must be 600\n' "$path"; failed=1; fi
 done
 [[ $failed -eq 0 ]] || exit 1

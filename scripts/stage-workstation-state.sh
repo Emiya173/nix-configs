@@ -11,7 +11,7 @@ target=$(realpath -- "$1")
 mountpoint -q -- "$target" || { echo 'Target must be a mounted installation root' >&2; exit 1; }
 [[ $(findmnt -n -o FSROOT --target "$target") == /@nixos ]] || { echo 'Target must mount @nixos' >&2; exit 1; }
 umask 077
-install -d -m 700 "$target/var/lib/nixos-secrets" "$target/etc/dae" "$target/etc/hysteria" "$target/etc/NetworkManager/system-connections" "$target/var/lib/dae-subscription-config"
+install -d -m 700 "$target/var/lib/nixos-secrets" "$target/etc/dae" "$target/etc/hysteria" "$target/etc/NetworkManager/system-connections"
 install -m 600 /etc/dae/config.dae "$target/etc/dae/config.dae"
 # Preserve the full YAML, including the QUIC field omitted by the audit summary.
 install -m 600 /etc/hysteria/client.yaml "$target/etc/hysteria/client.yaml"
@@ -32,16 +32,5 @@ password_hash=$(getent shadow present | cut -d: -f2)
 [[ -n "$password_hash" && "$password_hash" != '!'* && "$password_hash" != '*'* ]] || { echo 'No usable login password hash for present' >&2; exit 1; }
 printf '%s\n' "$password_hash" > "$target/var/lib/nixos-secrets/present-password-hash"
 unset password_hash
-source_file=/var/lib/dae-subscription-config/upstream-url
-if [[ -s "$source_file" ]]; then
-  install -m 600 "$source_file" "$target/var/lib/dae-subscription-config/upstream-url"
-else
-  [[ -t 0 ]] || { echo 'Subscription source missing; rerun in an interactive terminal' >&2; exit 1; }
-  read -r -s -p 'Upstream subscription URL (hidden): ' subscription_url
-  printf '\n'
-  [[ "$subscription_url" == https://* || "$subscription_url" == http://* ]] || { echo 'Expected an HTTP(S) URL' >&2; exit 1; }
-  printf '%s\n' "$subscription_url" > "$target/var/lib/dae-subscription-config/upstream-url"
-  unset subscription_url
-fi
-chmod 600 "$target/var/lib/nixos-secrets/present-password-hash" "$target/var/lib/dae-subscription-config/upstream-url"
+chmod 600 "$target/var/lib/nixos-secrets/present-password-hash"
 printf '%s\n' 'Network state, SSH identity and login hash imported. Reuse @home and recreate EasyConnect from its Compose configuration.'
