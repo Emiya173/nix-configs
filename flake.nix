@@ -167,6 +167,23 @@
           touch $out
         '';
 
+        windows-vm = pkgs.runCommand "check-windows-vm" { } ''
+          export PYTHONDONTWRITEBYTECODE=1
+          export WINDOWS_VM_MODULE=${./scripts/windows-vm.py}
+          export QEMU_IMG=${pkgs.qemu_kvm}/bin/qemu-img
+          export COPY_PROGRAM=${pkgs.coreutils}/bin/cp
+          ${pkgs.python3}/bin/python3 ${./tests/test_windows_vm.py}
+          touch $out
+        '';
+
+        dae-config = pkgs.runCommand "check-dae-config" { } ''
+          export PYTHONDONTWRITEBYTECODE=1
+          export DAE_CONFIG_MODULE=${./scripts/prepare-dae-config.py}
+          export DAE_BIN=${pkgs.unstable.dae}/bin/dae
+          ${pkgs.python3}/bin/python3 ${./tests/test_dae_config.py}
+          touch $out
+        '';
+
         formatting = pkgs.runCommand "check-nix-formatting" { } ''
           ${nixpkgs.lib.concatMapStringsSep "\n" (
             path: "${pkgs.nixfmt}/bin/nixfmt --check ${path}"

@@ -9,7 +9,7 @@
 | 主机 | 用途与硬件 | 主机专属配置 |
 | --- | --- | --- |
 | [`present-pc`](hosts/present-pc/configuration.nix) | 私人电脑，AMD 显卡，双 DP 显示器 | AMD/ROCm、Steam/Lutris/Wine、Waydroid、Sunshine、投屏与虚拟输出、VoidMaker 入口 |
-| [`arch-pc`](hosts/arch-pc/configuration.nix) | 工作机，Intel UHD 770，单 HDMI 显示器 | 工作应用、Android/ADB 工具、xlog、DAE、EasyConnect、Hysteria 与反向隧道、wayvnc |
+| [`arch-pc`](hosts/arch-pc/configuration.nix) | 工作机，Intel UHD 770，单 HDMI 显示器 | 工作应用、Android/ADB 工具、xlog、DAE、EasyConnect、Hysteria 与反向隧道、wayvnc、KVM/libvirt 与 virt-manager |
 
 两台主机共享桌面与基本操作习惯，工作机关闭娱乐功能、投屏和 VoidMaker 入口。功能选择集中在 [flake.nix](flake.nix) 的 `desktopFeatures`；硬件与系统服务由各自主机的模块导入和覆盖决定。
 
@@ -30,6 +30,12 @@ Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引�
 工作机另有 Beyond Compare、钉钉、腾讯会议、LocalSend、JDK 11、Maven、ADB 脚本和 xlog 解码工具；私人主机另有游戏、串流及 Blender 等应用。完整包清单见 [modules/packages.nix](modules/packages.nix)、[modules/user/packages.nix](modules/user/packages.nix)、[modules/user/desktop.nix](modules/user/desktop.nix)、[modules/user/dev.nix](modules/user/dev.nix) 和 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix)。
 
 `arch-pc` 登录 niri 后按固定顺序恢复应用：workspace 1 为飞书、Chromium，workspace 2 为 Kitty、Brave，workspace 3 为 ChatGPT、Telegram。启动时通过窗口 ID 在后台分配工作区和调整宽度，不主动切换工作区；这些应用在 niri 启动阶段打开时不自动聚焦。工作区按 niri 默认规则动态创建和回收，不预留固定空工作区；某组应用全部启动失败时，后面的组使用下一个可用工作区。各窗口占半列宽，Brave 占整列宽；Kitty 从 `~/dev/tool/vehicleApiMock` 打开（目录不存在时回到主目录），两个浏览器恢复上次会话。启动脚本仅在登录时整理布局，后续手动打开的窗口仍使用正常放置规则。配置与脚本位于 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix) 和 [hosts/arch-pc/session-startup.sh](hosts/arch-pc/session-startup.sh)。
+
+### 工作机 Windows 虚拟机
+
+`arch-pc` 通过 [hosts/arch-pc/win11.nix](hosts/arch-pc/win11.nix) 和 XML 模板声明完整 `win11`：KVM/libvirt、4 核/8 GiB、128 GiB 初始磁盘、UEFI、TPM 2.0、NAT 与 virtiofs。UUID、MAC、SATA 系统盘和 e1000e 网卡沿用现有安装；磁盘缺失但已有旧状态时拒绝创建新盘，已有磁盘不覆盖。共享目录 `/srv/vm-share`、默认 ACL 和新镜像 NOCOW 由 NixOS 管理，Windows 侧安装一次 WinFsp/VirtIO FS 后通常显示为 `Z:`。
+
+激活后 NAT 网络自动就绪，虚拟机自动注册但不启动；可在 virt-manager 或通过 `sudo win11-vm start` 手动启动 Windows。`sudo win11-vm backup <新目录>` 在 Windows 完全关机后保存独立磁盘、NVRAM、TPM、共享文件和校验清单；新机器先应用配置，再执行 `sudo win11-vm restore <备份目录>` 预览、加 `--apply` 恢复。没有备份时，准备固定路径的 Windows/VirtIO ISO 后从空白磁盘安装。完整安装、迁移、备份恢复和存储说明见 [WIN11.md](WIN11.md)。
 
 ## 配置结构
 

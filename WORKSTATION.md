@@ -25,7 +25,7 @@
 
 ## DAE 配置
 
-私密配置保存在 `/etc/dae/config.dae`。服务从私有 credential 读取配置，不再运行本地订阅中继或自动同步旧订阅。修改节点或订阅后重启 `dae.service` 应用；原来指向 `http://127.0.0.1:8080/sub` 的订阅项需要替换或移除。
+私密配置保存在 `/etc/dae/config.dae`。服务启动时生成 `/run/dae/config.dae` 并加入 `virbr0`，不再运行本地订阅中继或自动同步旧订阅。修改节点或订阅后重启 `dae.service` 应用；原来指向 `http://127.0.0.1:8080/sub` 的订阅项需要替换或移除。
 
 ## Btrfs 与安装前提
 

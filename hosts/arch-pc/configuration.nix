@@ -10,6 +10,7 @@
   imports = [
     ./hardware-configuration.nix
     ./user.nix
+    ./win11.nix
     ../../modules/boot.nix
     ../../modules/network.nix
     ../../modules/audio.nix
@@ -75,6 +76,8 @@
       "docker"
       "render"
       "dialout"
+      "kvm"
+      "libvirtd"
     ];
   };
   users.groups.${userName}.gid = 1000;
