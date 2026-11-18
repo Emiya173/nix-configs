@@ -177,12 +177,6 @@ def write_updated(path, text):
 
 
 def sync(config_home, ui_font, mono_font, cjk_font):
-    dms = config_home / "DankMaterialShell/settings.json"
-    write_updated(dms, patch_jsonc(dms.read_text() if dms.exists() else "{}", {
-        "fontFamily": ui_font,
-        "displayFontFamily": ui_font,
-        "monoFontFamily": mono_font,
-    }))
     for version in (5, 6):
         qt = config_home / f"qt{version}ct/qt{version}ct.conf"
         write_updated(qt, patch_qt(qt.read_text() if qt.exists() else "", ui_font, mono_font, version))

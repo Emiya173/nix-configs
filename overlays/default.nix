@@ -17,7 +17,7 @@ in
 nurPackages
 // {
   qq = nurPackages.qq.override {
-    # GUI launchers may not inherit NIXOS_OZONE_WL from the niri session.
+    # GUI launchers may not inherit NIXOS_OZONE_WL from the Wayland session.
     commandLineArgs = prev.lib.escapeShellArgs [
       "--ozone-platform=wayland"
       "--enable-features=WaylandWindowDecorations"

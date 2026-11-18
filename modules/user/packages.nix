@@ -42,7 +42,7 @@
 
     codex
 
-    # Niri PipeWire window capture -> N150 H.264/UDP display stream
+    # Umbriel PipeWire window capture -> N150 H.264/UDP display stream
     obs-studio
   ];
 }

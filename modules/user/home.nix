@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   pkgs,
   inputs,
@@ -34,8 +33,6 @@ in
         user.name = "Emiya173";
         user.email = "cno.101@qq.com";
       };
-      # DMS reads this conventional path when displaying keybinds/window rules.
-      "niri/config.kdl".text = config.programs.niri.finalConfig;
       "user-dirs.dirs".text =
         lib.concatStringsSep "\n" (
           lib.mapAttrsToList (name: directory: ''XDG_${name}_DIR="$HOME/${directory}"'') userDirectories

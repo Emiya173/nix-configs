@@ -20,9 +20,9 @@ Keep hardware-specific values in each host's `hardware-configuration.nix`.
 
 Prefer native NixOS modules, then `nix-wrapper-modules` for configured packages,
 and Hjem for the remaining fixed-location links. `modules/user/wrappers.nix`
-handles Kitty/Fastfetch/btop; `modules/user/niri.nix` preserves niri-flake's
-settings serializer and supplies the wrapped compositor. Keep personal Git
-identity in the user's Hjem file, not the system Git config. Leave DMS settings,
+handles Kitty/Fastfetch/btop. `modules/user/umbriel.nix` configures the compositor
+through its upstream Hjem module. Keep personal Git
+identity in the user's Hjem file, not the system Git config. Leave Noctalia settings,
 GTK CSS, Qt color files, and Kitty's dynamic theme files writable. Do not
 reintroduce Home Manager or add another application-module abstraction layer.
 
@@ -74,8 +74,8 @@ environment changes do not authorize building both hosts. Do not commit
 generated `result` links.
 
 `tests/check-greeter.sh` exercises the real launcher in a private headless
-Wayland display. Keep its explicit Quickshell/Niri selection independent of
-the user's desktop packages and test the full migration/rollback file handover.
+Wayland display. Keep the greeter and its compositor independent of the
+user's desktop configuration.
 
 ## Commit & Pull Request Guidelines
 

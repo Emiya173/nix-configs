@@ -9,17 +9,6 @@
 
 let
   wrappers = inputs.nix-wrapper-modules.wrappers;
-  kittyDmsIncludes = pkgs.writeText "kitty-dms-includes.py" ''
-    import os
-    from pathlib import Path
-
-    config_home = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-    for name in ("dank-tabs.conf", "dank-theme.conf"):
-        path = config_home / "kitty" / name
-        if path.is_file():
-            print(f"include {path.absolute()}")
-  '';
-
   # 按设备类型汇总，避免设备顺序变化影响 Swap_Zram / Swap_Disk 的标签。
   swapUsage = kind: ''
     LC_ALL=C ${lib.getExe pkgs.gawk} -v kind=${lib.escapeShellArg kind} '
@@ -75,8 +64,8 @@ let
 
     settings = {
       # 禁用文件监视: kitty 每实例的 __watch_conf__ 约占 25MB,
-      # 替换配置符号链接 曾触发 watcher 累积泄漏。
-      # DMS 通过 SIGUSR1 重载主题,手动重载 ctrl+shift+f5 仍可用。
+      # 替换配置符号链接曾触发 watcher 累积泄漏。
+      # Noctalia 通过 SIGUSR1 重载主题,手动重载 ctrl+shift+f5 仍可用。
       auto_reload_config = -1;
       cursor_shape = "beam";
       cursor_trail = 1;
@@ -100,10 +89,9 @@ let
       "ctrl+0" = "change_font_size all 0";
     };
 
-    # Kitty's globinclude rejects absolute patterns after expanding ~ or $HOME.
-    # Resolve optional, mutable DMS files on every startup and theme reload.
+    # The shell writes this theme when Kitty integration is enabled.
     extraConfig = ''
-      geninclude ${kittyDmsIncludes}
+      include ${config.hjem.users.${userName}.xdg.config.directory}/kitty/themes/noctalia.conf
     '';
   };
 
@@ -336,7 +324,7 @@ in
   options.workstation.kittyPackage = lib.mkOption {
     type = lib.types.package;
     readOnly = true;
-    description = "Kitty with the workstation configuration and mutable DMS theme includes.";
+    description = "Kitty with the workstation configuration and mutable Noctalia theme includes.";
   };
 
   config = {

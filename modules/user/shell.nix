@@ -73,9 +73,8 @@
       ntree = "nix-tree"; # 交互式依赖树
       nrepl = "nix repl --expr 'import <nixpkgs> {}'"; # 进 repl 试 nix 表达式
 
-      # niri / DMS --------------------------------------------------
-      nmsg = "niri msg"; # niri msg outputs/windows/action ...
-      dipc = "dms ipc"; # dms ipc spotlight/lock/audio ...
+      nmsg = "umbriel msg";
+      dipc = "noctalia msg";
     };
   };
 

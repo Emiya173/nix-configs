@@ -113,7 +113,7 @@ in
       // {
         "feishu/fontconfig.conf".source = feishuFontConfig;
         "gtk-3.0/settings.ini".text = gtkIni (gtkSettings // gtkTheme // gtkInput);
-        # DMS owns GTK CSS and Qt color files; keep their parent directories writable.
+        # Noctalia owns GTK CSS and Qt color files; keep their parent directories writable.
         "gtk-4.0/settings.ini".text = gtkIni (gtkSettings // gtkInput);
 
         # 百度网盘会用 xdg-mime/sed 替换符号链接；激活时恢复声明式关联。
@@ -159,7 +159,7 @@ in
       "image/heif" = "imv.desktop";
 
       "text/plain" = "code.desktop";
-      "inode/directory" = "org.kde.dolphin.desktop";
+      "inode/directory" = "dev.noctalia.luciole.desktop";
     };
 
     xdg.data.files = {
@@ -198,7 +198,7 @@ in
       mpv
       (chromium.override browserOverrides)
       (brave.override browserOverrides)
-      # 启动器/剪贴板/通知/电源菜单全归 DMS,不再装 fuzzel/rofi
+      # 启动器/剪贴板/通知/电源菜单全归 Noctalia,不再装 fuzzel/rofi
 
       # 文档编辑
       typora
@@ -211,15 +211,13 @@ in
       element-desktop
 
       # 图像/媒体
-      imv # 默认图片查看器 (dolphin 双击 / xdg-open)
+      imv # 默认图片查看器 (Luciole 双击 / xdg-open)
       gthumb # 轻量编辑: 裁剪/缩放/旋转/调色/红眼/批量重命名/格式转换
 
       # 文件管理 (Yazi 由 modules/user/yazi.nix 安装)
       kdePackages.ark
-      kdePackages.dolphin
 
-      # DMS 负责截图，Satty 保留标注；录屏选区的 slurp 由脚本声明依赖。
-      satty # 截图标注 (Mod+Shift+A 键位用)
+      satty # 独立截图标注工具
       hyprpicker # 取色器 (Mod+Shift+C 键位用)
 
       # 系统监控/通知/音量面板/蓝牙: btop 走 wrappers.nix,
@@ -230,8 +228,8 @@ in
       papirus-icon-theme
       materia-theme
 
-      # qt6ct/qt5ct: 走 user profile 让 dolphin 等 system Qt app 能在 QT_PLUGIN_PATH 里搜到
-      # qt.platformTheme 留空以保留 DMS 所需的 qt6ct 环境值，因此显式安装两代插件。
+      # qt6ct/qt5ct: 走 user profile 让 Qt 应用 能在 QT_PLUGIN_PATH 里搜到
+      # qt.platformTheme 留空以保留 Noctalia 所需的 qt6ct 环境值，因此显式安装两代插件。
       qt6Packages.qt6ct
       libsForQt5.qt5ct
 
@@ -287,7 +285,7 @@ in
   };
   environment.profileRelativeSessionVariables.XCURSOR_PATH = [ "/share/icons" ];
 
-  # Defaults remain writable in the user dconf database for DMS and gsettings.
+  # Defaults remain writable in the user dconf database for Noctalia and gsettings.
   programs.dconf.profiles.user.databases = [
     {
       settings."org/gnome/desktop/interface" = {

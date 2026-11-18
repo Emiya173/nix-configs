@@ -11,7 +11,7 @@ let
     runtimeInputs = [
       pkgs.coreutils
       pkgs.jq
-      pkgs.niri
+      config.programs.umbriel.package
       pkgs.util-linux
     ];
     text = builtins.readFile ./session-startup.sh;
@@ -30,25 +30,6 @@ let
     };
 in
 {
-  programs.niri.settings = {
-    spawn-at-startup = [ { command = [ (lib.getExe sessionStartup) ]; } ];
-    window-rules = [
-      {
-        matches = [
-          {
-            # Feishu currently reports an empty app ID.
-            app-id = "^(chromium-browser|brave-browser|kitty|chatgpt|org\\.telegram\\.desktop)?$";
-            at-startup = true;
-          }
-          {
-            title = "^飞书$";
-            at-startup = true;
-          }
-        ];
-        open-focused = false;
-      }
-    ];
-  };
   users.users.${userName}.packages = with pkgs; [
     wayvnc
     bcompare
@@ -114,9 +95,9 @@ in
       StartLimitIntervalSec = 0;
     };
     script = ''
-      echo 'Waiting for an enabled Niri output before starting WayVNC'
-      until ${lib.getExe pkgs.niri} msg --json outputs |
-        ${lib.getExe pkgs.jq} -e 'any(.[]; .current_mode != null)' >/dev/null; do
+      echo 'Waiting for an enabled Umbriel output before starting WayVNC'
+      until ${lib.getExe config.programs.umbriel.package} outputs --json |
+        ${lib.getExe pkgs.jq} -e 'any(.[]; .enabled)' >/dev/null; do
         ${lib.getExe' pkgs.coreutils "sleep"} 5
       done
       exec ${lib.getExe pkgs.wayvnc} --config=${pkgs.writeText "wayvnc.conf" "address=0.0.0.0\nport=5900\n"}
@@ -127,27 +108,43 @@ in
       RestartSec = 3;
     };
   };
-  # The login compositor does not start graphical-session.target. Its startup
-  # hook imports its own sockets and starts this unit in the greeter's manager.
-  systemd.user.services.wayvnc-greeter = {
-    description = "wayvnc for the login screen";
-    documentation = [ "man:wayvnc(1)" ];
-    unitConfig.ConditionUser = config.services.greetd.settings.default_session.user;
-    script = ''
-      while ${lib.getExe pkgs.niri} msg version >/dev/null 2>&1; do
-        if ${lib.getExe pkgs.niri} msg --json outputs |
-          ${lib.getExe pkgs.jq} -e 'any(.[]; .current_mode != null)' >/dev/null; then
-          ${lib.getExe pkgs.wayvnc} --config=${pkgs.writeText "wayvnc-greeter.conf" "address=127.0.0.1\nport=5900\n"} || true
-        fi
-        ${lib.getExe' pkgs.coreutils "sleep"} 1
-      done
-    '';
-    serviceConfig = {
-      Restart = "on-failure";
-      RestartSec = 3;
-    };
-  };
   hjem.users.${userName} = {
+    programs.umbriel.settings = {
+      general.autostart = [ (lib.getExe sessionStartup) ];
+      window_rule =
+        map
+          (rule: {
+            match = rule.match // {
+              at_startup = true;
+            };
+            default_workspace = rule.workspace;
+            default_scrolling_extent = rule.width or 0.5;
+            default_focused = false;
+          })
+          [
+            {
+              match.title = "^飞书$";
+              workspace = 1;
+            }
+            {
+              match.app_id = "^chromium-browser$";
+              workspace = 1;
+            }
+            {
+              match.app_id = "^kitty$";
+              workspace = 2;
+            }
+            {
+              match.app_id = "^brave-browser$";
+              workspace = 2;
+              width = 1.0;
+            }
+            {
+              match.app_id = "^(chatgpt|org\\.telegram\\.desktop)$";
+              workspace = 3;
+            }
+          ];
+    };
     # Keep the legacy path used by Yazi and scripts, while building the executable
     # from source. The private key remains in the user's mutable config directory.
     files.".local/bin/xlog".source = "${pkgs.xlog}/bin/xlog";

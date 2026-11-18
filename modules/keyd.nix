@@ -6,8 +6,7 @@
   environment.systemPackages = [ pkgs.keyd ];
 
   # 内核层 tap-hold remap —— 让 Win 单点能触发 launcher,长按仍是 Super modifier
-  # niri 本身没有 tap-vs-hold,绕道 keyd: tap leftmeta -> F13,F13 在 niri.nix
-  # 里被 bind 到 DMS spotlight
+  # Umbriel 将这个 F13 对应的 XF86Tools 映射到 Noctalia 启动器。
   services.keyd = {
     enable = true;
     keyboards.default = {

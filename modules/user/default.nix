@@ -8,7 +8,7 @@
     ./nvim.nix
     ./yazi.nix
     ./wrappers.nix
-    ./niri.nix
+    ./umbriel.nix
     ./desktop.nix
     ./input-method.nix
     ./fonts.nix

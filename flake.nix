@@ -25,19 +25,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    niri = {
-      url = "github:sodiboo/niri-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
+    noctalia.url = "github:noctalia-dev/noctalia";
+    umbriel = {
+      url = "github:noctalia-dev/umbriel";
+      inputs.nixpkgs.follows = "noctalia/nixpkgs";
     };
-
-    dms = {
-      url = "github:AvengeMedia/DankMaterialShell";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    dms-greeter = {
-      url = "github:duxlabs-dev/dux-greeter";
-      inputs.nixpkgs.follows = "nixpkgs";
+    luciole.url = "github:noctalia-dev/luciole";
+    noctalia-greeter = {
+      url = "github:noctalia-dev/noctalia-greeter";
+      inputs.nixpkgs.follows = "noctalia/nixpkgs";
     };
 
     nixvim = {
@@ -55,7 +51,6 @@
     {
       self,
       nixpkgs,
-      niri,
       ...
     }@inputs:
     let
@@ -88,7 +83,10 @@
           };
           modules = [
             ./hosts/${hostName}/configuration.nix
-            niri.nixosModules.niri
+            inputs.noctalia.nixosModules.default
+            inputs.umbriel.nixosModules.default
+            inputs.luciole.nixosModules.default
+            inputs.noctalia-greeter.nixosModules.default
             ./modules/user
             inputs.nix-index-database.nixosModules.default
             inputs.hjem.nixosModules.default
@@ -137,13 +135,14 @@
           pkgs.runCommand "check-greeter-startup"
             {
               nativeBuildInputs = with pkgs; [
-                weston
                 dbus
                 coreutils
                 gnugrep
               ];
-              GREETER_LAUNCHER = self.nixosConfigurations.arch-pc.config.system.build.greeter-launcher;
-              PLAIN_QUICKSHELL = pkgs.quickshell;
+              WORKSTATION_GREETER =
+                self.nixosConfigurations.arch-pc.config.services.greetd.settings.default_session.command;
+              PERSONAL_GREETER =
+                self.nixosConfigurations.present-pc.config.services.greetd.settings.default_session.command;
               DBUS_SESSION_CONF = "${pkgs.dbus}/share/dbus-1/session.conf";
               MESA_DIR = pkgs.mesa;
             }

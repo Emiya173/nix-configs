@@ -57,12 +57,17 @@
       mode = "e";
     };
   };
-  services.displayManager.dms-greeter.compositor.customConfig = lib.mkAfter ''
-    spawn-at-startup "${pkgs.writeShellScript "start-wayvnc-greeter" ''
-      ${pkgs.systemd}/bin/systemctl --user import-environment WAYLAND_DISPLAY NIRI_SOCKET
-      exec ${pkgs.systemd}/bin/systemctl --user restart --no-block wayvnc-greeter.service
-    ''}"
-  '';
+  # The bundled login compositor lacks WayVNC's capture and input protocols.
+  services.greetd.settings.default_session.command =
+    let
+      greeterClient = pkgs.writeShellScript "noctalia-remote-login" ''
+        ${pkgs.wayvnc}/bin/wayvnc --config=${pkgs.writeText "wayvnc-greeter.conf" "address=127.0.0.1\nport=5900\n"} &
+        vnc_pid=$!
+        trap 'kill "$vnc_pid" 2>/dev/null || true' EXIT
+        ${lib.getExe config.services.displayManager.noctalia-greeter.package}
+      '';
+    in
+    lib.mkForce "${pkgs.coreutils}/bin/env XDG_DATA_DIRS=${config.services.displayManager.sessionData.desktops}/share ${lib.getExe pkgs.cage} -s -- ${greeterClient}";
   users.users.${userName} = {
     uid = 1000;
     group = userName;
