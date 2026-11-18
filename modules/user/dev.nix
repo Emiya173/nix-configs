@@ -31,7 +31,6 @@
 
     # 编辑器/IDE
     vscode
-    androidStudioPackages.beta # 2026.1+,launcher 默认 -Dawt.toolkit.name=auto → 原生 Wayland
     # jetbrains.idea-community  # 按需放开
 
     # C/C++:用 clang 作默认工具链(自带 cc/c++/cpp + binutils)

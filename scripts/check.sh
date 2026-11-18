@@ -21,7 +21,7 @@ case "$mode" in
   packages)
     for package in "$@"; do
       case "$package" in
-        qq|codex|baidunetdisk|deepseek-harness-desktop|dwproton-bin|fastfetch|nix-tree|umu-launcher|xlog|dingtalk|chatgpt-desktop) ;;
+        qq|codex|baidunetdisk|dwproton-bin|fastfetch|nix-tree|umu-launcher|xlog|dingtalk|chatgpt-desktop) ;;
         *)
           echo "Unknown maintained package: $package" >&2
           usage
@@ -55,7 +55,7 @@ esac
 check_eval() {
   local -a eval_flags=("${NIX_FLAGS[@]}" --option allow-import-from-derivation false)
   # Multiverse outputs may need substitution before flake check opens a
-  # read-only store. DSH's dependency lock is already a source JSON file.
+  # read-only store.
   # One evaluator lets both hosts share the configured package set.
   echo "==> Evaluate complete hosts"
   nix "${eval_flags[@]}" eval --no-update-lock-file --json \
@@ -74,7 +74,7 @@ check_packages() {
   local -a packages=("$@") targets=()
   local package
   if (( ${#packages[@]} == 0 )); then
-    packages=(qq codex baidunetdisk deepseek-harness-desktop dwproton-bin fastfetch nix-tree umu-launcher xlog dingtalk chatgpt-desktop)
+    packages=(qq codex baidunetdisk dwproton-bin fastfetch nix-tree umu-launcher xlog dingtalk chatgpt-desktop)
   fi
   for package in "${packages[@]}"; do
     targets+=("$FLAKE#$package")

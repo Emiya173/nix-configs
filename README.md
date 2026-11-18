@@ -18,7 +18,7 @@
 - **桌面**：niri 滚动平铺，DMS 面板、启动器、通知、剪贴板、壁纸与动态主题，DankGreeter 登录和 DMS 锁屏；通过 XWayland Satellite 运行 X11 应用。
 - **中文与外观**：Fcitx5 + Rime、雾凇词库与小鹤双拼；HarmonyOS Sans SC 界面字体、FiraCode Nerd Font Mono 等宽字体及 Noto CJK 中文回退。
 - **终端**：Kitty、Fish、Starship、Atuin、fzf、zoxide、bat、eza、Yazi、lazygit，以及 nix-index/comma 命令查找。
-- **开发**：VS Code、Android Studio、Git、direnv/nix-direnv，以及 Rust、Node.js、Java、Python、C/C++、Go、Zig、Haskell、Typst 等工具；项目自己的 devShell 与 lock 由各项目维护。
+- **开发**：VS Code、Git、direnv/nix-direnv，以及 Rust、Node.js、Java、Python、C/C++、Go、Zig、Haskell、Typst 等工具；项目自己的 devShell 与 lock 由各项目维护。
 - **编辑器**：Nixvim 提供语言服务、补全与格式化、日志高亮、Markdown 浏览器预览、Git 改动与 blame、跨文件搜索替换、会话恢复、标记显示、大文件模式和浮动终端；普通模式下，`Space -` 向下分屏、`Space |` 向右分屏、`Space =` 均分窗口，`Ctrl+h/j/k/l` 切换窗口、`Ctrl+方向键` 调整大小，`Ctrl+w c` 关闭当前窗口；which-key 提供英文分组与图标提示。
 - **应用**：Chromium、Brave、WPS、QQ、飞书、百度网盘、ChatGPT/Codex 桌面入口与独立 Codex CLI；Dolphin、Ark、OBS、ffmpeg、mpv、图像查看与截图工具。
 - **系统**：CachyOS LTO 内核、UEFI GRUB、zram 与磁盘 swap、PipeWire、NetworkManager、蓝牙、Tailscale、OpenSSH、Docker、nix-ld 和 AppImage 支持。
@@ -27,7 +27,7 @@ Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引�
 
 两台主机共用 [nix-cachyos-kernel release 分支](https://github.com/xddxdd/nix-cachyos-kernel/tree/release)的 x86-64-v3 内核，私人主机另外启用 `scx_lavd`。版本、源码与工具链随 flake 输入锁定；缓存配置见 [modules/nix.nix](modules/nix.nix)。
 
-工作机另有 Beyond Compare、钉钉、腾讯会议、LocalSend、JDK 11、Maven、ADB 脚本和 xlog 解码工具；私人主机另有游戏、串流及 Blender 等应用。完整包清单见 [modules/packages.nix](modules/packages.nix)、[modules/user/packages.nix](modules/user/packages.nix)、[modules/user/desktop.nix](modules/user/desktop.nix)、[modules/user/dev.nix](modules/user/dev.nix) 和 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix)。
+工作机另有 Android Studio、Beyond Compare、钉钉、腾讯会议、LocalSend、JDK 11、Maven、ADB 脚本和 xlog 解码工具；私人主机另有游戏、串流及 Blender 等应用。完整包清单见 [modules/packages.nix](modules/packages.nix)、[modules/user/packages.nix](modules/user/packages.nix)、[modules/user/desktop.nix](modules/user/desktop.nix)、[modules/user/dev.nix](modules/user/dev.nix) 和 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix)。
 
 `arch-pc` 登录 niri 后按固定顺序恢复应用：workspace 1 为飞书、Chromium，workspace 2 为 Kitty、Brave，workspace 3 为 ChatGPT、Telegram。启动时通过窗口 ID 在后台分配工作区和调整宽度，不主动切换工作区；这些应用在 niri 启动阶段打开时不自动聚焦。工作区按 niri 默认规则动态创建和回收，不预留固定空工作区；某组应用全部启动失败时，后面的组使用下一个可用工作区。各窗口占半列宽，Brave 占整列宽；Kitty 从 `~/dev/tool/vehicleApiMock` 打开（目录不存在时回到主目录），两个浏览器恢复上次会话。启动脚本仅在登录时整理布局，后续手动打开的窗口仍使用正常放置规则。配置与脚本位于 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix) 和 [hosts/arch-pc/session-startup.sh](hosts/arch-pc/session-startup.sh)。
 
@@ -67,7 +67,7 @@ Nixvim 普通模式下，`gd` 跳转定义、`gi` 跳转实现、`gr` 查找引�
 
 fast 包依赖上游二进制缓存，没有可供覆盖或从源码重建的 `drvPath`；索引缺失时直接报错，不会静默退回慢速求值。需要 `.override` 或完整派生时，应显式选择 Multiverse 的普通接口。首次使用需要下载固定哈希的索引，求值时也可能补齐缓存输出。QQ 的配方、源码哈希和更新脚本由 [nur/pkgs/qq](nur/pkgs/qq/) 维护，使用稳定依赖，系统 overlay 保留 Wayland 参数，不再为 QQ 下载 unstable 源码树；CachyOS 继续保留其独立工具链和缓存。
 
-DMS 2 的登录器已拆分为独立的官方 `dux-greeter` 输入，通过共享稳定包集构建，沿用原生 NixOS greeter 模块的用户、缓存目录和壁纸配置。DSH 直接读取 NUR 中预生成的 `build-lock.json`，更新脚本负责同步，避免求值期间构建锁文件转换器；生成结果的一致性检查保留在 NUR 的 flake checks 中。
+DMS 2 的登录器已拆分为独立的官方 `dux-greeter` 输入，通过共享稳定包集构建，沿用原生 NixOS greeter 模块的用户、缓存目录和壁纸配置。
 
 ### 修改入口
 
@@ -115,7 +115,7 @@ Fcitx5 默认选择 Rime，使用小鹤双拼、简体和锁定版本的雾凇�
 
 ## 自定义软件包
 
-可复用软件包、补丁和测试在 [nur/](nur/) 独立维护，通过本地 overlay 使用本仓库的稳定包集。主要包括 Codex CLI、QQ、百度网盘、钉钉、ChatGPT/DeepSeek Harness 桌面版、DW-Proton、UMU、Fastfetch、nix-tree 补丁和 xlog。
+可复用软件包、补丁和测试在 [nur/](nur/) 独立维护，通过本地 overlay 使用本仓库的稳定包集。主要包括 Codex CLI、QQ、百度网盘、钉钉、ChatGPT 桌面版、DW-Proton、UMU、Fastfetch、nix-tree 补丁和 xlog。
 
 维护包通过 flake 的 `packages` 输出提供，可单独构建。NUR 的修改先在子模块提交和推送，再更新主仓库 gitlink；主仓库的 `nix flake update` 不会更新子模块。包说明与独立验证入口见 [nur/README.md](nur/README.md)。
 

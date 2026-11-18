@@ -58,6 +58,7 @@ in
     libarchive
     rename
     android-tools
+    androidStudioPackages.beta
     spflashtool6
     (lib.lowPrio jdk11)
     maven

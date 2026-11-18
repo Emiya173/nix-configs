@@ -205,7 +205,6 @@ in
 
       # AI 桌面应用
       chatgpt-desktop
-      deepseek-harness-desktop
 
       # 通讯
       telegram-desktop

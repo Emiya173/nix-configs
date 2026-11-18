@@ -117,7 +117,6 @@
           codex
           baidunetdisk
           chatgpt-desktop
-          deepseek-harness-desktop
           dingtalk
           dwproton-bin
           fastfetch
