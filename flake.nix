@@ -151,14 +151,6 @@
               bash ${./tests/check-greeter.sh}
               touch $out
             '';
-        home-migration = pkgs.runCommand "check-home-migration" { } ''
-          export PYTHONDONTWRITEBYTECODE=1
-          export HOME_MIGRATION_MODULE=${./scripts/migrate-home-manager.py}
-          export HJEM_BIN=${self.nixosConfigurations.arch-pc.config.hjem.cli.package}/bin/hjem
-          ${pkgs.python3}/bin/python3 ${./tests/test_home_migration.py}
-          touch $out
-        '';
-
         fcitx5-migration = pkgs.runCommand "check-fcitx5-migration" { } ''
           export PYTHONDONTWRITEBYTECODE=1
           export FCITX5_MIGRATION_MODULE=${./scripts/migrate-fcitx5.py}
@@ -197,7 +189,7 @@
             ''
               shellcheck ${./scripts/check.sh} ${./scripts/bump-release.sh} \
                 ${./scripts/stage-workstation-state.sh} ${./scripts/preflight-workstation.sh} \
-                ${./scripts/rollback-system.sh} ${./tests/check-greeter.sh}
+                ${./tests/check-greeter.sh}
               touch $out
             '';
       };

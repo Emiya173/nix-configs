@@ -37,7 +37,7 @@ in
     viAlias = true;
     vimAlias = true;
     wrapRc = true;
-    # Keep user runtime additions (e.g. after/) available, as in the HM module.
+    # Keep user runtime additions (e.g. after/) available.
     impureRtp = true;
 
     # ----- 基础 vim 选项 (对齐 LazyVim 默认值) -----

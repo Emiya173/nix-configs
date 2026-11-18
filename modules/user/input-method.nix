@@ -61,8 +61,8 @@ in
     };
   };
 
-  # 在现有 HM 交接之后、Hjem 链接之前保留冲突文件；不接管学习数据和编译缓存。
-  systemd.services."hjem-migrate-${userName}".script = lib.mkAfter ''
+  # 在 Hjem 链接之前保留 Fcitx5 冲突文件；不接管学习数据和编译缓存。
+  systemd.services."hjem-activate@${userName}".preStart = lib.mkAfter ''
     ${lib.getExe pkgs.python3} ${../../scripts/migrate-fcitx5.py} \
       --manifest ${handoverManifest} \
       --state-dir ${lib.escapeShellArg "${user.xdg.state.directory}/fcitx5"}

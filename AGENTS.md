@@ -62,13 +62,6 @@ should explain constraints or non-obvious decisions, not restate the code.
 ## Testing Guidelines
 
 Subscription recovery and privacy tests live in `tests/test_subscription.py`.
-Legacy HM link migration tests live in `tests/test_home_migration.py`; run them
-only against disposable homes under `/tmp`, never against the real home. Both
-run through flake checks. The frozen per-host allowlists under
-`assets/home-manager-files/` describe the previous HM deployment; do not
-regenerate them from the new Hjem configuration. A new host without HM history
-still needs a version 1 manifest with an empty `targets` list, since
-`modules/user/home.nix` selects the manifest by hostname.
 
 Finish all requested edits before running validation; avoid repeated checks
 during implementation. Every change must pass `./scripts/check.sh`, which is
@@ -98,13 +91,3 @@ rollback risks, and include screenshots only for visible desktop/theme changes.
 Never commit credentials, private keys, or machine-local tokens. Inspect lock
 file changes and fixed-output hashes carefully. Preserve `system.stateVersion`
 unless performing a deliberate migration.
-
-Legacy link handover is wired before Hjem activation in `modules/user/home.nix`.
-Preserve the old system generations and `~/.local/state/home-manager-migration/`
-backups until the user has verified the new session. Rolling back the system
-can leave home-file collisions for the old HM activation, including existing
-`*.hm-backup` files; do not promise automatic home restoration or delete those
-files without inspecting the recorded paths and user changes.
-Use `nixos-rollback` or `scripts/rollback-system.sh` when crossing the HM
-migration boundary. The default previews; `--apply` preserves conflicting
-files before switching. Do not replace this with force-overwriting home files.

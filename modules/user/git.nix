@@ -18,7 +18,7 @@
       pull.rebase = false;
       core.editor = "nvim";
 
-      # Match Home Manager's delta integration, including interactive staging.
+      # Use delta for diffs and interactive staging.
       pager = lib.genAttrs [ "blame" "diff" "log" "show" ] (_: lib.getExe pkgs.delta);
       interactive.diffFilter = "${lib.getExe pkgs.delta} --color-only";
       credential = lib.genAttrs [ "https://github.com" "https://gist.github.com" ] (_: {

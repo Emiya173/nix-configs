@@ -36,7 +36,6 @@
       ls = "eza --icons";
       l = "eza -lh --icons=auto";
       ll = "eza -lha --icons=auto --sort=name --group-directories-first";
-      # These aliases were supplied by Home Manager's eza integration.
       la = "eza -a";
       lla = "eza -la";
       ld = "eza -lhD --icons=auto";
@@ -53,7 +52,7 @@
       # nh / 系统切换 (flake 路径走 NH_FLAKE,见 modules/nix.nix programs.nh) ----
       nos = "nh os switch"; # 切换 (= apt upgrade + dotfile sync)
       nob = "nh os build"; # 只 build 验证,不切换
-      nor = "nixos-rollback"; # 先预览；--apply 备份 home 冲突后回退
+      nor = "nh os rollback --dry"; # 预览目标系统代次
       ninfo = "nh os info"; # 看 generations 列表
       # GC 已有 programs.nh.clean 定时器 (--keep 5 --keep-since 14d),这里是手动触发
       ngc = "sudo nh clean all --keep 5 --keep-since 14d";
@@ -197,7 +196,6 @@
 
   programs.atuin = {
     enable = true;
-    # The Home Manager module kept the daemon disabled by default.
     daemon.enable = false;
     enableFishIntegration = true;
     settings = {

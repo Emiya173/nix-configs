@@ -75,7 +75,7 @@ let
 
     settings = {
       # 禁用文件监视: kitty 每实例的 __watch_conf__ 约占 25MB,
-      # Home Manager 替换 store symlink 曾触发 watcher 累积泄漏。
+      # 替换配置符号链接 曾触发 watcher 累积泄漏。
       # DMS 通过 SIGUSR1 重载主题,手动重载 ctrl+shift+f5 仍可用。
       auto_reload_config = -1;
       cursor_shape = "beam";
