@@ -110,6 +110,10 @@ in
   };
   hjem.users.${userName} = {
     programs.umbriel.settings = {
+      colors.border = {
+        focused = "#88c0d0";
+        unfocused = "#3b4252";
+      };
       general.autostart = [ (lib.getExe sessionStartup) ];
       window_rule =
         map

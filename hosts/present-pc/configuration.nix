@@ -11,6 +11,7 @@
 {
   imports = [
     ./hardware-configuration.nix
+    ./user.nix
     ../../modules/boot.nix
     ../../modules/network.nix
     ../../modules/audio.nix

@@ -199,10 +199,6 @@ in
           ];
         };
         appearance.corner_radius = 8;
-        colors.border = {
-          focused = "#88c0d0";
-          unfocused = "#3b4252";
-        };
         window_rule = [
           {
             match.app_id = "^(pavucontrol|blueman-manager|nm-connection-editor|xdg-desktop-portal-gtk|fcitx)$";
