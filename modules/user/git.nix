@@ -33,11 +33,10 @@
   programs.lazygit = {
     enable = true;
     settings = {
-      # 使用当前 pagers schema，避免自动迁移尝试写入只读配置文件。
-      git.pagers = [
+      git.diffRenderers = [
         {
           colorArg = "always";
-          pager = "delta --dark --paging=never";
+          command = "delta --dark --paging=never";
         }
       ];
 
