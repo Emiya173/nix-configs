@@ -11,6 +11,11 @@
 let
   primaryOutput = displayConfig.primary;
   shell = action: "spawn noctalia msg ${action}";
+  controlCenterTab = tab: {
+    action = shell "panel-open control-center ${tab}";
+    submap = "reset";
+    repeat = false;
+  };
   mediaKey = action: {
     action = shell action;
     allow_when_locked = true;
@@ -146,6 +151,7 @@ in
         general = {
           autostart = [ "fcitx5 -d" ];
           show_cheatsheet = false;
+          xwayland_native_resolution = true;
           xwayland_primary_output = primaryOutput;
         };
         output = lib.mapAttrs (
@@ -199,23 +205,45 @@ in
           ];
         };
         appearance.corner_radius = 8;
-        window_rule = [
-          {
-            match.app_id = "^(pavucontrol|blueman-manager|nm-connection-editor|xdg-desktop-portal-gtk|fcitx)$";
+        # Apply the lone-column width after host-specific startup placement.
+        window_rule = lib.mkAfter (
+          [
+            {
+              match.app_id = "^(pavucontrol|blueman-manager|nm-connection-editor|xdg-desktop-portal-gtk|fcitx)$";
+              default_floating = true;
+            }
+            {
+              match.app_id = "^(kitty|com[.]mitchellh[.]ghostty|foot)$";
+              opacity = 0.75;
+              blur = true;
+            }
+            {
+              match.app_id = "^([Cc]ode|neovide|dev[.]zed[.]Zed|herdr-app)$";
+              opacity = 0.85;
+              blur = true;
+            }
+            {
+              match.app_id = "^dev[.]noctalia[.]Noctalia$";
+              opacity = 0.75;
+              blur = true;
+            }
+            {
+              match.is_alone = true;
+              default_scrolling_extent = 0.667;
+            }
+          ]
+          ++ lib.optional desktopFeatures.voidmaker {
+            match.app_id = "^voidmaker$";
             default_floating = true;
+            default_position = {
+              anchor = "bottom_right";
+              x = 32;
+              y = 32;
+            };
+            border_width = 0;
+            corner_radius = 0;
           }
-        ]
-        ++ lib.optional desktopFeatures.voidmaker {
-          match.app_id = "^voidmaker$";
-          default_floating = true;
-          default_position = {
-            anchor = "bottom_right";
-            x = 32;
-            y = 32;
-          };
-          border_width = 0;
-          corner_radius = 0;
-        };
+        );
         keybinds = {
           "Mod+Return" = "spawn kitty";
           "Mod+T" = "spawn kitty";
@@ -228,9 +256,21 @@ in
           "Ctrl+Shift+Escape" = "spawn kitty -e btop";
           "Mod+M" = "spawn kitty -e btop";
           "Mod+Space" = shell "panel-toggle launcher";
+          "Mod+S" = "scratchpad-toggle";
+          "Mod+Shift+S" = "window-move-to-scratchpad";
+          "Mod+Ctrl+S" = "window-restore-from-scratchpad";
           "XF86Tools" = shell "panel-toggle launcher";
           "Mod+V" = shell "panel-toggle clipboard";
-          "Mod+N" = shell "panel-toggle control-center notifications";
+          "Mod+P" = {
+            action = "submap panels";
+            repeat = false;
+          };
+          "submap[panels],C" = controlCenterTab "home";
+          "submap[panels],N" = controlCenterTab "notifications";
+          "submap[panels],M" = controlCenterTab "media";
+          "submap[panels],A" = controlCenterTab "audio";
+          "submap[panels],S" = controlCenterTab "system";
+          "submap[panels],Escape" = "submap reset";
           "Mod+I" = shell "settings-toggle";
           "Mod+Slash" = "cheatsheet-toggle";
           "Mod+Alt+L" = shell "session lock";
@@ -269,6 +309,14 @@ in
           "Mod+Alt+Page_Up" = "workspace-move-up";
           "Mod+Alt+Page_Down" = "workspace-move-down";
           "Mod+Tab" = "overview-toggle";
+          "Alt+Tab" = {
+            action = shell "window-switcher hold";
+            repeat = false;
+          };
+          "Alt+Shift+Tab" = {
+            action = shell "window-switcher hold reverse";
+            repeat = false;
+          };
           "Mod+WheelDown" = "window-focus-right";
           "Mod+WheelUp" = "window-focus-left";
           "Mod+Shift+WheelDown" = "column-move-right";
@@ -276,7 +324,6 @@ in
           "Print" = shell "screenshot-region";
           "Ctrl+Print" = shell "screenshot-fullscreen";
           "Alt+Print" = shell "screenshot-window";
-          "Mod+Shift+S" = shell "screenshot-region";
           "Mod+Shift+A" = shell "screenshot-annotate";
           "Mod+Shift+C" = "spawn hyprpicker -a";
           "Mod+Ctrl+R" = "spawn ${lib.getExe recordToggle} region";
