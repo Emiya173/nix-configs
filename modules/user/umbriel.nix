@@ -230,6 +230,12 @@ in
           focus.follows_mouse = "sloppy";
         };
         workspaces.back_and_forth = true;
+        scratchpad = [
+          {
+            name = "terminal";
+            spawn_when_empty = "kitty";
+          }
+        ];
         layout = {
           mode = "scrolling";
           gap = 8;
@@ -293,9 +299,9 @@ in
           "Ctrl+Shift+Escape" = "spawn kitty -e btop";
           "Mod+M" = "spawn kitty -e btop";
           "Mod+Space" = shell "panel-toggle launcher";
-          "Mod+S" = "scratchpad-toggle";
-          "Mod+Shift+S" = "window-move-to-scratchpad";
-          "Mod+Ctrl+S" = "window-restore-from-scratchpad";
+          "Mod+S" = "scratchpad-toggle terminal";
+          "Mod+Shift+S" = "window-move-to-scratchpad terminal";
+          "Mod+Ctrl+S" = "window-restore-from-scratchpad terminal";
           "XF86Tools" = shell "panel-toggle launcher";
           "Mod+V" = shell "panel-toggle clipboard";
           "Mod+P" = {
