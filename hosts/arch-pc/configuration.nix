@@ -2,10 +2,16 @@
   config,
   pkgs,
   lib,
+  displayConfig,
   hostName,
   userName,
   ...
 }:
+let
+  inherit (displayConfig) primary;
+  inherit (displayConfig.outputs.${primary}) mode;
+  resolution = "${toString mode.width}x${toString mode.height}";
+in
 {
   imports = [
     ./hardware-configuration.nix
@@ -52,22 +58,37 @@
         install -Dm444 ${../../assets/edid/dell-se2726d.bin} "$out/lib/firmware/edid/dell-se2726d.bin"
       '')
     ];
-    outputs."HDMI-A-1" = {
+    outputs.${primary} = {
       edid = "dell-se2726d.bin";
-      mode = "e";
+      # The kernel takes whole Hz; keep the forced connector for monitor-off VNC.
+      mode = "${resolution}@${toString (builtins.floor (mode.refresh + 0.5))}e";
     };
   };
   # The bundled login compositor lacks WayVNC's capture and input protocols.
   services.greetd.settings.default_session.command =
     let
       greeterClient = pkgs.writeShellScript "noctalia-remote-login" ''
+        # Cage starts in the EDID-preferred 60 Hz mode. Keep login usable on fallback outputs.
+        ${lib.getExe pkgs.wlr-randr} --output ${lib.escapeShellArg primary} --mode ${resolution}@${toString mode.refresh}Hz
         ${pkgs.wayvnc}/bin/wayvnc --config=${pkgs.writeText "wayvnc-greeter.conf" "address=127.0.0.1\nport=5900\n"} &
         vnc_pid=$!
         trap 'kill "$vnc_pid" 2>/dev/null || true' EXIT
         ${lib.getExe config.services.displayManager.noctalia-greeter.package}
       '';
+      greeterSession = pkgs.writeShellScript "arch-pc-greeter-session" ''
+        export XDG_DATA_DIRS=${config.services.displayManager.sessionData.desktops}/share
+        set -- ${lib.getExe pkgs.cage} -s -- ${greeterClient}
+        if [ -t 1 ]; then
+          # Clear boot text before Cage takes the VT; otherwise it reappears at logout from Cage.
+          printf '\033[2J\033[H'
+        fi
+        if [ -n "''${GREETD_SOCK:-}" ]; then
+          exec ${lib.getExe' pkgs.systemd "systemd-cat"} -t noctalia-greeter-session -- "$@"
+        fi
+        exec "$@"
+      '';
     in
-    lib.mkForce "${pkgs.coreutils}/bin/env XDG_DATA_DIRS=${config.services.displayManager.sessionData.desktops}/share ${lib.getExe pkgs.cage} -s -- ${greeterClient}";
+    lib.mkForce "${greeterSession}";
   users.users.${userName} = {
     uid = 1000;
     group = userName;
