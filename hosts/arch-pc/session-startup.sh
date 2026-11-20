@@ -24,15 +24,6 @@ restore_app() {
   return 1
 }
 
-terminal_directory="$HOME/dev/tool/vehicleApiMock"
-if [[ ! -d "$terminal_directory" ]]; then
-  terminal_directory=$HOME
-fi
-
 # Continue restoring the remaining applications if one fails to open.
 restore_app '' '飞书' bytedance-feishu || echo 'Could not restore Feishu' >&2
 restore_app chromium-browser '' chromium --restore-last-session || echo 'Could not restore Chromium' >&2
-restore_app kitty '' kitty --directory "$terminal_directory" || echo 'Could not restore Kitty' >&2
-restore_app brave-browser '' brave --restore-last-session || echo 'Could not restore Brave' >&2
-restore_app chatgpt '' chatgpt-desktop || echo 'Could not restore ChatGPT' >&2
-restore_app org.telegram.desktop '' Telegram || echo 'Could not restore Telegram' >&2

@@ -36,7 +36,7 @@ extra-trusted-public-keys = lantian:WVGO7vsRMSEN+h7Lp7kv6SAmrkEXgUGbbXm7jMDjBuQ=
 
 工作机另有 Android Studio、Beyond Compare、钉钉、腾讯会议、LocalSend、JDK 11、Maven、ADB 脚本和 xlog 解码工具；私人主机另有游戏、串流及 Blender 等应用。完整包清单见 [modules/packages.nix](modules/packages.nix)、[modules/user/packages.nix](modules/user/packages.nix)、[modules/user/desktop.nix](modules/user/desktop.nix)、[modules/user/dev.nix](modules/user/dev.nix) 和 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix)。
 
-`arch-pc` 登录 Umbriel 后，启动脚本依次恢复应用。启动阶段的窗口规则将飞书和 Chromium 放在工作区 1、Kitty 和 Brave 放在工作区 2、ChatGPT 和 Telegram 放在工作区 3。各窗口占半列宽，Brave 占整列宽；Kitty 从 `~/dev/tool/vehicleApiMock` 打开（目录不存在时回到主目录），两个浏览器恢复上次会话。启动脚本仅在登录时整理布局，后续手动打开的窗口仍使用正常放置规则。配置与脚本位于 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix) 和 [hosts/arch-pc/session-startup.sh](hosts/arch-pc/session-startup.sh)。
+`arch-pc` 登录 Umbriel 后，依次启动飞书和 Chromium，两个窗口都放在工作区 1，各占半列宽。Chromium 恢复上次会话。后续手动打开的窗口使用正常放置规则。配置与脚本位于 [hosts/arch-pc/user.nix](hosts/arch-pc/user.nix) 和 [hosts/arch-pc/session-startup.sh](hosts/arch-pc/session-startup.sh)。
 
 ### 工作机 Windows 虚拟机
 

@@ -118,36 +118,17 @@ in
       general.autostart = [ (lib.getExe sessionStartup) ];
       window_rule =
         map
-          (rule: {
-            match = rule.match // {
+          (match: {
+            match = match // {
               at_startup = true;
             };
-            default_workspace = rule.workspace;
-            default_scrolling_extent = rule.width or 0.5;
+            default_workspace = 1;
+            default_scrolling_extent = 0.5;
             default_focused = false;
           })
           [
-            {
-              match.title = "^飞书$";
-              workspace = 1;
-            }
-            {
-              match.app_id = "^chromium-browser$";
-              workspace = 1;
-            }
-            {
-              match.app_id = "^kitty$";
-              workspace = 2;
-            }
-            {
-              match.app_id = "^brave-browser$";
-              workspace = 2;
-              width = 1.0;
-            }
-            {
-              match.app_id = "^(chatgpt|org\\.telegram\\.desktop)$";
-              workspace = 3;
-            }
+            { title = "^飞书$"; }
+            { app_id = "^chromium-browser$"; }
           ];
     };
     # Keep the legacy path used by Yazi and scripts, while building the executable
