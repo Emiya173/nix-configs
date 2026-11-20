@@ -31,6 +31,8 @@ in
     "sd_mod"
   ];
   boot.kernelModules = [ "kvm-intel" ];
+  # Waking the ALC897 reports a false mic unplug/replug and recreates the default input.
+  boot.kernelParams = [ "snd_hda_intel.power_save=0" ];
   hardware.cpu.intel.updateMicrocode = true;
   hardware.enableRedistributableFirmware = true;
   hardware.graphics = {
