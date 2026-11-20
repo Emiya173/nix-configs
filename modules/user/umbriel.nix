@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   lib,
   inputs,
@@ -10,6 +11,29 @@
 }:
 let
   primaryOutput = displayConfig.primary;
+  warpNewWindow = pkgs.writeShellApplication {
+    name = "umbriel-warp-new-window";
+    runtimeInputs = [
+      config.programs.umbriel.package
+      pkgs.jq
+    ];
+    text = ''
+      # The first snapshot is the baseline. Only warp to a newly mapped, active window.
+      umbriel subscribe windows |
+        jq --unbuffered -nr '
+          foreach inputs as $event (null;
+            {previous: .ids, ids: [$event.data[].id], active: ([$event.data[] | select(.active) | .id][0])};
+            select(.previous != null and .active != null) |
+            .active as $id | select(.previous | index($id) == null) | $id
+          )
+        ' |
+        while IFS= read -r id; do
+          if umbriel focused-window --json | jq -e --arg id "$id" '.active and .id == $id' >/dev/null; then
+            umbriel msg window-focus-warp "$id" >/dev/null || continue
+          fi
+        done
+    '';
+  };
   shell = action: "spawn noctalia msg ${action}";
   controlCenterTab = tab: {
     action = shell "panel-open control-center ${tab}";
@@ -159,7 +183,10 @@ in
           }
         ];
         general = {
-          autostart = [ "fcitx5 -d" ];
+          autostart = [
+            "fcitx5 -d"
+            (lib.getExe warpNewWindow)
+          ];
           show_cheatsheet = false;
           xwayland_native_resolution = true;
           xwayland_primary_output = primaryOutput;
