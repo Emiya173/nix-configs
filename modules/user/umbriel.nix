@@ -148,6 +148,16 @@ in
       enable = true;
       package = null;
       settings = {
+        # Noctalia generates the palette after the first shell startup.
+        include.optional.files = [ "noctalia.toml" ];
+        layer_rule = [
+          {
+            match.namespace = "^noctalia-(panel|attached-panel|notification|osd)$";
+            blur = true;
+            blur_ignore_alpha = 0.5;
+            blur_popups = true;
+          }
+        ];
         general = {
           autostart = [ "fcitx5 -d" ];
           show_cheatsheet = false;

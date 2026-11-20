@@ -18,10 +18,7 @@ in
   };
   systemd.user.services.noctalia.unitConfig.ConditionUser = userName;
   programs.luciole.enable = true;
-  environment.etc."xdg/noctalia/config.toml".text = ''
-    [shell]
-    polkit_agent = true
-  '';
+  environment.etc."xdg/noctalia/config.toml".source = ./noctalia.toml;
 
   services.displayManager.noctalia-greeter = {
     enable = true;

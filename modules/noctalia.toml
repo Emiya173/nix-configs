@@ -1,0 +1,53 @@
+[shell]
+polkit_agent = true
+font_family = "HarmonyOS Sans SC"
+time_format = "{:%H:%M}"
+
+[theme]
+source = "wallpaper"
+mode = "dark"
+wallpaper_scheme = "m3-tonal-spot"
+
+[theme.templates]
+builtin_ids = ["kitty", "umbriel"]
+
+[bar.default]
+margin_edge = 10
+margin_ends = "10%"
+radius = 18
+concave_edge_corners = false
+background_opacity = 0.75
+border = "outline_variant"
+border_width = 0.5
+start = ["launcher", "clock", "active_window"]
+center = ["workspaces"]
+end = ["tray", "network", "volume", "control-center", "session"]
+
+[widget.clock]
+format = "{:%H:%M}"
+
+[widget.active_window]
+display = "text_only"
+max_length = 180
+title_scroll = "on_hover"
+
+[widget.network]
+show_label = false
+
+[widget.volume]
+show_label = false
+
+[shell.panel]
+launcher_placement = "attached"
+clipboard_placement = "attached"
+control_center_position = "center"
+transparency_mode = "glass"
+
+[system.monitor]
+enabled = true
+
+[notification]
+background_opacity = 0.85
+
+[osd]
+background_opacity = 0.70

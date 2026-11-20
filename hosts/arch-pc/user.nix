@@ -30,6 +30,11 @@ let
     };
 in
 {
+  environment.etc = {
+    "xdg/noctalia/appearance.toml".source = ./noctalia.toml;
+    "xdg/noctalia/wallpapers/makoto-yuki.jpg".source = ../../assets/noctalia/makoto-yuki.jpg;
+  };
+
   users.users.${userName}.packages = with pkgs; [
     wayvnc
     bcompare
@@ -110,10 +115,6 @@ in
   };
   hjem.users.${userName} = {
     programs.umbriel.settings = {
-      colors.border = {
-        focused = "#88c0d0";
-        unfocused = "#3b4252";
-      };
       general.autostart = [ (lib.getExe sessionStartup) ];
       window_rule =
         map
