@@ -14,7 +14,7 @@
         y = 0;
       };
       focus-at-startup = true;
-      variable-refresh-rate = "on-demand";
+      vrr = "disabled";
     };
     "DP-2" = {
       mode = {

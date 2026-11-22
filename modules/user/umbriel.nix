@@ -205,9 +205,7 @@ in
           // lib.optionalAttrs (output ? transform) {
             transform = toString output.transform.rotation;
           }
-          // lib.optionalAttrs (output ? variable-refresh-rate) {
-            vrr = "fullscreen";
-          }
+          // lib.optionalAttrs (output ? vrr) { inherit (output) vrr; }
         ) displayConfig.outputs;
         input = {
           keyboard = {
