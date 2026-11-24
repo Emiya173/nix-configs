@@ -48,6 +48,7 @@
     haskell-language-server
 
     # 工具 (direnv + nix-direnv 由下面 programs.direnv 自动装,这里不重复)
+    jujutsu
     just
     typst
     mdbook
