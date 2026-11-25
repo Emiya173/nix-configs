@@ -1,6 +1,7 @@
 { ... }:
 {
   imports = [
+    ./antigravity
     ./shell.nix
     ./git.nix
     ./dev.nix
